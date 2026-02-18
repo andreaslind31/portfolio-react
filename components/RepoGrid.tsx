@@ -31,7 +31,7 @@ export default function RepoGrid({ repos }: { repos: GitHubRepo[] }) {
             className={`px-3 py-1 text-sm rounded-full transition-colors cursor-pointer ${
               selectedLanguage === lang
                 ? "bg-blue-600 text-white"
-                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
             }`}
           >
             {lang}
@@ -46,7 +46,7 @@ export default function RepoGrid({ repos }: { repos: GitHubRepo[] }) {
       </div>
 
       {filteredRepos.length === 0 && (
-        <p className="text-gray-500 text-center py-8">
+        <p className="text-gray-500 dark:text-gray-400 text-center py-8">
           No repositories found for this language.
         </p>
       )}

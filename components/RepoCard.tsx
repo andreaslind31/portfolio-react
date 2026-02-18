@@ -20,19 +20,19 @@ export default function RepoCard({ repo }: { repo: GitHubRepo }) {
       href={repo.html_url}
       target="_blank"
       rel="noopener noreferrer"
-      className="block p-6 bg-white rounded-xl border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all"
+      className="block p-6 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-500 hover:shadow-md transition-all"
     >
-      <h3 className="text-lg font-semibold text-blue-600 truncate">
+      <h3 className="text-lg font-semibold text-blue-600 dark:text-blue-400 truncate">
         {repo.name}
       </h3>
 
       {repo.description && (
-        <p className="text-sm text-gray-600 mt-2 line-clamp-2">
+        <p className="text-sm text-gray-600 dark:text-gray-300 mt-2 line-clamp-2">
           {repo.description}
         </p>
       )}
 
-      <div className="flex items-center gap-4 mt-4 text-xs text-gray-500">
+      <div className="flex items-center gap-4 mt-4 text-xs text-gray-500 dark:text-gray-400">
         {repo.language && (
           <span className="flex items-center gap-1">
             <span
@@ -64,7 +64,7 @@ export default function RepoCard({ repo }: { repo: GitHubRepo }) {
           {repo.topics.map((topic) => (
             <span
               key={topic}
-              className="px-2 py-0.5 text-xs bg-blue-50 text-blue-700 rounded-full"
+              className="px-2 py-0.5 text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full"
             >
               {topic}
             </span>

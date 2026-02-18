@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 html {
   scroll-behavior: smooth;
 }
@@ -7,4 +9,8 @@ html {
 ::selection {
   background-color: #3b82f6;
   color: white;
+}
+
+.dark ::selection {
+  background-color: #2563eb;
 }
