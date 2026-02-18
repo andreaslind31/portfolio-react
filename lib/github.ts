@@ -1,3 +1,7 @@
+// This file is pure TypeScript — no React or Vue imports. It works identically in both frameworks.
+// In Vue/Nuxt, you'd typically put this in composables/ (e.g., composables/useGitHub.ts)
+// or server/api/ for server-side fetching. The fetch logic itself is framework-agnostic.
+
 const GITHUB_USERNAME = "andreaslind31";
 
 export interface GitHubUser {

@@ -14,6 +14,9 @@ const languageColors: Record<string, string> = {
   NSIS: "#A8B9CC",
 };
 
+// React: This is a Server Component (no "use client" directive).
+// It receives props and returns JSX — pure rendering, no state or effects.
+// Vue equivalent: A simple <script setup> component with defineProps, no ref/reactive needed.
 export default function RepoCard({ repo }: { repo: GitHubRepo }) {
   return (
     <a
@@ -37,6 +40,8 @@ export default function RepoCard({ repo }: { repo: GitHubRepo }) {
           <span className="flex items-center gap-1">
             <span
               className="w-3 h-3 rounded-full inline-block"
+              // React: Inline styles use double braces — outer {} for JS expression, inner {} for the style object.
+              // Vue equivalent: :style="{ backgroundColor: languageColors[repo.language] || '#6B7280' }"
               style={{
                 backgroundColor: languageColors[repo.language] || "#6B7280",
               }}
@@ -59,6 +64,9 @@ export default function RepoCard({ repo }: { repo: GitHubRepo }) {
         )}
       </div>
 
+      {/* React: .map() is how you loop over arrays to render lists.
+          Vue equivalent: <span v-for="topic in repo.topics" :key="topic">
+          key={topic} helps React track which items changed — same purpose as :key in Vue. */}
       {repo.topics.length > 0 && (
         <div className="flex flex-wrap gap-1 mt-3">
           {repo.topics.map((topic) => (

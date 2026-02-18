@@ -1,9 +1,17 @@
 import Image from "next/image";
 import { GitHubUser } from "@/lib/github";
 
+// React: Props are received via destructuring the function argument.
+// The type annotation { user }: { user: GitHubUser } provides TypeScript typing inline.
+// Vue equivalent: const props = defineProps<{ user: GitHubUser }>()
+// Then you'd access props.user in the script and just `user` in the template.
 export default function Header({ user }: { user: GitHubUser }) {
   return (
+    // React: className is used instead of class (class is a reserved word in JavaScript).
+    // Vue equivalent: Just use class="..." in the template — Vue handles the mapping for you.
     <header className="flex flex-col md:flex-row items-center gap-8 mb-12">
+      {/* React/Next.js: <Image> is Next.js's optimized image component (lazy loading, resizing).
+          Vue equivalent: <NuxtImg> in Nuxt, or a third-party like vue-lazyload. */}
       <Image
         src={user.avatar_url}
         alt={user.name || user.login}
@@ -16,6 +24,9 @@ export default function Header({ user }: { user: GitHubUser }) {
       <div className="text-center md:text-left">
         <h1 className="text-4xl font-bold">{user.name || user.login}</h1>
 
+        {/* React: {condition && <JSX>} is the pattern for conditional rendering.
+            Vue equivalent: <p v-if="user.bio">{{ user.bio }}</p>
+            React has no directives — you use plain JavaScript expressions inside {}. */}
         {user.bio && (
           <p className="text-lg text-gray-600 dark:text-gray-300 mt-2">{user.bio}</p>
         )}

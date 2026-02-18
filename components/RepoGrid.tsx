@@ -1,3 +1,7 @@
+// React: "use client" tells Next.js this component runs in the browser (not server-only).
+// Without it, components are Server Components by default and can't use state or effects.
+// Vue equivalent: All Vue components run client-side by default. In Nuxt, you'd need to
+// explicitly opt into server components, which is the opposite of React's model.
 "use client";
 
 import { useState, useMemo } from "react";
@@ -5,8 +9,16 @@ import { GitHubRepo } from "@/lib/github";
 import RepoCard from "./RepoCard";
 
 export default function RepoGrid({ repos }: { repos: GitHubRepo[] }) {
+  // React: useState returns [value, setter]. You MUST use the setter to update state.
+  // Calling setSelectedLanguage triggers a full component re-render.
+  // Vue equivalent: const selectedLanguage = ref("All") — then just assign selectedLanguage.value = "Go".
+  // Key difference: Vue tracks reactivity at the property level (fine-grained), React re-renders the whole component.
   const [selectedLanguage, setSelectedLanguage] = useState<string>("All");
 
+  // React: useMemo caches a computed value, only recalculating when dependencies [repos] change.
+  // Vue equivalent: const languages = computed(() => { ... })
+  // Both serve the same purpose — derived/cached values. Vue's computed() auto-tracks dependencies,
+  // while React's useMemo requires you to list them explicitly in the dependency array.
   const languages = useMemo(() => {
     const langs = new Set(
       repos.map((r) => r.language).filter(Boolean) as string[]
@@ -27,7 +39,13 @@ export default function RepoGrid({ repos }: { repos: GitHubRepo[] }) {
         {languages.map((lang) => (
           <button
             key={lang}
+            // React: Event handlers are camelCase props (onClick, onChange, onSubmit).
+            // Vue equivalent: @click="selectedLanguage = lang" or @click="setLanguage(lang)"
+            // React has no v-model — data flows one way. You always need an explicit handler.
             onClick={() => setSelectedLanguage(lang)}
+            // React: Dynamic classes use template literals or string concatenation.
+            // Vue equivalent: :class="{ 'bg-blue-600 text-white': selectedLanguage === lang }"
+            // Vue's :class object/array syntax is more ergonomic for conditional classes.
             className={`px-3 py-1 text-sm rounded-full transition-colors cursor-pointer ${
               selectedLanguage === lang
                 ? "bg-blue-600 text-white"
