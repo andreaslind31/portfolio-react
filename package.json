@@ -9,7 +9,9 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "pages:build": "next build",
+    "pages:preview": "npx wrangler pages dev out"
   },
   "keywords": [],
   "author": "",
