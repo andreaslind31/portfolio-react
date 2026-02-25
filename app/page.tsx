@@ -6,7 +6,9 @@
 import { getGitHubUser, getGitHubRepos } from "@/lib/github";
 import Header from "@/components/Header";
 import SkillsOverview from "@/components/SkillsOverview";
+import GitHubStats from "@/components/GitHubStats";
 import RepoGrid from "@/components/RepoGrid";
+import ContactSection from "@/components/ContactSection";
 import Footer from "@/components/Footer";
 import ScrollReveal from "@/components/ScrollReveal";
 
@@ -32,8 +34,14 @@ export default async function Home() {
       <ScrollReveal animation="fade-up" delay={100}>
         <SkillsOverview repos={repos} />
       </ScrollReveal>
+      <ScrollReveal animation="fade-up" delay={150}>
+        <GitHubStats user={user} repos={repos} />
+      </ScrollReveal>
       <ScrollReveal animation="fade-up" delay={200}>
         <RepoGrid repos={repos} />
+      </ScrollReveal>
+      <ScrollReveal animation="fade-up" delay={100}>
+        <ContactSection user={user} />
       </ScrollReveal>
       <ScrollReveal animation="fade-in" delay={100}>
         <Footer />
