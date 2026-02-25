@@ -28,6 +28,15 @@ export default function Loading() {
         </div>
       </div>
 
+      {/* Contribution heatmap skeleton */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+        <div className="flex items-baseline justify-between mb-3">
+          <div className="h-5 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+          <div className="h-4 w-52 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+        </div>
+        <div className="h-[90px] bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+      </div>
+
       {/* Repo grid skeleton */}
       <div>
         <div className="h-7 w-36 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-6" />

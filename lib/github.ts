@@ -39,6 +39,55 @@ export async function getGitHubUser(): Promise<GitHubUser> {
   return res.json();
 }
 
+export interface ContributionDay {
+  date: string; // "2025-04-28"
+  level: number; // 0-4
+  count: number; // from tooltip text
+}
+
+export async function getGitHubContributions(): Promise<ContributionDay[]> {
+  try {
+    const res = await fetch(
+      `https://github.com/users/${GITHUB_USERNAME}/contributions`,
+      { next: { revalidate: 3600 } }
+    );
+    if (!res.ok) return [];
+    const html = await res.text();
+
+    const contributions: ContributionDay[] = [];
+    // Match each td with data-date and data-level, followed by a tool-tip with count
+    const cellRegex =
+      /data-date="(\d{4}-\d{2}-\d{2})"[^>]*data-level="([0-4])"[^>]*>[\s\S]*?<tool-tip[^>]*>([\s\S]*?)<\/tool-tip>/g;
+    let match;
+    while ((match = cellRegex.exec(html)) !== null) {
+      const tooltipText = match[3].trim();
+      const countMatch = tooltipText.match(/^(\d+)/);
+      contributions.push({
+        date: match[1],
+        level: parseInt(match[2], 10),
+        count: countMatch ? parseInt(countMatch[1], 10) : 0,
+      });
+    }
+
+    // Fallback: if tooltip parsing failed, try date+level only
+    if (contributions.length === 0) {
+      const fallbackRegex =
+        /data-date="(\d{4}-\d{2}-\d{2})"[^>]*data-level="([0-4])"/g;
+      while ((match = fallbackRegex.exec(html)) !== null) {
+        contributions.push({
+          date: match[1],
+          level: parseInt(match[2], 10),
+          count: 0,
+        });
+      }
+    }
+
+    return contributions;
+  } catch {
+    return [];
+  }
+}
+
 export async function getGitHubRepos(): Promise<GitHubRepo[]> {
   const res = await fetch(
     `https://api.github.com/users/${GITHUB_USERNAME}/repos?per_page=100&sort=updated`,
