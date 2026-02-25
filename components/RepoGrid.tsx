@@ -7,6 +7,7 @@
 import { useState, useMemo } from "react";
 import { GitHubRepo } from "@/lib/github";
 import RepoCard from "./RepoCard";
+import ScrollReveal from "./ScrollReveal";
 
 export default function RepoGrid({ repos }: { repos: GitHubRepo[] }) {
   // React: useState returns [value, setter]. You MUST use the setter to update state.
@@ -58,8 +59,14 @@ export default function RepoGrid({ repos }: { repos: GitHubRepo[] }) {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredRepos.map((repo) => (
-          <RepoCard key={repo.name} repo={repo} />
+        {filteredRepos.map((repo, index) => (
+          <ScrollReveal
+            key={repo.name}
+            animation="fade-up"
+            delay={Math.min(index * 75, 600)}
+          >
+            <RepoCard repo={repo} />
+          </ScrollReveal>
         ))}
       </div>
 

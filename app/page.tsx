@@ -5,8 +5,10 @@
 
 import { getGitHubUser, getGitHubRepos } from "@/lib/github";
 import Header from "@/components/Header";
+import SkillsOverview from "@/components/SkillsOverview";
 import RepoGrid from "@/components/RepoGrid";
 import Footer from "@/components/Footer";
+import ScrollReveal from "@/components/ScrollReveal";
 
 // React: Server Components can be async functions — you can await directly in the component.
 // Vue equivalent: In Nuxt, you'd use const { data } = await useFetch('/api/...') inside <script setup>.
@@ -21,12 +23,21 @@ export default async function Home() {
   // Vue equivalent: The <template> section of an SFC (.vue file).
   // In React, markup and logic live together. In Vue, they're separated into <template>, <script>, <style>.
   return (
-    <main className="max-w-5xl mx-auto px-4 py-12">
+    <main className="max-w-5xl mx-auto px-4 py-12 space-y-8">
       {/* React: Props are passed like HTML attributes. <Header user={user} />
           Vue equivalent: <Header :user="user" /> (v-bind shorthand) */}
-      <Header user={user} />
-      <RepoGrid repos={repos} />
-      <Footer />
+      <ScrollReveal animation="fade-up">
+        <Header user={user} />
+      </ScrollReveal>
+      <ScrollReveal animation="fade-up" delay={100}>
+        <SkillsOverview repos={repos} />
+      </ScrollReveal>
+      <ScrollReveal animation="fade-up" delay={200}>
+        <RepoGrid repos={repos} />
+      </ScrollReveal>
+      <ScrollReveal animation="fade-in" delay={100}>
+        <Footer />
+      </ScrollReveal>
     </main>
   );
 }

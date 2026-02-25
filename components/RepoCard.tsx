@@ -1,18 +1,5 @@
 import { GitHubRepo } from "@/lib/github";
-
-const languageColors: Record<string, string> = {
-  Go: "#00ADD8",
-  "C#": "#239120",
-  JavaScript: "#F7DF1E",
-  TypeScript: "#3178C6",
-  Vue: "#4FC08D",
-  Svelte: "#FF3E00",
-  HTML: "#E34F26",
-  CSS: "#563D7C",
-  Python: "#3572A5",
-  Rust: "#DEA584",
-  NSIS: "#A8B9CC",
-};
+import { languageColors } from "@/lib/languageColors";
 
 // React: This is a Server Component (no "use client" directive).
 // It receives props and returns JSX — pure rendering, no state or effects.
@@ -23,7 +10,7 @@ export default function RepoCard({ repo }: { repo: GitHubRepo }) {
       href={repo.html_url}
       target="_blank"
       rel="noopener noreferrer"
-      className="block p-6 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-500 hover:shadow-md transition-all"
+      className="flex flex-col h-full p-6 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-500 hover:shadow-md transition-all"
     >
       <h3 className="text-lg font-semibold text-blue-600 dark:text-blue-400 truncate">
         {repo.name}
@@ -34,6 +21,8 @@ export default function RepoCard({ repo }: { repo: GitHubRepo }) {
           {repo.description}
         </p>
       )}
+
+      <div className="flex-grow" />
 
       <div className="flex items-center gap-4 mt-4 text-xs text-gray-500 dark:text-gray-400">
         {repo.language && (
