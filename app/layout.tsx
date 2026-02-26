@@ -6,6 +6,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import ThemeToggle from "@/components/ThemeToggle";
+import CommandPalette from "@/components/CommandPalette";
 import SpotlightBackground from "@/components/SpotlightBackground";
 import "./globals.css";
 
@@ -48,12 +49,20 @@ export default function RootLayout({
             Named "dangerously" as a reminder that injecting raw HTML can be an XSS risk.
             Here it's safe because we control the script content. */}
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        {process.env.NEXT_PUBLIC_CF_BEACON_TOKEN && (
+          <script
+            defer
+            src="https://static.cloudflareinsights.com/beacon.min.js"
+            data-cf-beacon={`{"token": "${process.env.NEXT_PUBLIC_CF_BEACON_TOKEN}"}`}
+          />
+        )}
       </head>
       <body
         className={`${inter.className} bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white min-h-screen transition-colors`}
       >
         <SpotlightBackground />
         <ThemeToggle />
+        <CommandPalette />
         {/* React: {children} renders whatever page component matches the current route.
             Vue equivalent: <slot /> in a layout, or <router-view /> / <NuxtPage /> for routing. */}
         {children}
