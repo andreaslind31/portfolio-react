@@ -140,13 +140,12 @@ async function queryAnalytics(
     }),
   ]);
 
-  const [totals, daily, referrers, pages]: GraphQLResponse[] =
-    await Promise.all([
-      totalsRes.json(),
-      dailyRes.json(),
-      referrersRes.json(),
-      pagesRes.json(),
-    ]);
+  const [totals, daily, referrers, pages] = (await Promise.all([
+    totalsRes.json(),
+    dailyRes.json(),
+    referrersRes.json(),
+    pagesRes.json(),
+  ])) as GraphQLResponse[];
 
   const totalsData =
     totals.data?.viewer.accounts[0]?.rumPageloadEventsAdaptiveGroups[0];
