@@ -51,6 +51,188 @@ html {
   animation: none;
 }
 
+/* ===== Mouse-tracking Spotlight Background ===== */
+.spotlight-bg {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(
+    600px circle at var(--spotlight-x, -1000px) var(--spotlight-y, -1000px),
+    rgba(59, 130, 246, 0.06),
+    transparent 80%
+  );
+  transition: background 0.15s ease;
+}
+
+.dark .spotlight-bg {
+  background: radial-gradient(
+    600px circle at var(--spotlight-x, -1000px) var(--spotlight-y, -1000px),
+    rgba(59, 130, 246, 0.15),
+    transparent 80%
+  );
+}
+
+/* Hide spotlight on touch devices */
+@media (hover: none) {
+  .spotlight-bg {
+    display: none;
+  }
+}
+
+/* ===== Glow Card Hover Effect ===== */
+.glow-card {
+  position: relative;
+  border-radius: 0.75rem;
+  height: 100%;
+}
+
+.glow-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  z-index: 1;
+  background: radial-gradient(
+    400px circle at var(--glow-x, 50%) var(--glow-y, 50%),
+    rgba(59, 130, 246, 0.1),
+    transparent 60%
+  );
+}
+
+.dark .glow-card::before {
+  background: radial-gradient(
+    400px circle at var(--glow-x, 50%) var(--glow-y, 50%),
+    rgba(59, 130, 246, 0.15),
+    transparent 60%
+  );
+}
+
+@media (hover: hover) {
+  .glow-card:hover::before {
+    opacity: 1;
+  }
+}
+
+/* ===== Staggered Page Load Animation ===== */
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.page-enter {
+  animation: page-enter 0.6s ease-out both;
+}
+
+.page-enter-1 { animation-delay: 0ms; }
+.page-enter-2 { animation-delay: 100ms; }
+.page-enter-3 { animation-delay: 200ms; }
+.page-enter-4 { animation-delay: 280ms; }
+.page-enter-5 { animation-delay: 350ms; }
+.page-enter-6 { animation-delay: 420ms; }
+.page-enter-7 { animation-delay: 480ms; }
+
+/* ===== Section Navigation (Scroll Spy) ===== */
+.section-nav {
+  position: fixed;
+  left: 2rem;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 40;
+  display: none;
+}
+
+@media (min-width: 1280px) {
+  .section-nav {
+    display: block;
+  }
+}
+
+.section-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  text-decoration: none;
+  color: inherit;
+  transition: color 0.2s ease;
+}
+
+.section-nav-indicator {
+  display: block;
+  width: 2px;
+  height: 1.25rem;
+  background: #d1d5db;
+  border-radius: 1px;
+  transition: all 0.3s ease;
+}
+
+.dark .section-nav-indicator {
+  background: #4b5563;
+}
+
+.section-nav-label {
+  font-size: 0.75rem;
+  opacity: 0;
+  transform: translateX(-4px);
+  transition: all 0.2s ease;
+  color: #6b7280;
+  white-space: nowrap;
+}
+
+.dark .section-nav-label {
+  color: #9ca3af;
+}
+
+.section-nav-link:hover .section-nav-label,
+.section-nav-link.active .section-nav-label {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.section-nav-link.active .section-nav-indicator {
+  width: 3px;
+  height: 1.5rem;
+  background: #3b82f6;
+}
+
+.section-nav-link:hover .section-nav-indicator {
+  background: #93c5fd;
+}
+
+.section-nav-link.active:hover .section-nav-indicator {
+  background: #3b82f6;
+}
+
+/* ===== Animated Link Underlines ===== */
+.animated-link {
+  position: relative;
+  text-decoration: none;
+}
+
+.animated-link::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  width: 0;
+  height: 1px;
+  background: currentColor;
+  transition: width 0.3s ease;
+}
+
+.animated-link:hover::after {
+  width: 100%;
+}
+
 /* Respect reduced motion preferences */
 @media (prefers-reduced-motion: reduce) {
   .scroll-reveal {
@@ -58,5 +240,29 @@ html {
     transform: none;
     transition: none;
     animation: none;
+  }
+
+  .spotlight-bg {
+    display: none;
+  }
+
+  .glow-card::before {
+    display: none;
+  }
+
+  .page-enter {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .section-nav-label {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .animated-link::after {
+    transition: none;
   }
 }

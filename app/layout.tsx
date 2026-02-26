@@ -6,6 +6,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import ThemeToggle from "@/components/ThemeToggle";
+import SpotlightBackground from "@/components/SpotlightBackground";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -51,6 +52,7 @@ export default function RootLayout({
       <body
         className={`${inter.className} bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white min-h-screen transition-colors`}
       >
+        <SpotlightBackground />
         <ThemeToggle />
         {/* React: {children} renders whatever page component matches the current route.
             Vue equivalent: <slot /> in a layout, or <router-view /> / <NuxtPage /> for routing. */}

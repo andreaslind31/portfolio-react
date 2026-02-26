@@ -7,7 +7,7 @@ export default function Footer() {
           href="https://nextjs.org"
           target="_blank"
           rel="noopener noreferrer"
-          className="text-blue-600 dark:text-blue-400 hover:underline"
+          className="text-blue-600 dark:text-blue-400 animated-link"
         >
           Next.js
         </a>
@@ -17,7 +17,7 @@ export default function Footer() {
           href="https://docs.github.com/en/rest"
           target="_blank"
           rel="noopener noreferrer"
-          className="text-blue-600 dark:text-blue-400 hover:underline"
+          className="text-blue-600 dark:text-blue-400 animated-link"
         >
           GitHub API
         </a>
