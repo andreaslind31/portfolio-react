@@ -42,6 +42,12 @@ const ChartIcon = () => (
   </svg>
 );
 
+const GamepadIcon = () => (
+  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+  </svg>
+);
+
 export default function CommandPalette() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -66,6 +72,8 @@ export default function CommandPalette() {
       { id: "link-linkedin", group: "Links", label: "Open LinkedIn", keywords: ["linkedin", "social", "network"], action: () => { window.open("https://www.linkedin.com/in/andreas-lind31/", "_blank"); }, icon: <ExternalLinkIcon /> },
       { id: "link-email", group: "Links", label: "Send Email", keywords: ["email", "mail", "contact"], action: () => { window.location.href = "mailto:andreaslind31@gmail.com"; }, icon: <ExternalLinkIcon /> },
       { id: "link-dashboard", group: "Links", label: "View Dashboard", keywords: ["dashboard", "analytics", "stats", "visitors"], action: () => { window.location.href = "/dashboard"; }, icon: <ChartIcon /> },
+      // Easter Eggs
+      { id: "egg-tetris", group: "Easter Eggs", label: "Play Tetris", keywords: ["tetris", "game", "arcade", "play", "easter egg"], action: () => { window.location.href = "/arcade"; }, icon: <GamepadIcon /> },
     ],
     [dark, toggle]
   );

@@ -3,5 +3,11 @@
   "compatibility_date": "2026-02-18",
   "assets": {
     "directory": "./out"
-  }
+  },
+  "kv_namespaces": [
+    {
+      "binding": "LEADERBOARD",
+      "id": "<LEADERBOARD_KV_NAMESPACE_ID>"
+    }
+  ]
 }
