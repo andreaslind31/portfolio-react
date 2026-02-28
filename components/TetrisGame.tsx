@@ -613,8 +613,8 @@ export default function TetrisGame({
           <div className="arcade-crt" />
         </div>
 
-        {/* Side panel — desktop: vertical column, mobile: inline row */}
-        <div className={`arcade-sidebar ${controlsFlipped ? "arcade-sidebar-flipped" : ""}`}>
+        {/* Side panel */}
+        <div className="arcade-sidebar">
           <div className="arcade-panel arcade-panel-next">
             <h3 className="arcade-panel-label">Next</h3>
             <canvas
@@ -624,7 +624,7 @@ export default function TetrisGame({
               className="arcade-preview"
             />
           </div>
-          <div className="arcade-panel-stats">
+          <div className={`arcade-panel-stats ${controlsFlipped ? "arcade-panel-stats-flipped" : ""}`}>
             <div className="arcade-panel arcade-panel-stat">
               <h3 className="arcade-panel-label">Score</h3>
               <p className="arcade-panel-value">{score.toLocaleString()}</p>

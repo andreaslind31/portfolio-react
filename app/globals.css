@@ -515,28 +515,37 @@ html {
 }
 
 @media (max-width: 500px) {
+  /* Unwrap sidebar so its children participate in arcade-game's column layout */
   .arcade-sidebar {
-    flex-direction: row;
+    display: contents;
+  }
+
+  /* Next preview: above the board, compact horizontal layout */
+  .arcade-panel-next {
+    order: -1;
+    padding: 0.25rem 0.5rem;
+    display: flex;
     align-items: center;
-    min-width: auto;
     gap: 0.5rem;
   }
 
-  .arcade-panel-next {
-    flex-shrink: 0;
+  .arcade-panel-next .arcade-panel-label {
+    font-size: 0.5625rem;
   }
 
+  .arcade-panel-next .arcade-preview {
+    width: 56px;
+    height: 56px;
+  }
+
+  /* Stats: horizontal row below board */
   .arcade-panel-stats {
     flex-direction: row !important;
-    flex: 1;
     gap: 0.375rem !important;
+    width: 100%;
   }
 
-  .arcade-sidebar-flipped {
-    flex-direction: row-reverse !important;
-  }
-
-  .arcade-sidebar-flipped .arcade-panel-stats {
+  .arcade-panel-stats-flipped {
     flex-direction: row-reverse !important;
   }
 
