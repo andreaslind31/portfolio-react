@@ -21,13 +21,6 @@ export default function Footer() {
         >
           GitHub API
         </a>
-        {" "}&middot;{" "}
-        <a
-          href="/arcade"
-          className="text-blue-600 dark:text-blue-400 animated-link"
-        >
-          Arcade
-        </a>
       </p>
       <p className="mt-2 hidden md:block text-gray-400 dark:text-gray-500">
         Press{" "}
