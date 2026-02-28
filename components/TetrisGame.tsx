@@ -613,9 +613,9 @@ export default function TetrisGame({
           <div className="arcade-crt" />
         </div>
 
-        {/* Side panel */}
+        {/* Side panel — desktop: vertical column, mobile: inline row */}
         <div className="arcade-sidebar">
-          <div className="arcade-panel">
+          <div className="arcade-panel arcade-panel-next">
             <h3 className="arcade-panel-label">Next</h3>
             <canvas
               ref={previewRef}
@@ -624,17 +624,19 @@ export default function TetrisGame({
               className="arcade-preview"
             />
           </div>
-          <div className="arcade-panel">
-            <h3 className="arcade-panel-label">Score</h3>
-            <p className="arcade-panel-value">{score.toLocaleString()}</p>
-          </div>
-          <div className="arcade-panel">
-            <h3 className="arcade-panel-label">Level</h3>
-            <p className="arcade-panel-value">{level}</p>
-          </div>
-          <div className="arcade-panel">
-            <h3 className="arcade-panel-label">Lines</h3>
-            <p className="arcade-panel-value">{lines}</p>
+          <div className={`arcade-panel-stats ${controlsFlipped ? "arcade-panel-stats-flipped" : ""}`}>
+            <div className="arcade-panel arcade-panel-stat">
+              <h3 className="arcade-panel-label">Score</h3>
+              <p className="arcade-panel-value">{score.toLocaleString()}</p>
+            </div>
+            <div className="arcade-panel arcade-panel-stat">
+              <h3 className="arcade-panel-label">Level</h3>
+              <p className="arcade-panel-value">{level}</p>
+            </div>
+            <div className="arcade-panel arcade-panel-stat">
+              <h3 className="arcade-panel-label">Lines</h3>
+              <p className="arcade-panel-value">{lines}</p>
+            </div>
           </div>
         </div>
       </div>

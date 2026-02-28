@@ -517,18 +517,37 @@ html {
 @media (max-width: 500px) {
   .arcade-sidebar {
     flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: center;
+    align-items: center;
     min-width: auto;
     gap: 0.5rem;
   }
 
-  .arcade-panel {
-    padding: 0.375rem 0.5rem;
+  .arcade-panel-next {
+    flex-shrink: 0;
   }
 
-  .arcade-panel-value {
-    font-size: 0.875rem;
+  .arcade-panel-stats {
+    flex-direction: row !important;
+    flex: 1;
+    gap: 0.375rem !important;
+  }
+
+  .arcade-panel-stats-flipped {
+    flex-direction: row-reverse !important;
+  }
+
+  .arcade-panel-stat {
+    flex: 1;
+    padding: 0.25rem 0.375rem;
+  }
+
+  .arcade-panel-stat .arcade-panel-label {
+    font-size: 0.5625rem;
+    margin-bottom: 0.125rem;
+  }
+
+  .arcade-panel-stat .arcade-panel-value {
+    font-size: 0.8125rem;
   }
 }
 
@@ -567,6 +586,12 @@ html {
 
 .dark .arcade-panel-value {
   color: #f3f4f6;
+}
+
+.arcade-panel-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
 .arcade-preview {
