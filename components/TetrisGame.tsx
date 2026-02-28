@@ -674,18 +674,6 @@ export default function TetrisGame({
               </button>
             </div>
 
-            {/* Swap button */}
-            <button
-              onClick={toggleControls}
-              className="arcade-control-swap"
-              aria-label="Swap control layout"
-              type="button"
-            >
-              <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2}>
-                <path d="M7 16l-4-4m0 0l4-4m-4 4h18M17 8l4 4m0 0l-4 4m4-4H3" />
-              </svg>
-            </button>
-
             {/* D-pad buttons (← ↓ →) */}
             <div className={`arcade-controls-group ${controlsFlipped ? "order-1" : "order-2"}`}>
               <RepeatButton
@@ -717,6 +705,19 @@ export default function TetrisGame({
               </RepeatButton>
             </div>
           </div>
+
+          {/* Swap button */}
+          <button
+            onClick={toggleControls}
+            className="arcade-control-swap"
+            aria-label="Swap control layout"
+            type="button"
+          >
+            <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2}>
+              <path d="M7 16l-4-4m0 0l4-4m-4 4h18M17 8l4 4m0 0l-4 4m4-4H3" />
+            </svg>
+            <span className="text-[10px] ml-1">Swap</span>
+          </button>
         </div>
       )}
     </div>

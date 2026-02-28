@@ -739,14 +739,13 @@ html {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 2rem;
-  height: 2rem;
-  border-radius: 50%;
+  align-self: center;
+  padding: 0.25rem 0.75rem;
+  border-radius: 1rem;
   border: 1px solid #d1d5db;
   background: #f3f4f6;
   color: #9ca3af;
   cursor: pointer;
-  flex-shrink: 0;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
 }
