@@ -533,10 +533,10 @@ html {
   }
 
   .arcade-sidebar-flipped {
-    flex-direction: row-reverse;
+    flex-direction: row-reverse !important;
   }
 
-  .arcade-panel-stats-flipped {
+  .arcade-sidebar-flipped .arcade-panel-stats {
     flex-direction: row-reverse !important;
   }
 
