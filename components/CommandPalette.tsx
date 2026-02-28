@@ -43,8 +43,8 @@ const ChartIcon = () => (
 );
 
 const GamepadIcon = () => (
-  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M6 9h2v2H6V9zm8 0h2v2h-2V9zm-3 7c-1.66 0-3-1.34-3-3h2c0 .55.45 1 1 1s1-.45 1-1h2c0 1.66-1.34 3-3 3zm9-4.5C20 6.36 16.42 2 12 2S4 6.36 4 11.5c0 3.35 2.17 6.17 5 7.25V20c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1.25c2.83-1.08 5-3.9 5-7.25zM12 4c3.31 0 6 3.13 6 7.5 0 2.59-1.55 4.8-3.75 5.74l-.75.3V19h-3v-1.46l-.75-.3C8.55 16.3 7 14.09 7 11.5 7 7.13 9.69 4 12 4z" />
   </svg>
 );
 
