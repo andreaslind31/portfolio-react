@@ -649,7 +649,6 @@ export default function TetrisGame({
             <div className={`arcade-controls-group ${controlsFlipped ? "order-2" : "order-1"}`}>
               <button
                 onTouchStart={(e) => { e.preventDefault(); engineRef.current?.hardDrop(); }}
-                onClick={() => engineRef.current?.hardDrop()}
                 className="arcade-control-btn arcade-control-action"
                 aria-label="Hard drop"
                 type="button"
@@ -666,7 +665,6 @@ export default function TetrisGame({
               <div className="arcade-controls-arrows-top">
                 <button
                   onTouchStart={(e) => { e.preventDefault(); engineRef.current?.rotate(); }}
-                  onClick={() => engineRef.current?.rotate()}
                   className="arcade-control-btn arcade-control-dpad"
                   aria-label="Rotate"
                   type="button"
