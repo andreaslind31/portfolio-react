@@ -178,6 +178,21 @@ export default function TetrisGame({
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [controlsFlipped, setControlsFlipped] = useState(false);
+
+  // Load controls preference from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem("arcade-controls-flipped");
+    if (saved === "true") setControlsFlipped(true);
+  }, []);
+
+  const toggleControls = useCallback(() => {
+    setControlsFlipped((prev) => {
+      const next = !prev;
+      localStorage.setItem("arcade-controls-flipped", String(next));
+      return next;
+    });
+  }, []);
 
   // Keep dark ref in sync + redraw
   useEffect(() => {
@@ -627,63 +642,80 @@ export default function TetrisGame({
       {/* Touch controls */}
       {started && !gameOver && (
         <div className="arcade-controls">
-          <div className="arcade-controls-row">
-            <RepeatButton
-              onAction={() => engineRef.current?.move(-1)}
-              className="arcade-control-btn"
-              label="Move left"
-            >
-              <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2.5}>
-                <path d="M15 19l-7-7 7-7" />
-              </svg>
-            </RepeatButton>
-            <RepeatButton
-              onAction={() => engineRef.current?.softDrop()}
-              className="arcade-control-btn"
-              label="Soft drop"
-            >
-              <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2.5}>
-                <path d="M19 9l-7 7-7-7" />
-              </svg>
-            </RepeatButton>
-            <RepeatButton
-              onAction={() => engineRef.current?.move(1)}
-              className="arcade-control-btn"
-              label="Move right"
-            >
-              <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2.5}>
-                <path d="M9 5l7 7-7 7" />
-              </svg>
-            </RepeatButton>
-          </div>
-          <div className="arcade-controls-row">
+          <div className="arcade-controls-split">
+            {/* Action buttons (Rotate + Drop) */}
+            <div className={`arcade-controls-group ${controlsFlipped ? "order-2" : "order-1"}`}>
+              <button
+                onTouchStart={(e) => { e.preventDefault(); engineRef.current?.rotate(); }}
+                onClick={() => engineRef.current?.rotate()}
+                className="arcade-control-btn arcade-control-action"
+                aria-label="Rotate"
+                type="button"
+              >
+                <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2.5}>
+                  <path d="M4 4v5h5" />
+                  <path d="M20 20v-5h-5" />
+                  <path d="M4 9a9 9 0 0 1 15.36-4.36" />
+                  <path d="M20 15a9 9 0 0 1-15.36 4.36" />
+                </svg>
+                <span className="text-[10px] mt-0.5">Rotate</span>
+              </button>
+              <button
+                onTouchStart={(e) => { e.preventDefault(); engineRef.current?.hardDrop(); }}
+                onClick={() => engineRef.current?.hardDrop()}
+                className="arcade-control-btn arcade-control-action"
+                aria-label="Hard drop"
+                type="button"
+              >
+                <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2.5}>
+                  <path d="M12 3v14m0 0l-4-4m4 4l4-4M5 21h14" />
+                </svg>
+                <span className="text-[10px] mt-0.5">Drop</span>
+              </button>
+            </div>
+
+            {/* Swap button */}
             <button
-              onTouchStart={(e) => { e.preventDefault(); engineRef.current?.rotate(); }}
-              onClick={() => engineRef.current?.rotate()}
-              className="arcade-control-btn arcade-control-wide"
-              aria-label="Rotate"
+              onClick={toggleControls}
+              className="arcade-control-swap"
+              aria-label="Swap control layout"
               type="button"
             >
-              <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.5}>
-                <path d="M4 4v5h5" />
-                <path d="M20 20v-5h-5" />
-                <path d="M4 9a9 9 0 0 1 15.36-4.36" />
-                <path d="M20 15a9 9 0 0 1-15.36 4.36" />
+              <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2}>
+                <path d="M7 16l-4-4m0 0l4-4m-4 4h18M17 8l4 4m0 0l-4 4m4-4H3" />
               </svg>
-              <span className="text-xs ml-1">Rotate</span>
             </button>
-            <button
-              onTouchStart={(e) => { e.preventDefault(); engineRef.current?.hardDrop(); }}
-              onClick={() => engineRef.current?.hardDrop()}
-              className="arcade-control-btn arcade-control-wide"
-              aria-label="Hard drop"
-              type="button"
-            >
-              <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.5}>
-                <path d="M12 3v14m0 0l-4-4m4 4l4-4M5 21h14" />
-              </svg>
-              <span className="text-xs ml-1">Drop</span>
-            </button>
+
+            {/* D-pad buttons (← ↓ →) */}
+            <div className={`arcade-controls-group ${controlsFlipped ? "order-1" : "order-2"}`}>
+              <RepeatButton
+                onAction={() => engineRef.current?.move(-1)}
+                className="arcade-control-btn arcade-control-dpad"
+                label="Move left"
+              >
+                <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2.5}>
+                  <path d="M15 19l-7-7 7-7" />
+                </svg>
+              </RepeatButton>
+              <RepeatButton
+                onAction={() => engineRef.current?.softDrop()}
+                className="arcade-control-btn arcade-control-dpad"
+                label="Soft drop"
+              >
+                <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2.5}>
+                  <path d="M19 9l-7 7-7-7" />
+                </svg>
+              </RepeatButton>
+              <RepeatButton
+                onAction={() => engineRef.current?.move(1)}
+                className="arcade-control-btn arcade-control-dpad"
+                label="Move right"
+              >
+                <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2.5}>
+                  <path d="M9 5l7 7-7 7" />
+                </svg>
+              </RepeatButton>
+            </div>
           </div>
         </div>
       )}
