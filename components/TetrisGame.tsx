@@ -614,7 +614,7 @@ export default function TetrisGame({
         </div>
 
         {/* Side panel — desktop: vertical column, mobile: inline row */}
-        <div className="arcade-sidebar">
+        <div className={`arcade-sidebar ${controlsFlipped ? "arcade-sidebar-flipped" : ""}`}>
           <div className="arcade-panel arcade-panel-next">
             <h3 className="arcade-panel-label">Next</h3>
             <canvas

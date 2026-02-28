@@ -532,6 +532,10 @@ html {
     gap: 0.375rem !important;
   }
 
+  .arcade-sidebar-flipped {
+    flex-direction: row-reverse;
+  }
+
   .arcade-panel-stats-flipped {
     flex-direction: row-reverse !important;
   }
