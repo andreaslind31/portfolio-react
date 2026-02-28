@@ -733,6 +733,24 @@ html {
   width: 3.75rem;
   height: 3.75rem;
   gap: 0;
+  align-self: flex-end;
+}
+
+.arcade-controls-arrows {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.arcade-controls-arrows-top {
+  display: flex;
+  justify-content: center;
+}
+
+.arcade-controls-arrows-bottom {
+  display: flex;
+  gap: 0.25rem;
 }
 
 .arcade-control-swap {
