@@ -109,6 +109,7 @@ function RepeatButton({
 }) {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const touchedRef = useRef(false);
 
   const stop = useCallback(() => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
@@ -128,12 +129,12 @@ function RepeatButton({
 
   return (
     <button
-      onTouchStart={(e) => { e.preventDefault(); begin(); }}
+      onTouchStart={(e) => { e.preventDefault(); touchedRef.current = true; begin(); }}
       onTouchEnd={stop}
       onTouchCancel={stop}
-      onMouseDown={begin}
-      onMouseUp={stop}
-      onMouseLeave={stop}
+      onMouseDown={() => { if (!touchedRef.current) begin(); }}
+      onMouseUp={() => { touchedRef.current = false; stop(); }}
+      onMouseLeave={() => { touchedRef.current = false; stop(); }}
       className={className}
       aria-label={label}
       type="button"
