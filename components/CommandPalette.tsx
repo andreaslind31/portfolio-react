@@ -73,7 +73,9 @@ export default function CommandPalette() {
       { id: "link-email", group: "Links", label: "Send Email", keywords: ["email", "mail", "contact"], action: () => { window.location.href = "mailto:andreaslind31@gmail.com"; }, icon: <ExternalLinkIcon /> },
       { id: "link-dashboard", group: "Links", label: "View Dashboard", keywords: ["dashboard", "analytics", "stats", "visitors"], action: () => { window.location.href = "/dashboard"; }, icon: <ChartIcon /> },
       // Easter Eggs
-      { id: "egg-tetris", group: "Easter Eggs", label: "Play Tetris", keywords: ["tetris", "game", "arcade", "play", "easter egg"], action: () => { window.location.href = "/arcade"; }, icon: <GamepadIcon /> },
+      { id: "egg-arcade", group: "Easter Eggs", label: "Go to Arcade", keywords: ["arcade", "games", "play", "easter egg"], action: () => { window.location.href = "/arcade"; }, icon: <GamepadIcon /> },
+      { id: "egg-tetris", group: "Easter Eggs", label: "Play Tetris", keywords: ["tetris", "game", "blocks", "play", "easter egg"], action: () => { window.location.href = "/arcade/tetris"; }, icon: <GamepadIcon /> },
+      { id: "egg-wordle", group: "Easter Eggs", label: "Play Wordle", keywords: ["wordle", "word", "game", "guess", "play", "easter egg"], action: () => { window.location.href = "/arcade/wordle"; }, icon: <GamepadIcon /> },
     ],
     [dark, toggle]
   );

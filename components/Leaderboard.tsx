@@ -9,9 +9,13 @@ interface ScoreEntry {
 }
 
 export default function Leaderboard({
+  game,
+  scoreLabel = "Score",
   refreshTrigger,
   highlightName,
 }: {
+  game: "tetris" | "wordle";
+  scoreLabel?: string;
   refreshTrigger?: number;
   highlightName?: string;
 }) {
@@ -22,7 +26,7 @@ export default function Leaderboard({
   useEffect(() => {
     setLoading(true);
     setError(null);
-    fetch("/api/leaderboard")
+    fetch(`/api/leaderboard?game=${game}`)
       .then((res) => {
         if (!res.ok) return res.json().then((d) => Promise.reject(d.error));
         return res.json();
@@ -32,7 +36,7 @@ export default function Leaderboard({
         setError(typeof err === "string" ? err : "Failed to load leaderboard.")
       )
       .finally(() => setLoading(false));
-  }, [refreshTrigger]);
+  }, [game, refreshTrigger]);
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 w-full">
@@ -72,7 +76,7 @@ export default function Leaderboard({
               <tr className="text-left text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 <th className="pb-2 pr-2">#</th>
                 <th className="pb-2 pr-2">Name</th>
-                <th className="pb-2 pr-2 text-right">Score</th>
+                <th className="pb-2 pr-2 text-right">{scoreLabel}</th>
                 <th className="pb-2 text-right hidden sm:table-cell">Date</th>
               </tr>
             </thead>

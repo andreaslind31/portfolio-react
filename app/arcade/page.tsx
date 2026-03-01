@@ -1,38 +1,9 @@
-"use client";
+import Link from "next/link";
 
-import { useState } from "react";
-import TetrisGame from "@/components/TetrisGame";
-import Leaderboard from "@/components/Leaderboard";
-
-export default function ArcadePage() {
-  const [refreshKey, setRefreshKey] = useState(0);
-  const [highlightName, setHighlightName] = useState<string | undefined>();
-
-  const handleScoreSubmit = async (
-    name: string,
-    score: number
-  ): Promise<string | null> => {
-    try {
-      const res = await fetch("/api/leaderboard", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, score }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => null);
-        return data?.error || `Submission failed (${res.status})`;
-      }
-      setHighlightName(name);
-      setRefreshKey((k) => k + 1);
-      return null;
-    } catch {
-      return "Network error. Could not reach the server.";
-    }
-  };
-
+export default function ArcadeHubPage() {
   return (
-    <main className="relative z-10 max-w-6xl mx-auto px-4 py-8">
-      <div className="mb-6">
+    <main className="relative z-10 max-w-4xl mx-auto px-4 py-8">
+      <div className="mb-8">
         <a
           href="/"
           className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
@@ -43,18 +14,30 @@ export default function ArcadePage() {
           Arcade
         </h1>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          A retro Tetris easter egg. Clear lines, set a high score.
+          Pick a game, set a high score, climb the leaderboard.
         </p>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-6 items-start">
-        <TetrisGame onScoreSubmit={handleScoreSubmit} />
-        <div className="w-full lg:w-80 lg:flex-shrink-0">
-          <Leaderboard
-            refreshTrigger={refreshKey}
-            highlightName={highlightName}
-          />
-        </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Link href="/arcade/tetris" className="arcade-hub-card group">
+          <div className="text-3xl mb-3">🧱</div>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+            Tetris
+          </h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Clear lines, stack blocks, chase the high score.
+          </p>
+        </Link>
+
+        <Link href="/arcade/wordle" className="arcade-hub-card group">
+          <div className="text-3xl mb-3">🔤</div>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+            Wordle
+          </h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Guess the 5-letter word. Build your win streak.
+          </p>
+        </Link>
       </div>
     </main>
   );

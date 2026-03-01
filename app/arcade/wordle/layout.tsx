@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Arcade | Andreas Lind",
-  description: "Play arcade games and compete on the global leaderboard.",
+  title: "Wordle | Arcade | Andreas Lind",
 };
 
-export default function ArcadeLayout({
+export default function WordleLayout({
   children,
 }: {
   children: React.ReactNode;
