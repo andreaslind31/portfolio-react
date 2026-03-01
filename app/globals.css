@@ -459,8 +459,11 @@ html {
 
 @media (max-width: 500px) {
   .arcade-game {
-    flex-direction: column;
-    align-items: center;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-rows: auto auto;
+    gap: 0.375rem;
+    justify-items: center;
   }
 }
 
@@ -515,14 +518,15 @@ html {
 }
 
 @media (max-width: 500px) {
-  /* Unwrap sidebar so its children participate in arcade-game's column layout */
+  /* Unwrap sidebar so its children participate in arcade-game's grid layout */
   .arcade-sidebar {
     display: contents;
   }
 
-  /* Next preview: above the board, compact horizontal layout */
+  /* Next preview: top-left cell */
   .arcade-panel-next {
-    order: -1;
+    grid-row: 1;
+    grid-column: 1;
     padding: 0.25rem 0.5rem;
     display: flex;
     align-items: center;
@@ -538,15 +542,20 @@ html {
     height: 56px;
   }
 
-  /* Stats: horizontal row below board */
+  /* Stats: top-right cell, side by side with Next preview */
   .arcade-panel-stats {
+    grid-row: 1;
+    grid-column: 2;
     flex-direction: row !important;
     gap: 0.375rem !important;
+    align-self: center;
     width: 100%;
   }
 
-  .arcade-panel-stats-flipped {
-    flex-direction: row-reverse !important;
+  /* Board: full-width second row */
+  .arcade-board {
+    grid-row: 2;
+    grid-column: 1 / -1;
   }
 
   .arcade-panel-stat {
