@@ -14,7 +14,7 @@ export default function Leaderboard({
   refreshTrigger,
   highlightName,
 }: {
-  game: "tetris" | "wordle";
+  game: "tetris" | "wordle" | "shooter";
   scoreLabel?: string;
   refreshTrigger?: number;
   highlightName?: string;

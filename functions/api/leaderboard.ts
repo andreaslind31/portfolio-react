@@ -8,7 +8,7 @@ interface ScoreEntry {
   date: string;
 }
 
-const VALID_GAMES = ["tetris", "wordle"] as const;
+const VALID_GAMES = ["tetris", "wordle", "shooter"] as const;
 type Game = (typeof VALID_GAMES)[number];
 
 const MAX_SCORES = 100;

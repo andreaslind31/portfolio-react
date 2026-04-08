@@ -864,6 +864,48 @@ html {
   background: #374151;
 }
 
+/* ===== Shooter ===== */
+.shooter-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.shooter-board {
+  position: relative;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  border: 2px solid #374151;
+  flex-shrink: 0;
+}
+
+.dark .shooter-board {
+  border-color: #0ff;
+  box-shadow: 0 0 15px rgba(0, 255, 255, 0.2), 0 0 40px rgba(0, 255, 255, 0.05);
+}
+
+.shooter-canvas {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.shooter-glow {
+  text-shadow: 0 0 10px currentColor, 0 0 30px currentColor, 0 0 60px currentColor;
+}
+
+.shooter-controls-hint {
+  font-size: 0.6875rem;
+  color: #6b7280;
+  text-align: center;
+  margin-top: 0.5rem;
+}
+
+.dark .shooter-controls-hint {
+  color: #4b5563;
+}
+
 /* ===== Wordle ===== */
 .wordle-container {
   display: flex;
