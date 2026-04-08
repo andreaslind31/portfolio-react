@@ -38,7 +38,7 @@ interface Bullet {
   life: number;
 }
 
-type EnemyType = "melee" | "ranged" | "flying" | "boss";
+type EnemyType = "soldier" | "drone" | "plane" | "tank";
 
 interface Enemy {
   x: number;
@@ -159,58 +159,59 @@ function createEnemy(type: EnemyType, wave: number, side: "left" | "right"): Ene
   };
 
   switch (type) {
-    case "melee":
+    case "soldier":
       return {
         ...base,
-        y: H - 20 - 28,
-        w: 22,
-        h: 28,
+        y: H - 20 - 30,
+        w: 18,
+        h: 30,
         hp: Math.round(30 * hpScale),
         maxHp: Math.round(30 * hpScale),
-        type: "melee",
+        type: "soldier",
         color: "#ff3366",
         points: 100,
-        vx: side === "left" ? 3 : -3,
+        vx: side === "left" ? 2.5 : -2.5,
       } as Enemy;
-    case "ranged":
+    case "drone":
       return {
         ...base,
-        y: H - 20 - 28,
-        w: 22,
-        h: 28,
-        hp: Math.round(40 * hpScale),
-        maxHp: Math.round(40 * hpScale),
-        type: "ranged",
-        color: "#ff8800",
-        points: 200,
-        vx: side === "left" ? 1.5 : -1.5,
-      } as Enemy;
-    case "flying":
-      return {
-        ...base,
-        y: 80 + Math.random() * 150,
-        w: 24,
-        h: 24,
+        y: 60 + Math.random() * 140,
+        w: 26,
+        h: 14,
         hp: Math.round(25 * hpScale),
         maxHp: Math.round(25 * hpScale),
-        type: "flying",
+        type: "drone",
         color: "#cc44ff",
         points: 150,
         vx: side === "left" ? 1.8 : -1.8,
-        sineBase: 80 + Math.random() * 150,
+        sineBase: 60 + Math.random() * 140,
       } as Enemy;
-    case "boss":
+    case "plane":
       return {
         ...base,
-        y: H - 20 - 56,
-        w: 48,
-        h: 56,
-        hp: Math.round(200 * hpScale),
-        maxHp: Math.round(200 * hpScale),
-        type: "boss",
-        color: "#ff0044",
+        y: 30 + Math.random() * 60,
+        w: 36,
+        h: 16,
+        hp: Math.round(40 * hpScale),
+        maxHp: Math.round(40 * hpScale),
+        type: "plane",
+        color: "#ff8800",
+        points: 200,
+        vx: side === "left" ? 2.8 : -2.8,
+        sineBase: 30 + Math.random() * 60,
+      } as Enemy;
+    case "tank":
+      return {
+        ...base,
+        y: H - 20 - 36,
+        w: 52,
+        h: 36,
+        hp: Math.round(250 * hpScale),
+        maxHp: Math.round(250 * hpScale),
+        type: "tank",
+        color: "#44cc44",
         points: 1000,
-        vx: side === "left" ? 1 : -1,
+        vx: side === "left" ? 0.7 : -0.7,
         shootTimer: 40,
       } as Enemy;
   }
@@ -317,16 +318,19 @@ export default function ShooterGame({
     const side: "left" | "right" = Math.random() < 0.5 ? "left" : "right";
 
     if (isBoss && g.enemiesToSpawn === 1) {
-      g.enemies.push(createEnemy("boss", w, side));
+      g.enemies.push(createEnemy("tank", w, side));
     } else {
       const roll = Math.random();
       let type: EnemyType;
       if (w < 3) {
-        type = roll < 0.7 ? "melee" : "ranged";
+        // Early waves: soldiers and drones
+        type = roll < 0.65 ? "soldier" : "drone";
       } else if (w < 6) {
-        type = roll < 0.4 ? "melee" : roll < 0.7 ? "ranged" : "flying";
+        // Mid waves: add planes
+        type = roll < 0.35 ? "soldier" : roll < 0.6 ? "drone" : "plane";
       } else {
-        type = roll < 0.3 ? "melee" : roll < 0.6 ? "ranged" : "flying";
+        // Late waves: even mix
+        type = roll < 0.3 ? "soldier" : roll < 0.55 ? "drone" : "plane";
       }
       g.enemies.push(createEnemy(type, w, side));
     }
@@ -432,7 +436,8 @@ export default function ShooterGame({
       const distToPlayer = p.x + PW / 2 - (e.x + e.w / 2);
 
       switch (e.type) {
-        case "melee": {
+        case "soldier": {
+          // Soldiers run toward player on the ground, shoot when close
           const speed = 2.5 + g.wave * 0.1;
           e.vx = distToPlayer > 0 ? speed : -speed;
           e.vy += GRAVITY;
@@ -457,80 +462,68 @@ export default function ShooterGame({
             e.vy = -8;
             e.onGround = false;
           }
-          break;
-        }
-        case "ranged": {
-          const rangeDist = Math.abs(distToPlayer);
-          if (rangeDist > 250) {
-            e.vx = distToPlayer > 0 ? 1.5 : -1.5;
-          } else if (rangeDist < 150) {
-            e.vx = distToPlayer > 0 ? -1 : 1;
-          } else {
-            e.vx = 0;
-          }
-          e.vy += GRAVITY;
-          e.x += e.vx;
-          e.y += e.vy;
-          e.onGround = false;
-          for (const plat of g.platforms) {
-            if (
-              e.vy >= 0 &&
-              e.x + e.w > plat.x &&
-              e.x < plat.x + plat.w &&
-              e.y + e.h >= plat.y &&
-              e.y + e.h - e.vy <= plat.y + 4
-            ) {
-              e.y = plat.y - e.h;
-              e.vy = 0;
-              e.onGround = true;
-            }
-          }
-          // Shoot at player
+          // Shoot when in range
           e.shootTimer--;
-          if (e.shootTimer <= 0 && rangeDist < 400) {
+          if (e.shootTimer <= 0 && Math.abs(distToPlayer) < 300) {
             const ecx = e.x + e.w / 2;
-            const ecy = e.y + e.h / 2;
+            const ecy = e.y + e.h * 0.3;
             const dx = p.x + PW / 2 - ecx;
             const dy = p.y + PH / 2 - ecy;
             const d = Math.sqrt(dx * dx + dy * dy) || 1;
             g.bullets.push({
-              x: ecx,
-              y: ecy,
-              vx: (dx / d) * 5,
-              vy: (dy / d) * 5,
-              friendly: false,
-              life: 90,
+              x: ecx, y: ecy,
+              vx: (dx / d) * 5, vy: (dy / d) * 5,
+              friendly: false, life: 70,
             });
-            e.shootTimer = 80 - Math.min(g.wave * 2, 30);
+            e.shootTimer = 90 - Math.min(g.wave * 2, 30);
           }
           break;
         }
-        case "flying": {
-          e.sineOffset += 0.04;
-          e.x += distToPlayer > 0 ? 1.2 : -1.2;
-          e.y = e.sineBase + Math.sin(e.sineOffset) * 30;
-          // Shoot occasionally
+        case "drone": {
+          // Small hovering drone, bobs up/down, shoots down at player
+          e.sineOffset += 0.05;
+          e.x += distToPlayer > 0 ? 1.4 : -1.4;
+          e.y = e.sineBase + Math.sin(e.sineOffset) * 20;
           e.shootTimer--;
           if (e.shootTimer <= 0) {
             const ecx = e.x + e.w / 2;
-            const ecy = e.y + e.h / 2;
+            const ecy = e.y + e.h;
             const dx = p.x + PW / 2 - ecx;
             const dy = p.y + PH / 2 - ecy;
             const d = Math.sqrt(dx * dx + dy * dy) || 1;
             g.bullets.push({
-              x: ecx,
-              y: ecy,
-              vx: (dx / d) * 4,
-              vy: (dy / d) * 4,
-              friendly: false,
-              life: 80,
+              x: ecx, y: ecy,
+              vx: (dx / d) * 4, vy: (dy / d) * 4,
+              friendly: false, life: 80,
             });
             e.shootTimer = 100 - Math.min(g.wave * 3, 40);
           }
           break;
         }
-        case "boss": {
-          const speed = 0.8 + g.wave * 0.05;
+        case "plane": {
+          // Fast jet that flies across screen, strafes with bursts
+          e.x += e.vx;
+          e.sineOffset += 0.02;
+          e.y = e.sineBase + Math.sin(e.sineOffset) * 15;
+          e.shootTimer--;
+          if (e.shootTimer <= 0 && Math.abs(distToPlayer) < 350) {
+            const ecx = e.x + e.w / 2;
+            const ecy = e.y + e.h;
+            // Drops bullets downward with slight tracking
+            const dx = p.x + PW / 2 - ecx;
+            const d = Math.abs(dx) || 1;
+            g.bullets.push({
+              x: ecx, y: ecy,
+              vx: (dx / d) * 2, vy: 5,
+              friendly: false, life: 70,
+            });
+            e.shootTimer = 50 - Math.min(g.wave * 2, 20);
+          }
+          break;
+        }
+        case "tank": {
+          // Heavy tank: slow, on ground, fires spread cannon
+          const speed = 0.6 + g.wave * 0.04;
           e.vx = distToPlayer > 0 ? speed : -speed;
           e.vy += GRAVITY;
           e.x += e.vx;
@@ -549,27 +542,24 @@ export default function ShooterGame({
               e.onGround = true;
             }
           }
-          // Spread shot
+          // Cannon spread shot
           e.shootTimer--;
           if (e.shootTimer <= 0) {
             const ecx = e.x + e.w / 2;
-            const ecy = e.y + e.h / 3;
+            const ecy = e.y + 6;
             const baseAngle = Math.atan2(
               p.y + PH / 2 - ecy,
               p.x + PW / 2 - ecx
             );
             for (let i = -2; i <= 2; i++) {
-              const a = baseAngle + i * 0.2;
+              const a = baseAngle + i * 0.18;
               g.bullets.push({
-                x: ecx,
-                y: ecy,
-                vx: Math.cos(a) * 4.5,
-                vy: Math.sin(a) * 4.5,
-                friendly: false,
-                life: 90,
+                x: ecx, y: ecy,
+                vx: Math.cos(a) * 4, vy: Math.sin(a) * 4,
+                friendly: false, life: 90,
               });
             }
-            e.shootTimer = 60 - Math.min(g.wave * 2, 20);
+            e.shootTimer = 70 - Math.min(g.wave * 2, 25);
           }
           break;
         }
@@ -584,12 +574,20 @@ export default function ShooterGame({
         p.invincible <= 0 &&
         aabb(p.x, p.y, PW, PH, e.x, e.y, e.w, e.h)
       ) {
-        const dmg = e.type === "boss" ? 20 : 10;
+        const dmg = e.type === "tank" ? 20 : 10;
         p.hp -= dmg;
         p.invincible = 30;
         g.shakeX = (Math.random() - 0.5) * 8;
         g.shakeY = (Math.random() - 0.5) * 8;
         spawnParticles(g.particles, p.x + PW / 2, p.y + PH / 2, "#00ffff", 6);
+      }
+    }
+
+    // Remove enemies that fell off-screen
+    for (let i = g.enemies.length - 1; i >= 0; i--) {
+      const e = g.enemies[i];
+      if (e.y > H + 100) {
+        g.enemies.splice(i, 1);
       }
     }
 
@@ -621,10 +619,10 @@ export default function ShooterGame({
                 e.x + e.w / 2,
                 e.y + e.h / 2,
                 e.color,
-                e.type === "boss" ? 30 : 12
+                e.type === "tank" ? 30 : 12
               );
-              g.shakeX = (Math.random() - 0.5) * (e.type === "boss" ? 12 : 4);
-              g.shakeY = (Math.random() - 0.5) * (e.type === "boss" ? 12 : 4);
+              g.shakeX = (Math.random() - 0.5) * (e.type === "tank" ? 12 : 4);
+              g.shakeY = (Math.random() - 0.5) * (e.type === "tank" ? 12 : 4);
               g.enemies.splice(j, 1);
             }
             break;
@@ -733,34 +731,280 @@ export default function ShooterGame({
     for (const e of g.enemies) {
       ctx.shadowColor = e.color;
       ctx.fillStyle = e.color;
+      const eDist = g.player.x + PW / 2 - (e.x + e.w / 2);
 
-      if (e.type === "boss") {
-        // Boss: larger, with details
-        ctx.fillRect(e.x, e.y, e.w, e.h);
+      if (e.type === "soldier") {
+        // ── Soldier (18×30) ──
+        const f = eDist > 0; // facing right
+        // Boots
+        ctx.fillStyle = "#442222";
+        ctx.fillRect(e.x + 2, e.y + 26, 5, 4);
+        ctx.fillRect(e.x + 11, e.y + 26, 5, 4);
+        // Legs (camo pants)
+        ctx.fillStyle = "#556633";
+        ctx.fillRect(e.x + 3, e.y + 18, 4, 8);
+        ctx.fillRect(e.x + 11, e.y + 18, 4, 8);
+        // Torso (camo jacket)
+        ctx.fillStyle = "#667744";
+        ctx.fillRect(e.x + 2, e.y + 9, 14, 10);
+        // Belt
+        ctx.fillStyle = "#443322";
+        ctx.fillRect(e.x + 2, e.y + 17, 14, 2);
+        // Arms
+        ctx.fillStyle = "#556633";
+        if (f) {
+          ctx.fillRect(e.x - 1, e.y + 10, 3, 8);
+          ctx.fillRect(e.x + 16, e.y + 10, 3, 8);
+        } else {
+          ctx.fillRect(e.x - 1, e.y + 10, 3, 8);
+          ctx.fillRect(e.x + 16, e.y + 10, 3, 8);
+        }
+        // Head
+        ctx.fillStyle = "#ddaa88";
+        ctx.fillRect(e.x + 5, e.y + 3, 8, 7);
+        // Helmet
+        ctx.fillStyle = "#556633";
+        ctx.fillRect(e.x + 4, e.y, 10, 5);
+        ctx.fillRect(e.x + 3, e.y + 3, 12, 2);
+        // Eye
         ctx.fillStyle = "#ffffff";
-        ctx.fillRect(e.x + 10, e.y + 12, 8, 8);
-        ctx.fillRect(e.x + 30, e.y + 12, 8, 8);
-        ctx.fillStyle = "#0a0a0f";
-        ctx.fillRect(e.x + 13, e.y + 15, 3, 3);
-        ctx.fillRect(e.x + 33, e.y + 15, 3, 3);
-      } else if (e.type === "flying") {
-        // Flying: diamond shape
+        ctx.fillRect(e.x + (f ? 10 : 6), e.y + 5, 2, 2);
+        ctx.fillStyle = "#000000";
+        ctx.fillRect(e.x + (f ? 11 : 6), e.y + 5, 1, 2);
+        // Rifle
+        ctx.fillStyle = "#888888";
+        const gx = f ? e.x + 16 : e.x - 8;
+        ctx.fillRect(gx, e.y + 11, 10, 2);
+        ctx.fillStyle = "#666666";
+        ctx.fillRect(gx + (f ? 8 : 0), e.y + 10, 2, 4);
+        // Muzzle flash hint
+        ctx.fillStyle = "#aa7744";
+        ctx.fillRect(gx + (f ? 0 : 8), e.y + 14, 3, 2);
+      } else if (e.type === "drone") {
+        // ── Drone (26×14) ──
+        const cx = e.x + e.w / 2;
+        const cy = e.y + e.h / 2;
+        // Landing skids
+        ctx.fillStyle = "#666677";
+        ctx.fillRect(e.x + 4, e.y + e.h - 2, 6, 2);
+        ctx.fillRect(e.x + e.w - 10, e.y + e.h - 2, 6, 2);
+        ctx.fillRect(e.x + 6, e.y + e.h - 4, 2, 2);
+        ctx.fillRect(e.x + e.w - 8, e.y + e.h - 4, 2, 2);
+        // Central body
+        ctx.fillStyle = "#8855aa";
+        ctx.fillRect(cx - 6, cy - 2, 12, 5);
+        ctx.fillStyle = "#9966bb";
+        ctx.fillRect(cx - 4, cy - 3, 8, 2);
+        // Camera/sensor pod
+        ctx.fillStyle = "#333344";
+        ctx.fillRect(cx - 2, cy + 3, 4, 3);
+        ctx.fillStyle = "#ff2222";
+        ctx.fillRect(cx - 1, cy + 4, 2, 1);
+        // Arms extending to rotors
+        ctx.fillStyle = "#776699";
+        ctx.fillRect(e.x + 2, cy - 1, cx - e.x - 6, 2);
+        ctx.fillRect(cx + 5, cy - 1, cx - e.x - 6, 2);
+        // Rotor mounts
+        ctx.fillStyle = "#665588";
+        ctx.fillRect(e.x + 1, cy - 3, 4, 4);
+        ctx.fillRect(e.x + e.w - 5, cy - 3, 4, 4);
+        // Spinning rotor blades (alternate frames for animation)
+        ctx.fillStyle = "rgba(180, 140, 220, 0.6)";
+        ctx.fillRect(e.x - 2, cy - 4, 10, 1);
+        ctx.fillRect(e.x + e.w - 8, cy - 4, 10, 1);
+        ctx.fillStyle = "rgba(180, 140, 220, 0.3)";
         ctx.beginPath();
-        ctx.moveTo(e.x + e.w / 2, e.y);
-        ctx.lineTo(e.x + e.w, e.y + e.h / 2);
-        ctx.lineTo(e.x + e.w / 2, e.y + e.h);
-        ctx.lineTo(e.x, e.y + e.h / 2);
+        ctx.ellipse(e.x + 3, cy - 3, 6, 2, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(e.x + e.w - 3, cy - 3, 6, 2, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // Status LED
+        ctx.fillStyle = (Date.now() % 600 < 300) ? "#00ff44" : "#004400";
+        ctx.fillRect(cx, cy - 2, 2, 2);
+      } else if (e.type === "plane") {
+        // ── Jet Fighter (36×16) ──
+        const f = e.vx > 0; // facing right
+        const mx = e.x; // left edge
+        const my = e.y; // top edge
+        if (f) {
+          // Nose cone
+          ctx.fillStyle = "#cc7700";
+          ctx.beginPath();
+          ctx.moveTo(mx + 36, my + 7);
+          ctx.lineTo(mx + 36, my + 10);
+          ctx.lineTo(mx + 30, my + 6);
+          ctx.lineTo(mx + 30, my + 11);
+          ctx.closePath();
+          ctx.fill();
+          // Fuselage
+          ctx.fillStyle = e.color;
+          ctx.fillRect(mx + 8, my + 5, 22, 7);
+          // Cockpit canopy
+          ctx.fillStyle = "#55ccff";
+          ctx.fillRect(mx + 24, my + 6, 5, 3);
+          ctx.fillStyle = "#44aadd";
+          ctx.fillRect(mx + 25, my + 7, 3, 1);
+          // Wings (swept back)
+          ctx.fillStyle = "#dd8822";
+          ctx.beginPath();
+          ctx.moveTo(mx + 20, my + 5);
+          ctx.lineTo(mx + 12, my);
+          ctx.lineTo(mx + 10, my);
+          ctx.lineTo(mx + 16, my + 5);
+          ctx.closePath();
+          ctx.fill();
+          ctx.beginPath();
+          ctx.moveTo(mx + 20, my + 12);
+          ctx.lineTo(mx + 12, my + 16);
+          ctx.lineTo(mx + 10, my + 16);
+          ctx.lineTo(mx + 16, my + 12);
+          ctx.closePath();
+          ctx.fill();
+          // Tail fins
+          ctx.fillStyle = "#bb7711";
+          ctx.beginPath();
+          ctx.moveTo(mx + 10, my + 5);
+          ctx.lineTo(mx + 5, my + 1);
+          ctx.lineTo(mx + 8, my + 5);
+          ctx.closePath();
+          ctx.fill();
+          ctx.beginPath();
+          ctx.moveTo(mx + 10, my + 12);
+          ctx.lineTo(mx + 5, my + 15);
+          ctx.lineTo(mx + 8, my + 12);
+          ctx.closePath();
+          ctx.fill();
+          // Engine exhaust glow
+          ctx.fillStyle = "#ffcc44";
+          ctx.fillRect(mx + 4, my + 7, 4, 3);
+          ctx.fillStyle = "rgba(255, 200, 50, 0.4)";
+          ctx.fillRect(mx, my + 7, 5, 3);
+        } else {
+          // Nose cone (mirrored)
+          ctx.fillStyle = "#cc7700";
+          ctx.beginPath();
+          ctx.moveTo(mx, my + 7);
+          ctx.lineTo(mx, my + 10);
+          ctx.lineTo(mx + 6, my + 6);
+          ctx.lineTo(mx + 6, my + 11);
+          ctx.closePath();
+          ctx.fill();
+          // Fuselage
+          ctx.fillStyle = e.color;
+          ctx.fillRect(mx + 6, my + 5, 22, 7);
+          // Cockpit canopy
+          ctx.fillStyle = "#55ccff";
+          ctx.fillRect(mx + 7, my + 6, 5, 3);
+          ctx.fillStyle = "#44aadd";
+          ctx.fillRect(mx + 8, my + 7, 3, 1);
+          // Wings
+          ctx.fillStyle = "#dd8822";
+          ctx.beginPath();
+          ctx.moveTo(mx + 16, my + 5);
+          ctx.lineTo(mx + 24, my);
+          ctx.lineTo(mx + 26, my);
+          ctx.lineTo(mx + 20, my + 5);
+          ctx.closePath();
+          ctx.fill();
+          ctx.beginPath();
+          ctx.moveTo(mx + 16, my + 12);
+          ctx.lineTo(mx + 24, my + 16);
+          ctx.lineTo(mx + 26, my + 16);
+          ctx.lineTo(mx + 20, my + 12);
+          ctx.closePath();
+          ctx.fill();
+          // Tail fins
+          ctx.fillStyle = "#bb7711";
+          ctx.beginPath();
+          ctx.moveTo(mx + 26, my + 5);
+          ctx.lineTo(mx + 31, my + 1);
+          ctx.lineTo(mx + 28, my + 5);
+          ctx.closePath();
+          ctx.fill();
+          ctx.beginPath();
+          ctx.moveTo(mx + 26, my + 12);
+          ctx.lineTo(mx + 31, my + 15);
+          ctx.lineTo(mx + 28, my + 12);
+          ctx.closePath();
+          ctx.fill();
+          // Engine exhaust glow
+          ctx.fillStyle = "#ffcc44";
+          ctx.fillRect(mx + 28, my + 7, 4, 3);
+          ctx.fillStyle = "rgba(255, 200, 50, 0.4)";
+          ctx.fillRect(mx + 31, my + 7, 5, 3);
+        }
+      } else if (e.type === "tank") {
+        // ── Tank (52×36) ──
+        const f = eDist > 0;
+        // Treads — outer track
+        ctx.fillStyle = "#2a6a2a";
+        ctx.fillRect(e.x, e.y + 24, e.w, 12);
+        // Tread wheels
+        ctx.fillStyle = "#1a4a1a";
+        const wheelY = e.y + 27;
+        for (let wx = e.x + 4; wx < e.x + e.w - 2; wx += 9) {
+          ctx.beginPath();
+          ctx.arc(wx + 3, wheelY + 3, 3, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        // Tread segments
+        ctx.fillStyle = "#336633";
+        for (let tx = e.x + 1; tx < e.x + e.w - 1; tx += 5) {
+          ctx.fillRect(tx, e.y + 24, 2, 1);
+          ctx.fillRect(tx, e.y + 35, 2, 1);
+        }
+        // Hull body
+        ctx.fillStyle = "#3a8a3a";
+        ctx.beginPath();
+        ctx.moveTo(e.x + 4, e.y + 24);
+        ctx.lineTo(e.x + 10, e.y + 12);
+        ctx.lineTo(e.x + e.w - 10, e.y + 12);
+        ctx.lineTo(e.x + e.w - 4, e.y + 24);
         ctx.closePath();
         ctx.fill();
-      } else {
-        // Melee/Ranged: rectangles
-        ctx.fillRect(e.x, e.y, e.w, e.h);
-        if (e.type === "ranged") {
-          // Gun arm
-          const gunSide = e.x + e.w / 2 < W / 2 ? e.w : -4;
-          ctx.fillStyle = "#ffaa00";
-          ctx.fillRect(e.x + gunSide, e.y + e.h / 2 - 2, 8, 4);
+        // Hull top plate
+        ctx.fillStyle = "#44aa44";
+        ctx.fillRect(e.x + 10, e.y + 12, e.w - 20, 4);
+        // Hull front slope highlight
+        ctx.fillStyle = "#55bb55";
+        const frontX = f ? e.x + e.w - 12 : e.x + 4;
+        ctx.fillRect(frontX, e.y + 14, 8, 2);
+        // Turret base
+        ctx.fillStyle = "#3a9a3a";
+        ctx.fillRect(e.x + 14, e.y + 6, 24, 10);
+        // Turret top
+        ctx.fillStyle = "#44bb44";
+        ctx.fillRect(e.x + 16, e.y + 4, 20, 4);
+        // Hatch
+        ctx.fillStyle = "#2a7a2a";
+        ctx.fillRect(e.x + 22, e.y + 4, 8, 3);
+        ctx.fillStyle = "#338833";
+        ctx.fillRect(e.x + 24, e.y + 5, 4, 1);
+        // Cannon barrel
+        ctx.fillStyle = "#2a7a2a";
+        const barrelLen = 18;
+        const barrelY = e.y + 9;
+        if (f) {
+          ctx.fillRect(e.x + 38, barrelY, barrelLen, 4);
+          // Muzzle brake
+          ctx.fillStyle = "#226622";
+          ctx.fillRect(e.x + 38 + barrelLen - 3, barrelY - 1, 3, 6);
+        } else {
+          ctx.fillRect(e.x - barrelLen + 14, barrelY, barrelLen, 4);
+          ctx.fillStyle = "#226622";
+          ctx.fillRect(e.x - barrelLen + 14, barrelY - 1, 3, 6);
         }
+        // Reactive armor blocks on hull side
+        ctx.fillStyle = "#338833";
+        ctx.fillRect(e.x + 6, e.y + 18, 6, 4);
+        ctx.fillRect(e.x + 14, e.y + 18, 6, 4);
+        ctx.fillRect(e.x + e.w - 12, e.y + 18, 6, 4);
+        ctx.fillRect(e.x + e.w - 20, e.y + 18, 6, 4);
+        // Exhaust pipes
+        ctx.fillStyle = "#555555";
+        const exX = f ? e.x + 2 : e.x + e.w - 5;
+        ctx.fillRect(exX, e.y + 13, 3, 3);
       }
 
       // HP bar for non-full-hp enemies
@@ -794,25 +1038,96 @@ export default function ShooterGame({
     }
     ctx.shadowBlur = 0;
 
-    // ── Player ─────────────────────────────────────────────────
+    // ── Player (24×32) ──────────────────────────────────────────
     const p = g.player;
     if (p.invincible > 0 && Math.floor(p.invincible / 3) % 2 === 0) {
-      // Flash when invincible
+      // Flash when invincible — skip drawing
     } else {
+      const f = p.facingRight;
       ctx.shadowColor = "#00ffff";
-      ctx.shadowBlur = 12;
-      ctx.fillStyle = "#00e5ff";
-      ctx.fillRect(p.x, p.y, PW, PH);
-
-      // Visor
-      ctx.shadowBlur = 0;
-      ctx.fillStyle = "#ffffff";
-      if (p.facingRight) {
-        ctx.fillRect(p.x + 14, p.y + 8, 8, 4);
+      ctx.shadowBlur = 8;
+      // Boots (dark navy)
+      ctx.fillStyle = "#1a2244";
+      ctx.fillRect(p.x + 3, p.y + 28, 6, 4);
+      ctx.fillRect(p.x + 15, p.y + 28, 6, 4);
+      // Legs (navy tactical pants)
+      ctx.fillStyle = "#223366";
+      ctx.fillRect(p.x + 4, p.y + 20, 5, 8);
+      ctx.fillRect(p.x + 15, p.y + 20, 5, 8);
+      // Knee pads
+      ctx.fillStyle = "#334488";
+      ctx.fillRect(p.x + 4, p.y + 22, 5, 2);
+      ctx.fillRect(p.x + 15, p.y + 22, 5, 2);
+      // Torso (tactical vest — blue-grey)
+      ctx.fillStyle = "#2a4477";
+      ctx.fillRect(p.x + 3, p.y + 10, 18, 11);
+      // Vest pouches / armor plates
+      ctx.fillStyle = "#335599";
+      ctx.fillRect(p.x + 5, p.y + 12, 5, 4);
+      ctx.fillRect(p.x + 14, p.y + 12, 5, 4);
+      // Vest center stripe
+      ctx.fillStyle = "#1a3366";
+      ctx.fillRect(p.x + 11, p.y + 10, 2, 11);
+      // Belt + utility
+      ctx.fillStyle = "#1a2244";
+      ctx.fillRect(p.x + 3, p.y + 19, 18, 2);
+      ctx.fillStyle = "#00cccc";
+      ctx.fillRect(p.x + 10, p.y + 19, 4, 2);
+      // Shoulder pads
+      ctx.fillStyle = "#335599";
+      ctx.fillRect(p.x + 1, p.y + 10, 3, 4);
+      ctx.fillRect(p.x + 20, p.y + 10, 3, 4);
+      // Arms
+      ctx.fillStyle = "#2a4477";
+      ctx.fillRect(p.x + 1, p.y + 13, 3, 7);
+      ctx.fillRect(p.x + 20, p.y + 13, 3, 7);
+      // Head
+      ctx.fillStyle = "#ddbb99";
+      ctx.fillRect(p.x + 7, p.y + 3, 10, 8);
+      // Tactical helmet (dark blue)
+      ctx.fillStyle = "#1a3060";
+      ctx.fillRect(p.x + 5, p.y, 14, 5);
+      ctx.fillRect(p.x + 6, p.y + 4, 12, 2);
+      // Helmet rim
+      ctx.fillStyle = "#224488";
+      ctx.fillRect(p.x + 5, p.y + 4, 14, 1);
+      // Cyan visor (neon glow)
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = "#00ffff";
+      ctx.fillStyle = "#00ffff";
+      if (f) {
+        ctx.fillRect(p.x + 13, p.y + 5, 5, 3);
+        ctx.fillStyle = "#88ffff";
+        ctx.fillRect(p.x + 15, p.y + 6, 2, 1);
       } else {
-        ctx.fillRect(p.x + 2, p.y + 8, 8, 4);
+        ctx.fillRect(p.x + 6, p.y + 5, 5, 3);
+        ctx.fillStyle = "#88ffff";
+        ctx.fillRect(p.x + 7, p.y + 6, 2, 1);
       }
       ctx.shadowBlur = 0;
+      // Weapon
+      ctx.fillStyle = "#778899";
+      const gunX = f ? p.x + 21 : p.x - 10;
+      ctx.fillRect(gunX, p.y + 14, 13, 3);
+      // Barrel
+      ctx.fillStyle = "#556677";
+      ctx.fillRect(gunX + (f ? 11 : 0), p.y + 13, 2, 5);
+      // Stock
+      ctx.fillStyle = "#3a3a3a";
+      ctx.fillRect(gunX + (f ? 0 : 11), p.y + 15, 3, 2);
+      // Muzzle glow when shooting
+      if (p.shootCooldown > SHOOT_COOLDOWN - 3) {
+        ctx.shadowColor = "#ffff00";
+        ctx.shadowBlur = 8;
+        ctx.fillStyle = "#ffff44";
+        const muzzleX = f ? gunX + 13 : gunX - 2;
+        ctx.fillRect(muzzleX, p.y + 13, 3, 4);
+        ctx.shadowBlur = 0;
+      }
+      // Cyan chevron on shoulder (team marker)
+      ctx.fillStyle = "#00cccc";
+      ctx.fillRect(p.x + (f ? 20 : 1), p.y + 11, 3, 1);
+      ctx.fillRect(p.x + (f ? 21 : 1), p.y + 12, 2, 1);
     }
 
     // ── Crosshair ──────────────────────────────────────────────
@@ -873,10 +1188,10 @@ export default function ShooterGame({
       ctx.globalAlpha = alpha;
       ctx.textAlign = "center";
       ctx.font = "bold 36px monospace";
-      ctx.shadowColor = g.wave % 5 === 0 ? "#ff0044" : "#00ffff";
+      ctx.shadowColor = g.wave % 5 === 0 ? "#44cc44" : "#00ffff";
       ctx.shadowBlur = 20;
-      ctx.fillStyle = g.wave % 5 === 0 ? "#ff0044" : "#00ffff";
-      const waveText = g.wave % 5 === 0 ? `BOSS WAVE ${g.wave}` : `WAVE ${g.wave}`;
+      ctx.fillStyle = g.wave % 5 === 0 ? "#44cc44" : "#00ffff";
+      const waveText = g.wave % 5 === 0 ? `TANK WAVE ${g.wave}` : `WAVE ${g.wave}`;
       ctx.fillText(waveText, W / 2, H / 2 - 20);
       ctx.font = "14px monospace";
       ctx.fillStyle = "#888888";
