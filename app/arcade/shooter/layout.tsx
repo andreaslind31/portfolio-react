@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Neon Shooter | Arcade | Andreas Lind",
+  title: "Neon Striker | Arcade | Andreas Lind",
 };
 
 export default function ShooterLayout({

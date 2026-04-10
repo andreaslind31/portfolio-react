@@ -1,8 +1,14 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useState } from "react";
-import ShooterGame from "@/components/ShooterGame";
 import Leaderboard from "@/components/Leaderboard";
+
+// Dynamic import to avoid SSR issues with Three.js / WebGL
+const ShooterGame3D = dynamic(
+  () => import("@/components/shooter3d/ShooterGame3D"),
+  { ssr: false }
+);
 
 export default function ShooterPage() {
   const [refreshKey, setRefreshKey] = useState(0);
@@ -40,15 +46,16 @@ export default function ShooterPage() {
           &larr; Back to Arcade
         </a>
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
-          Neon Shooter
+          Neon Striker
         </h1>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          Survive the waves, set a high score.
+          First-person sci-fi arena shooter. Survive the waves, set a high
+          score.
         </p>
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6 items-start">
-        <ShooterGame onScoreSubmit={handleScoreSubmit} />
+        <ShooterGame3D onScoreSubmit={handleScoreSubmit} />
         <div className="w-full lg:w-80 lg:flex-shrink-0">
           <Leaderboard
             game="shooter"
