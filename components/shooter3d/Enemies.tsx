@@ -250,7 +250,7 @@ export default function Enemies({ enemies, playerPosition }: EnemiesProps) {
         <EnemySprite
           key={enemy.id}
           enemy={enemy}
-          textures={enemy.type === "heavy" ? heavyTextures : impTextures}
+          textures={enemy.type === "drone" ? impTextures : heavyTextures}
         />
       ))}
     </group>
