@@ -1,20 +1,28 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
+import type { WeaponType } from "./Weapon";
 
 export interface RadarDot {
-  x: number; // relative to player, world units
+  x: number;
   z: number;
   type: "drone" | "sentinel" | "heavy";
   alive: boolean;
 }
+
+const WEAPON_DISPLAY: Record<WeaponType, { name: string; color: string }> = {
+  blaster: { name: "BLASTER", color: "#00d4ff" },
+  shotgun: { name: "SHOTGUN", color: "#ff8800" },
+  plasma: { name: "PLASMA", color: "#44ff44" },
+};
 
 interface HUDProps {
   health: number;
   maxHealth: number;
   score: number;
   wave: number;
-  ammo: number;
+  currentWeapon: WeaponType;
+  weaponAmmo: Record<WeaponType, number>;
   locked: boolean;
   gameState: "menu" | "playing" | "gameover";
   onStart: () => void;
@@ -26,7 +34,7 @@ interface HUDProps {
   damageDirection: number | null;
   kills: number;
   radarDots: RadarDot[];
-  playerYaw: number; // camera Y rotation for radar orientation
+  playerYaw: number;
 }
 
 export default function HUD({
@@ -34,7 +42,8 @@ export default function HUD({
   maxHealth,
   score,
   wave,
-  ammo,
+  currentWeapon,
+  weaponAmmo,
   locked,
   gameState,
   onStart,
@@ -278,7 +287,7 @@ export default function HUD({
             </div>
           </div>
 
-          {/* Ammo — bottom right */}
+          {/* Weapon & Ammo — bottom right */}
           <div
             style={{
               position: "absolute",
@@ -287,18 +296,50 @@ export default function HUD({
               textAlign: "right",
             }}
           >
-            <div style={{ color: "#00d4ff88", fontSize: 12, letterSpacing: 2 }}>
-              ENERGY
+            <div
+              style={{
+                color: WEAPON_DISPLAY[currentWeapon].color,
+                fontSize: 11,
+                letterSpacing: 2,
+                marginBottom: 4,
+              }}
+            >
+              {WEAPON_DISPLAY[currentWeapon].name}
             </div>
             <div
               style={{
-                color: "#00d4ff",
+                color: WEAPON_DISPLAY[currentWeapon].color,
                 fontSize: 24,
                 fontWeight: "bold",
-                textShadow: "0 0 8px #00d4ff",
+                textShadow: `0 0 8px ${WEAPON_DISPLAY[currentWeapon].color}`,
               }}
             >
-              {ammo === 999 ? "∞" : ammo}
+              {weaponAmmo[currentWeapon] === -1 ? "∞" : weaponAmmo[currentWeapon]}
+            </div>
+            {/* Weapon slots */}
+            <div style={{ display: "flex", gap: 6, justifyContent: "flex-end", marginTop: 8 }}>
+              {(["blaster", "shotgun", "plasma"] as WeaponType[]).map((w) => {
+                const display = WEAPON_DISPLAY[w];
+                const ammo = weaponAmmo[w];
+                const active = currentWeapon === w;
+                const available = ammo === -1 || ammo > 0;
+                return (
+                  <div
+                    key={w}
+                    style={{
+                      padding: "2px 6px",
+                      fontSize: 9,
+                      letterSpacing: 1,
+                      border: `1px solid ${active ? display.color : available ? display.color + "44" : "#333"}`,
+                      color: active ? display.color : available ? display.color + "88" : "#444",
+                      background: active ? display.color + "22" : "transparent",
+                      borderRadius: 2,
+                    }}
+                  >
+                    {w === "blaster" ? "1" : w === "shotgun" ? "2" : "3"}
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -487,6 +528,9 @@ export default function HUD({
             </div>
             <div>
               <span style={{ color: "#00d4ff" }}>SPACE</span> — Jump
+            </div>
+            <div>
+              <span style={{ color: "#00d4ff" }}>1/2/3</span> — Switch weapon
             </div>
           </div>
 

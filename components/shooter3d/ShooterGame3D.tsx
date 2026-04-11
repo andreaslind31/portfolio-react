@@ -6,7 +6,7 @@ import { Physics } from "@react-three/rapier";
 import * as THREE from "three";
 import Player from "./Player";
 import Level, { ARENA_HALF_W, ARENA_HALF_D, SPAWN_PORTALS, WALL_COLLIDERS } from "./Level";
-import Weapon from "./Weapon";
+import Weapon, { type WeaponType, WEAPON_CONFIGS } from "./Weapon";
 import HUD, { type RadarDot } from "./HUD";
 import Enemies, { type EnemyData, ENEMY_COLORS } from "./Enemies";
 import Projectiles, { type ProjectileData } from "./Projectiles";
@@ -16,7 +16,7 @@ import Particles, {
   createImpactSparks,
   createDeathExplosion,
 } from "./Particles";
-import Pickups, { type PickupData } from "./Pickups";
+import Pickups, { type PickupData, type PickupType } from "./Pickups";
 import PostProcessing from "./PostProcessing";
 import {
   playShootSound,
@@ -31,15 +31,25 @@ import {
 // ── Game constants ───────────────────────────────────────
 const MAX_HEALTH = 100;
 const ENEMY_DAMAGE = 10;
-const PLAYER_BULLET_DAMAGE = 25;
-const PROJECTILE_SPEED = 40;
-const PROJECTILE_LIFE = 3;
 const ENEMY_PROJECTILE_SPEED = 15;
+const ENEMY_PROJECTILE_LIFE = 3;
 const HIT_RADIUS = 1.0;
 const PLAYER_HIT_RADIUS = 0.8;
 const PICKUP_RADIUS = 1.5;
 const HEALTH_PICKUP_AMOUNT = 25;
-const PICKUP_DROP_CHANCE = 0.35;
+
+// ── Powerup spawning config ─────────────────────────────
+const MAX_POWERUPS_ON_MAP = 2;
+const POWERUP_RESPAWN_DELAY = 8; // seconds after all collected
+const POWERUP_DESPAWN_TIME = 20; // seconds before despawn
+const POWERUP_TYPES: PickupType[] = ["health", "shotgun", "plasma", "speed", "damage"];
+const SPEED_BOOST_DURATION = 8; // seconds
+const DAMAGE_BOOST_DURATION = 8; // seconds
+const DAMAGE_BOOST_MULTIPLIER = 2;
+
+// Weapon ammo amounts given by pickups
+const SHOTGUN_PICKUP_AMMO = 8;
+const PLASMA_PICKUP_AMMO = 5;
 
 // ── Shoot cooldowns per enemy type ──────────────────────
 const DRONE_SHOOT_CD = 1.5;
@@ -292,6 +302,13 @@ function GameLoop({
   setDamageDirection,
   setWaveAnnounce,
   setRadarDots,
+  currentWeapon,
+  damageBoostEnd,
+  setWeaponAmmo,
+  setCurrentWeapon,
+  setSpeedBoostEnd,
+  setDamageBoostEnd,
+  lastPowerupSpawn,
 }: {
   enemies: EnemyData[];
   setEnemies: React.Dispatch<React.SetStateAction<EnemyData[]>>;
@@ -318,6 +335,13 @@ function GameLoop({
   setDamageDirection: React.Dispatch<React.SetStateAction<number | null>>;
   setWaveAnnounce: React.Dispatch<React.SetStateAction<number>>;
   setRadarDots: React.Dispatch<React.SetStateAction<RadarDot[]>>;
+  currentWeapon: WeaponType;
+  damageBoostEnd: number;
+  setWeaponAmmo: React.Dispatch<React.SetStateAction<Record<WeaponType, number>>>;
+  setCurrentWeapon: React.Dispatch<React.SetStateAction<WeaponType>>;
+  setSpeedBoostEnd: React.Dispatch<React.SetStateAction<number>>;
+  setDamageBoostEnd: React.Dispatch<React.SetStateAction<number>>;
+  lastPowerupSpawn: React.MutableRefObject<number>;
 }) {
   const { camera } = useThree();
   const enemyShootTimers = useRef<Map<number, number>>(new Map());
@@ -543,7 +567,9 @@ function GameLoop({
                 setHitMarker(true);
                 setTimeout(() => setHitMarker(false), 100);
 
-                e.hp -= PLAYER_BULLET_DAMAGE;
+                const weaponDmg = WEAPON_CONFIGS[currentWeapon].damage;
+                const dmgMult = state.clock.elapsedTime < damageBoostEnd ? DAMAGE_BOOST_MULTIPLIER : 1;
+                e.hp -= weaponDmg * dmgMult;
                 if (e.hp <= 0) {
                   e.alive = false;
                   const points =
@@ -583,18 +609,7 @@ function GameLoop({
                   playExplosionSound();
                   shakeIntensity.current = e.type === "heavy" ? 0.15 : 0.08;
 
-                  if (Math.random() < PICKUP_DROP_CHANCE) {
-                    setPickups((pk) => [
-                      ...pk,
-                      {
-                        id: nextId++,
-                        position: e.position.clone(),
-                        type: "health",
-                        alive: true,
-                        spawnTime: state.clock.elapsedTime,
-                      },
-                    ]);
-                  }
+                  // Powerups now spawn on a timer, not on kill
                 }
                 break;
               }
@@ -635,27 +650,81 @@ function GameLoop({
         .filter((p) => p.alive)
     );
 
-    // ── Update pickups ──
+    // ── Update pickups (collection) ──
     setPickups((prev) =>
       prev
         .map((pk) => {
           if (!pk.alive) return pk;
           if (pk.position.distanceTo(playerPos.current) < PICKUP_RADIUS) {
             pk.alive = false;
-            if (pk.type === "health") {
-              setHealth((h) =>
-                Math.min(MAX_HEALTH, h + HEALTH_PICKUP_AMOUNT)
-              );
-            }
             playPickupSound();
+
+            switch (pk.type) {
+              case "health":
+                setHealth((h) => Math.min(MAX_HEALTH, h + HEALTH_PICKUP_AMOUNT));
+                break;
+              case "shotgun":
+                setWeaponAmmo((prev) => ({
+                  ...prev,
+                  shotgun: prev.shotgun + SHOTGUN_PICKUP_AMMO,
+                }));
+                setCurrentWeapon("shotgun");
+                break;
+              case "plasma":
+                setWeaponAmmo((prev) => ({
+                  ...prev,
+                  plasma: prev.plasma + PLASMA_PICKUP_AMMO,
+                }));
+                setCurrentWeapon("plasma");
+                break;
+              case "speed":
+                setSpeedBoostEnd(state.clock.elapsedTime + SPEED_BOOST_DURATION);
+                break;
+              case "damage":
+                setDamageBoostEnd(state.clock.elapsedTime + DAMAGE_BOOST_DURATION);
+                break;
+            }
           }
-          if (state.clock.elapsedTime - pk.spawnTime > 15) {
+          if (state.clock.elapsedTime - pk.spawnTime > POWERUP_DESPAWN_TIME) {
             pk.alive = false;
           }
           return pk;
         })
         .filter((pk) => pk.alive)
     );
+
+    // ── Spawn powerups (max 1-2, only when none on map, with delay) ──
+    const alivePickups = pickups.filter((p) => p.alive).length;
+    if (alivePickups === 0) {
+      if (lastPowerupSpawn.current === 0) {
+        // First time — start the delay timer
+        lastPowerupSpawn.current = state.clock.elapsedTime;
+      } else if (
+        state.clock.elapsedTime - lastPowerupSpawn.current > POWERUP_RESPAWN_DELAY
+      ) {
+        // Spawn 1-2 new powerups
+        const count = Math.random() < 0.4 ? 2 : 1;
+        const newPickups: PickupData[] = [];
+        for (let i = 0; i < count; i++) {
+          const type = POWERUP_TYPES[Math.floor(Math.random() * POWERUP_TYPES.length)];
+          // Random position in the arena (avoid center platform)
+          let px: number, pz: number;
+          do {
+            px = (Math.random() - 0.5) * (ARENA_HALF_W * 2 - 6);
+            pz = (Math.random() - 0.5) * (ARENA_HALF_D * 2 - 6);
+          } while (Math.abs(px) < 5 && Math.abs(pz) < 5); // avoid center
+          newPickups.push({
+            id: nextId++,
+            position: new THREE.Vector3(px, 0, pz),
+            type,
+            alive: true,
+            spawnTime: state.clock.elapsedTime,
+          });
+        }
+        setPickups(newPickups);
+        lastPowerupSpawn.current = state.clock.elapsedTime;
+      }
+    }
 
     // ── Clean up ──
     setParticles((prev) => prev.filter((p) => p.life > 0));
@@ -698,7 +767,7 @@ function fireEnemyProjectile(
       speed,
       alive: true,
       friendly: false,
-      life: PROJECTILE_LIFE,
+      life: ENEMY_PROJECTILE_LIFE,
       color: colors.projectile,
       size: projSize,
     },
@@ -717,7 +786,12 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
   const [health, setHealth] = useState(MAX_HEALTH);
   const [score, setScore] = useState(0);
   const [wave, setWave] = useState(1);
-  const [ammo, setAmmo] = useState(999);
+  const [currentWeapon, setCurrentWeapon] = useState<WeaponType>("blaster");
+  const [weaponAmmo, setWeaponAmmo] = useState<Record<WeaponType, number>>({
+    blaster: -1, // infinite
+    shotgun: 0,
+    plasma: 0,
+  });
   const [locked, setLocked] = useState(false);
   const [enemies, setEnemies] = useState<EnemyData[]>([]);
   const [projectiles, setProjectiles] = useState<ProjectileData[]>([]);
@@ -732,11 +806,14 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
   const [radarDots, setRadarDots] = useState<RadarDot[]>([]);
   const [finalScore, setFinalScore] = useState(0);
   const [isTouchDevice, setIsTouchDevice] = useState(false);
+  const [speedBoostEnd, setSpeedBoostEnd] = useState(0);
+  const [damageBoostEnd, setDamageBoostEnd] = useState(0);
 
   const playerPos = useRef(new THREE.Vector3(0, 2, 5));
   const playerYaw = useRef(0);
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const shakeIntensity = useRef(0);
+  const lastPowerupSpawn = useRef(0);
   const stopAmbient = useRef<(() => void) | null>(null);
 
   useEffect(() => {
@@ -771,13 +848,29 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
     };
   }, []);
 
+  // Weapon switching with 1/2/3 keys
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (gameState !== "playing") return;
+      if (e.code === "Digit1") setCurrentWeapon("blaster");
+      if (e.code === "Digit2" && weaponAmmo.shotgun > 0) setCurrentWeapon("shotgun");
+      if (e.code === "Digit3" && weaponAmmo.plasma > 0) setCurrentWeapon("plasma");
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [gameState, weaponAmmo]);
+
   const handleStart = useCallback(() => {
     setGameState("playing");
     setHealth(MAX_HEALTH);
     setScore(0);
     setWave(1);
-    setAmmo(999);
+    setCurrentWeapon("blaster");
+    setWeaponAmmo({ blaster: -1, shotgun: 0, plasma: 0 });
     setKills(0);
+    setSpeedBoostEnd(0);
+    setDamageBoostEnd(0);
+    lastPowerupSpawn.current = 0;
     setProjectiles([]);
     setParticles([]);
     setExplosions([]);
@@ -804,21 +897,52 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
   const handleShoot = useCallback(
     (origin: THREE.Vector3, direction: THREE.Vector3) => {
       if (gameState !== "playing") return;
+
+      const config = WEAPON_CONFIGS[currentWeapon];
+      const ammo = weaponAmmo[currentWeapon];
+      if (ammo === 0) return;
+
       playShootSound();
-      setProjectiles((prev) => [
-        ...prev,
-        {
+
+      // Deduct ammo (skip if infinite = -1)
+      if (ammo > 0) {
+        setWeaponAmmo((prev) => {
+          const newAmmo = { ...prev, [currentWeapon]: prev[currentWeapon] - 1 };
+          // Auto-switch to blaster when out of ammo
+          if (newAmmo[currentWeapon] <= 0 && currentWeapon !== "blaster") {
+            setTimeout(() => setCurrentWeapon("blaster"), 0);
+          }
+          return newAmmo;
+        });
+      }
+
+      // Create projectiles (multiple for shotgun)
+      const newProjectiles: ProjectileData[] = [];
+      for (let i = 0; i < config.pellets; i++) {
+        const dir = direction.clone().normalize();
+        // Add spread
+        if (config.spread > 0) {
+          dir.x += (Math.random() - 0.5) * config.spread * 2;
+          dir.y += (Math.random() - 0.5) * config.spread;
+          dir.z += (Math.random() - 0.5) * config.spread * 2;
+          dir.normalize();
+        }
+        newProjectiles.push({
           id: nextId++,
           position: origin.clone(),
-          direction: direction.clone().normalize(),
-          speed: PROJECTILE_SPEED,
+          direction: dir,
+          speed: config.speed,
           alive: true,
           friendly: true,
-          life: PROJECTILE_LIFE,
-        },
-      ]);
+          life: config.projectileLife,
+          color: config.color,
+          size: config.projectileSize,
+        });
+      }
+
+      setProjectiles((prev) => [...prev, ...newProjectiles]);
     },
-    [gameState]
+    [gameState, currentWeapon, weaponAmmo]
   );
 
   if (isTouchDevice) {
@@ -889,7 +1013,7 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
               <Player locked={locked} />
               <Level />
             </Physics>
-            <Weapon locked={locked} onShoot={handleShoot} />
+            <Weapon locked={locked} weaponType={currentWeapon} ammo={weaponAmmo[currentWeapon]} onShoot={handleShoot} />
             <Enemies enemies={enemies} playerPosition={playerPos.current} />
             <Projectiles projectiles={projectiles} />
             <Particles particles={particles} explosions={explosions} />
@@ -921,6 +1045,13 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
               setDamageDirection={setDamageDirection}
               setWaveAnnounce={setWaveAnnounce}
               setRadarDots={setRadarDots}
+              currentWeapon={currentWeapon}
+              damageBoostEnd={damageBoostEnd}
+              setWeaponAmmo={setWeaponAmmo}
+              setCurrentWeapon={setCurrentWeapon}
+              setSpeedBoostEnd={setSpeedBoostEnd}
+              setDamageBoostEnd={setDamageBoostEnd}
+              lastPowerupSpawn={lastPowerupSpawn}
             />
             <PostProcessing />
           </Suspense>
@@ -932,7 +1063,8 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
         maxHealth={MAX_HEALTH}
         score={score}
         wave={wave}
-        ammo={ammo}
+        currentWeapon={currentWeapon}
+        weaponAmmo={weaponAmmo}
         locked={locked}
         gameState={gameState}
         onStart={handleStart}
