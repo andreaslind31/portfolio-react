@@ -81,7 +81,7 @@ function spawnEnemies(wave: number): EnemyData[] {
         id: nextId++,
         position: new THREE.Vector3(
           portal[0] + offset.x,
-          1.5,
+          0,
           portal[2] + offset.z
         ),
         hp,
@@ -94,6 +94,9 @@ function spawnEnemies(wave: number): EnemyData[] {
         strafeDir: Math.random() > 0.5 ? 1 : -1,
         burstCount: type === "sentinel" ? 3 : 0,
         chargeTimer: 0,
+        isShooting: false,
+        shootFrame: 0,
+        lastMoveDir: new THREE.Vector3(0, 0, 1),
       });
     }
   };
@@ -170,6 +173,9 @@ function updateDroneAI(
     e.position.addScaledVector(dir, e.speed * 0.15 * dt);
   }
 
+  // Track facing direction (toward player)
+  e.lastMoveDir.copy(dir);
+
   // Randomly flip strafe direction
   if (Math.random() < 0.01) e.strafeDir *= -1;
 }
@@ -194,6 +200,8 @@ function updateSentinelAI(
     // Strafe at optimal range
     e.position.addScaledVector(strafe, e.speed * 0.5 * dt);
   }
+
+  e.lastMoveDir.copy(dir);
 
   if (Math.random() < 0.005) e.strafeDir *= -1;
 }
@@ -226,6 +234,7 @@ function updateHeavyAI(
     e.position.addScaledVector(dir, -e.speed * 0.4 * dt);
     e.chargeTimer = 0;
   }
+  e.lastMoveDir.copy(dir);
 }
 
 // ── Game Loop (runs inside Canvas) ───────────────────────
@@ -357,10 +366,21 @@ function GameLoop({
         const lastShot = enemyShootTimers.current.get(e.id) || 0;
         const now = performance.now() / 1000;
 
+        // Advance shoot animation (6 frames at 10fps = 0.6s)
+        if (e.isShooting) {
+          e.shootFrame += dt * 10;
+          if (e.shootFrame >= 6) {
+            e.isShooting = false;
+            e.shootFrame = 0;
+          }
+        }
+
         if (e.type === "drone") {
           if (now - lastShot > DRONE_SHOOT_CD && dist < 18) {
             enemyShootTimers.current.set(e.id, now);
             fireEnemyProjectile(e, playerPos.current, setProjectiles);
+            e.isShooting = true;
+            e.shootFrame = 0;
           }
         } else if (e.type === "sentinel") {
           const lastBurst = sentinelBurstTimers.current.get(e.id) || 0;
@@ -368,6 +388,8 @@ function GameLoop({
             enemyShootTimers.current.set(e.id, now);
             e.burstCount--;
             fireEnemyProjectile(e, playerPos.current, setProjectiles);
+            e.isShooting = true;
+            e.shootFrame = 0;
             if (e.burstCount <= 0) {
               sentinelBurstTimers.current.set(e.id, now);
             }
@@ -380,13 +402,14 @@ function GameLoop({
         } else if (e.type === "heavy") {
           if (now - lastShot > HEAVY_SHOOT_CD && dist < 16) {
             enemyShootTimers.current.set(e.id, now);
-            // Heavy fires a slightly faster, higher damage projectile
             fireEnemyProjectile(
               e,
               playerPos.current,
               setProjectiles,
               ENEMY_PROJECTILE_SPEED * 1.2
             );
+            e.isShooting = true;
+            e.shootFrame = 0;
           }
         }
 
@@ -450,7 +473,7 @@ function GameLoop({
             for (const e of enemies) {
               if (!e.alive) continue;
               const enemyWorldPos = e.position.clone();
-              enemyWorldPos.y += 1.5;
+              enemyWorldPos.y += 1.0; // center of sprite
               if (p.position.distanceTo(enemyWorldPos) < HIT_RADIUS) {
                 p.alive = false;
 
@@ -617,7 +640,7 @@ function fireEnemyProjectile(
     ...prev,
     {
       id: nextId++,
-      position: e.position.clone().add(new THREE.Vector3(0, 1.5, 0)),
+      position: e.position.clone().add(new THREE.Vector3(0, 1.0, 0)),
       direction: shootDir,
       speed,
       alive: true,
