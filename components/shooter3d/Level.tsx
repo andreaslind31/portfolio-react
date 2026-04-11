@@ -6,11 +6,11 @@ import { RigidBody } from "@react-three/rapier";
 import * as THREE from "three";
 
 // ── Sci-fi palette ──────────────────────────────────────
-const FLOOR_COLOR = "#1a1a2e";
-const FLOOR_DARK = "#111122";
-const WALL_COLOR = "#16213e";
-const TRIM_COLOR = "#0f3460";
-const CEILING_COLOR = "#0a0a15";
+const FLOOR_COLOR = "#2a2a42";
+const FLOOR_DARK = "#1e1e35";
+const WALL_COLOR = "#263556";
+const TRIM_COLOR = "#1a4a7a";
+const CEILING_COLOR = "#151525";
 const EMISSIVE_CYAN = "#00d4ff";
 const EMISSIVE_PURPLE = "#7b2ff7";
 const EMISSIVE_RED = "#ff2255";
@@ -83,7 +83,7 @@ function Wall({
 function CeilingLight({
   position,
   color = EMISSIVE_CYAN,
-  intensity = 4,
+  intensity = 6,
 }: {
   position: [number, number, number];
   color?: string;
@@ -100,7 +100,7 @@ function CeilingLight({
           toneMapped={false}
         />
       </mesh>
-      <pointLight position={[0, -0.5, 0]} color={color} intensity={intensity} distance={12} decay={2} />
+      <pointLight position={[0, -0.5, 0]} color={color} intensity={intensity} distance={18} decay={2} />
     </group>
   );
 }
@@ -506,7 +506,7 @@ export default function Level() {
           ═══════════════════════════════════════════════════ */}
 
       {/* Central hub lights */}
-      <CeilingLight position={[0, WALL_H - 0.1, 0]} color={EMISSIVE_CYAN} intensity={5} />
+      <CeilingLight position={[0, WALL_H - 0.1, 0]} color={EMISSIVE_CYAN} intensity={8} />
       <CeilingLight position={[-6, WALL_H - 0.1, -6]} />
       <CeilingLight position={[6, WALL_H - 0.1, -6]} />
       <CeilingLight position={[-6, WALL_H - 0.1, 6]} color={EMISSIVE_PURPLE} />
@@ -532,8 +532,8 @@ export default function Level() {
       <CeilingLight position={[-18, WALL_H - 0.1, 0]} color={EMISSIVE_ORANGE} />
 
       {/* Global ambient */}
-      <ambientLight intensity={0.12} color="#1a1a3e" />
-      <hemisphereLight color="#0f3460" groundColor="#0a0a1a" intensity={0.25} />
+      <ambientLight intensity={0.4} color="#334466" />
+      <hemisphereLight color="#4466aa" groundColor="#1a1a2e" intensity={0.5} />
     </group>
   );
 }

@@ -15,8 +15,8 @@ export default function PostProcessing() {
       />
       <Vignette
         eskil={false}
-        offset={0.3}
-        darkness={0.7}
+        offset={0.35}
+        darkness={0.35}
         blendFunction={BlendFunction.NORMAL}
       />
       <ChromaticAberration

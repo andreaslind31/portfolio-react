@@ -54,7 +54,7 @@ function EnemyMesh({ enemy, playerPosition }: EnemyMeshProps) {
     if (glowRef.current) {
       const mat = glowRef.current.material as THREE.MeshStandardMaterial;
       const pulseSpeed = enemy.aiState === "charge" ? 12 : 5;
-      mat.emissiveIntensity = 1.5 + Math.sin(state.clock.elapsedTime * pulseSpeed + enemy.bobOffset) * 0.8;
+      mat.emissiveIntensity = 3 + Math.sin(state.clock.elapsedTime * pulseSpeed + enemy.bobOffset) * 1.5;
     }
   });
 
@@ -82,16 +82,16 @@ function EnemyMesh({ enemy, playerPosition }: EnemyMeshProps) {
         ) : (
           <sphereGeometry args={[0.8, 8, 6]} />
         )}
-        <meshStandardMaterial color="#2a2a3e" metalness={0.8} roughness={0.2} />
+        <meshStandardMaterial color="#3a3a55" metalness={0.7} roughness={0.3} />
       </mesh>
 
       {/* Eye / sensor */}
       <mesh ref={glowRef} position={[0, 0, enemy.type === "heavy" ? 0.5 : 0.3]}>
-        <sphereGeometry args={[enemy.type === "heavy" ? 0.2 : 0.15, 8, 8]} />
+        <sphereGeometry args={[enemy.type === "heavy" ? 0.25 : 0.18, 8, 8]} />
         <meshStandardMaterial
           color={eyeColor}
           emissive={eyeColor}
-          emissiveIntensity={2}
+          emissiveIntensity={4}
           toneMapped={false}
         />
       </mesh>
@@ -198,7 +198,7 @@ function EnemyMesh({ enemy, playerPosition }: EnemyMeshProps) {
       )}
 
       {/* Point light for glow */}
-      <pointLight color={color} intensity={enemy.aiState === "charge" ? 3 : 1} distance={4} decay={2} />
+      <pointLight color={color} intensity={enemy.aiState === "charge" ? 6 : 3} distance={8} decay={2} />
     </group>
   );
 }
