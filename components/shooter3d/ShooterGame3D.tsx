@@ -10,7 +10,23 @@ import Weapon from "./Weapon";
 import HUD from "./HUD";
 import Enemies, { type EnemyData } from "./Enemies";
 import Projectiles, { type ProjectileData } from "./Projectiles";
+import Particles, {
+  type ParticleData,
+  type ExplosionData,
+  createImpactSparks,
+  createDeathExplosion,
+} from "./Particles";
+import Pickups, { type PickupData } from "./Pickups";
 import PostProcessing from "./PostProcessing";
+import {
+  playShootSound,
+  playHitSound,
+  playExplosionSound,
+  playDamageSound,
+  playWaveStartSound,
+  playPickupSound,
+  startAmbientHum,
+} from "./SoundEngine";
 
 // ── Game constants ───────────────────────────────────────
 const MAX_HEALTH = 100;
@@ -19,11 +35,14 @@ const PLAYER_BULLET_DAMAGE = 25;
 const ARENA_W = 30;
 const ARENA_D = 40;
 const PROJECTILE_SPEED = 40;
-const PROJECTILE_LIFE = 3; // seconds
-const ENEMY_SHOOT_COOLDOWN = 2; // seconds
+const PROJECTILE_LIFE = 3;
+const ENEMY_SHOOT_COOLDOWN = 2;
 const ENEMY_PROJECTILE_SPEED = 15;
 const HIT_RADIUS = 1.0;
 const PLAYER_HIT_RADIUS = 0.8;
+const PICKUP_RADIUS = 1.5;
+const HEALTH_PICKUP_AMOUNT = 25;
+const PICKUP_DROP_CHANCE = 0.35;
 
 // ── Spawn config per wave ────────────────────────────────
 function getWaveConfig(wave: number) {
@@ -40,7 +59,12 @@ function spawnEnemies(wave: number): EnemyData[] {
   const config = getWaveConfig(wave);
   const enemies: EnemyData[] = [];
 
-  const spawn = (type: EnemyData["type"], count: number, hp: number, speed: number) => {
+  const spawn = (
+    type: EnemyData["type"],
+    count: number,
+    hp: number,
+    speed: number
+  ) => {
     for (let i = 0; i < count; i++) {
       const angle = Math.random() * Math.PI * 2;
       const dist = 8 + Math.random() * 8;
@@ -75,7 +99,8 @@ function DamageFlash({ flash }: { flash: boolean }) {
       style={{
         position: "absolute",
         inset: 0,
-        background: "radial-gradient(ellipse at center, transparent 40%, #ff225544 100%)",
+        background:
+          "radial-gradient(ellipse at center, transparent 40%, #ff225544 100%)",
         pointerEvents: "none",
         opacity: flash ? 1 : 0,
         transition: "opacity 0.15s",
@@ -84,12 +109,43 @@ function DamageFlash({ flash }: { flash: boolean }) {
   );
 }
 
+// ── Screen shake (runs inside Canvas) ────────────────────
+function ScreenShake({
+  shakeIntensity,
+}: {
+  shakeIntensity: React.MutableRefObject<number>;
+}) {
+  const { camera } = useThree();
+  const basePos = useRef(new THREE.Vector3());
+
+  useFrame(() => {
+    if (shakeIntensity.current > 0.001) {
+      const offset = new THREE.Vector3(
+        (Math.random() - 0.5) * shakeIntensity.current,
+        (Math.random() - 0.5) * shakeIntensity.current,
+        0
+      );
+      offset.applyQuaternion(camera.quaternion);
+      camera.position.add(offset);
+      shakeIntensity.current *= 0.88; // decay
+    }
+  });
+
+  return null;
+}
+
 // ── Enemy AI + projectile updater (runs inside Canvas) ───
 function GameLoop({
   enemies,
   setEnemies,
   projectiles,
   setProjectiles,
+  particles,
+  setParticles,
+  explosions,
+  setExplosions,
+  pickups,
+  setPickups,
   playerPos,
   health,
   setHealth,
@@ -98,11 +154,22 @@ function GameLoop({
   setDamageFlash,
   setWave,
   wave,
+  shakeIntensity,
+  setHitMarker,
+  setKills,
+  setDamageDirection,
+  setWaveAnnounce,
 }: {
   enemies: EnemyData[];
   setEnemies: React.Dispatch<React.SetStateAction<EnemyData[]>>;
   projectiles: ProjectileData[];
   setProjectiles: React.Dispatch<React.SetStateAction<ProjectileData[]>>;
+  particles: ParticleData[];
+  setParticles: React.Dispatch<React.SetStateAction<ParticleData[]>>;
+  explosions: ExplosionData[];
+  setExplosions: React.Dispatch<React.SetStateAction<ExplosionData[]>>;
+  pickups: PickupData[];
+  setPickups: React.Dispatch<React.SetStateAction<PickupData[]>>;
   playerPos: React.MutableRefObject<THREE.Vector3>;
   health: number;
   setHealth: React.Dispatch<React.SetStateAction<number>>;
@@ -111,18 +178,23 @@ function GameLoop({
   setDamageFlash: React.Dispatch<React.SetStateAction<boolean>>;
   setWave: React.Dispatch<React.SetStateAction<number>>;
   wave: number;
+  shakeIntensity: React.MutableRefObject<number>;
+  setHitMarker: React.Dispatch<React.SetStateAction<boolean>>;
+  setKills: React.Dispatch<React.SetStateAction<number>>;
+  setDamageDirection: React.Dispatch<React.SetStateAction<number | null>>;
+  setWaveAnnounce: React.Dispatch<React.SetStateAction<number>>;
 }) {
   const { camera } = useThree();
   const enemyShootTimers = useRef<Map<number, number>>(new Map());
   const waveCleared = useRef(false);
 
-  useFrame((_, delta) => {
+  useFrame((state, delta) => {
     if (gameState !== "playing") return;
 
     // Sync player position ref
     playerPos.current.copy(camera.position);
 
-    const clampedDelta = Math.min(delta, 0.05); // prevent big jumps
+    const clampedDelta = Math.min(delta, 0.05);
 
     // ── Update enemies (AI movement + shooting) ──
     let allDead = true;
@@ -131,7 +203,6 @@ function GameLoop({
         if (!e.alive) return e;
         allDead = false;
 
-        // Move toward player
         const dir = new THREE.Vector3()
           .subVectors(playerPos.current, e.position)
           .setY(0)
@@ -139,18 +210,15 @@ function GameLoop({
 
         const dist = playerPos.current.distanceTo(e.position);
 
-        // Keep distance: approach if far, orbit if close
         if (dist > 5) {
           e.position.addScaledVector(dir, e.speed * clampedDelta);
         } else if (dist < 3) {
           e.position.addScaledVector(dir, -e.speed * 0.5 * clampedDelta);
         } else {
-          // Strafe
           const strafe = new THREE.Vector3(-dir.z, 0, dir.x);
           e.position.addScaledVector(strafe, e.speed * 0.5 * clampedDelta);
         }
 
-        // Clamp to arena bounds
         const margin = 1;
         e.position.x = THREE.MathUtils.clamp(
           e.position.x,
@@ -175,7 +243,9 @@ function GameLoop({
             ...prev,
             {
               id: nextId++,
-              position: e.position.clone().add(new THREE.Vector3(0, 0, 0)),
+              position: e.position
+                .clone()
+                .add(new THREE.Vector3(0, 1.5, 0)),
               direction: shootDir,
               speed: ENEMY_PROJECTILE_SPEED,
               alive: true,
@@ -198,6 +268,8 @@ function GameLoop({
           setEnemies(spawnEnemies(next));
           enemyShootTimers.current.clear();
           waveCleared.current = false;
+          setWaveAnnounce(next);
+          playWaveStartSound();
           return next;
         });
       }, 1500);
@@ -209,7 +281,6 @@ function GameLoop({
         .map((p) => {
           if (!p.alive) return p;
 
-          // Move
           p.position.addScaledVector(p.direction, p.speed * clampedDelta);
           p.life -= clampedDelta;
 
@@ -221,6 +292,14 @@ function GameLoop({
             p.position.y < -1 ||
             p.position.y > 6
           ) {
+            // Wall impact sparks for player bullets hitting walls
+            if (p.friendly && p.life > 0) {
+              const normal = new THREE.Vector3(0, 1, 0);
+              setParticles((pp) => [
+                ...pp,
+                ...createImpactSparks(p.position.clone(), normal, "#00d4ff", 5),
+              ]);
+            }
             p.alive = false;
           }
 
@@ -229,15 +308,83 @@ function GameLoop({
             for (const e of enemies) {
               if (!e.alive) continue;
               const enemyWorldPos = e.position.clone();
-              enemyWorldPos.y += 1.5; // match visual position
+              enemyWorldPos.y += 1.5;
               if (p.position.distanceTo(enemyWorldPos) < HIT_RADIUS) {
                 p.alive = false;
+
+                // Impact sparks
+                const hitNormal = new THREE.Vector3()
+                  .subVectors(p.position, enemyWorldPos)
+                  .normalize();
+                setParticles((pp) => [
+                  ...pp,
+                  ...createImpactSparks(
+                    p.position.clone(),
+                    hitNormal,
+                    "#00d4ff",
+                    6
+                  ),
+                ]);
+                playHitSound();
+
+                // Hit marker
+                setHitMarker(true);
+                setTimeout(() => setHitMarker(false), 100);
+
                 e.hp -= PLAYER_BULLET_DAMAGE;
                 if (e.hp <= 0) {
                   e.alive = false;
                   const points =
-                    e.type === "drone" ? 100 : e.type === "sentinel" ? 200 : 500;
+                    e.type === "drone"
+                      ? 100
+                      : e.type === "sentinel"
+                        ? 200
+                        : 500;
                   setScore((s) => s + points);
+                  setKills((k) => k + 1);
+
+                  // Death explosion
+                  const deathColor =
+                    e.type === "drone"
+                      ? "#ff2255"
+                      : e.type === "sentinel"
+                        ? "#ff8800"
+                        : "#ff0044";
+                  setParticles((pp) => [
+                    ...pp,
+                    ...createDeathExplosion(
+                      enemyWorldPos.clone(),
+                      deathColor,
+                      15
+                    ),
+                  ]);
+                  setExplosions((ex) => [
+                    ...ex,
+                    {
+                      id: nextId++,
+                      position: enemyWorldPos.clone(),
+                      color: deathColor,
+                      startTime: state.clock.elapsedTime,
+                      duration: 0.4,
+                      size: e.type === "heavy" ? 1.5 : 1,
+                    },
+                  ]);
+                  playExplosionSound();
+                  shakeIntensity.current = 0.08;
+
+                  // Chance to drop health pickup
+                  if (Math.random() < PICKUP_DROP_CHANCE) {
+                    setPickups((pk) => [
+                      ...pk,
+                      {
+                        id: nextId++,
+                        position: e.position.clone(),
+                        type: "health",
+                        alive: true,
+                        spawnTime: state.clock.elapsedTime,
+                      },
+                    ]);
+                  }
                 }
                 break;
               }
@@ -246,17 +393,68 @@ function GameLoop({
 
           // Enemy projectile hits player
           if (!p.friendly && p.alive) {
-            if (p.position.distanceTo(playerPos.current) < PLAYER_HIT_RADIUS) {
+            if (
+              p.position.distanceTo(playerPos.current) < PLAYER_HIT_RADIUS
+            ) {
               p.alive = false;
               setHealth((h) => Math.max(0, h - ENEMY_DAMAGE));
               setDamageFlash(true);
               setTimeout(() => setDamageFlash(false), 150);
+              playDamageSound();
+              shakeIntensity.current = 0.12;
+
+              // Compute damage direction (angle from player forward to projectile source)
+              const toProjectile = new THREE.Vector3()
+                .subVectors(p.position, playerPos.current)
+                .setY(0)
+                .normalize();
+              const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(
+                camera.quaternion
+              );
+              forward.y = 0;
+              forward.normalize();
+              const angle = Math.atan2(
+                forward.x * toProjectile.z - forward.z * toProjectile.x,
+                forward.x * toProjectile.x + forward.z * toProjectile.z
+              );
+              setDamageDirection(angle);
             }
           }
 
           return p;
         })
         .filter((p) => p.alive)
+    );
+
+    // ── Update pickups (collect if near player) ──
+    setPickups((prev) =>
+      prev
+        .map((pk) => {
+          if (!pk.alive) return pk;
+          if (pk.position.distanceTo(playerPos.current) < PICKUP_RADIUS) {
+            pk.alive = false;
+            if (pk.type === "health") {
+              setHealth((h) => Math.min(MAX_HEALTH, h + HEALTH_PICKUP_AMOUNT));
+            }
+            playPickupSound();
+          }
+          // Despawn after 15 seconds
+          if (state.clock.elapsedTime - pk.spawnTime > 15) {
+            pk.alive = false;
+          }
+          return pk;
+        })
+        .filter((pk) => pk.alive)
+    );
+
+    // ── Clean up expired particles ──
+    setParticles((prev) => prev.filter((p) => p.life > 0));
+
+    // ── Clean up expired explosions ──
+    setExplosions((prev) =>
+      prev.filter(
+        (e) => state.clock.elapsedTime - e.startTime < e.duration + 0.1
+      )
     );
   });
 
@@ -279,12 +477,21 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
   const [locked, setLocked] = useState(false);
   const [enemies, setEnemies] = useState<EnemyData[]>([]);
   const [projectiles, setProjectiles] = useState<ProjectileData[]>([]);
+  const [particles, setParticles] = useState<ParticleData[]>([]);
+  const [explosions, setExplosions] = useState<ExplosionData[]>([]);
+  const [pickups, setPickups] = useState<PickupData[]>([]);
   const [damageFlash, setDamageFlash] = useState(false);
+  const [hitMarker, setHitMarker] = useState(false);
+  const [kills, setKills] = useState(0);
+  const [waveAnnounce, setWaveAnnounce] = useState(0);
+  const [damageDirection, setDamageDirection] = useState<number | null>(null);
   const [finalScore, setFinalScore] = useState(0);
   const [isTouchDevice, setIsTouchDevice] = useState(false);
 
   const playerPos = useRef(new THREE.Vector3(0, 2, 5));
   const canvasContainerRef = useRef<HTMLDivElement>(null);
+  const shakeIntensity = useRef(0);
+  const stopAmbient = useRef<(() => void) | null>(null);
 
   // Detect touch device
   useEffect(() => {
@@ -298,18 +505,29 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
       setGameState("gameover");
       document.exitPointerLock?.();
       setLocked(false);
+      // Stop ambient
+      stopAmbient.current?.();
+      stopAmbient.current = null;
     }
   }, [health, gameState, score]);
 
   // Pointer lock change listener
   useEffect(() => {
     const handleChange = () => {
-      const isLocked = document.pointerLockElement === canvasContainerRef.current;
+      const isLocked =
+        document.pointerLockElement === canvasContainerRef.current;
       setLocked(isLocked);
-      // If user escapes, don't change game state — they can re-click
     };
     document.addEventListener("pointerlockchange", handleChange);
-    return () => document.removeEventListener("pointerlockchange", handleChange);
+    return () =>
+      document.removeEventListener("pointerlockchange", handleChange);
+  }, []);
+
+  // Cleanup ambient on unmount
+  useEffect(() => {
+    return () => {
+      stopAmbient.current?.();
+    };
   }, []);
 
   const handleStart = useCallback(() => {
@@ -318,11 +536,24 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
     setScore(0);
     setWave(1);
     setAmmo(999);
+    setKills(0);
     setProjectiles([]);
+    setParticles([]);
+    setExplosions([]);
+    setPickups([]);
+    setHitMarker(false);
+    setWaveAnnounce(1);
+    setDamageDirection(null);
     nextId = 1;
+    shakeIntensity.current = 0;
     setEnemies(spawnEnemies(1));
 
-    // Request pointer lock on the canvas container
+    // Start ambient sound
+    stopAmbient.current?.();
+    stopAmbient.current = startAmbientHum();
+
+    playWaveStartSound();
+
     canvasContainerRef.current?.requestPointerLock?.();
   }, []);
 
@@ -333,6 +564,7 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
   const handleShoot = useCallback(
     (origin: THREE.Vector3, direction: THREE.Vector3) => {
       if (gameState !== "playing") return;
+      playShootSound();
       setProjectiles((prev) => [
         ...prev,
         {
@@ -391,7 +623,11 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
     >
       <div
         ref={canvasContainerRef}
-        style={{ width: "100%", height: "100%", cursor: locked ? "none" : "pointer" }}
+        style={{
+          width: "100%",
+          height: "100%",
+          cursor: locked ? "none" : "pointer",
+        }}
         onClick={() => {
           if (gameState === "playing" && !locked) {
             canvasContainerRef.current?.requestPointerLock?.();
@@ -416,11 +652,20 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
             <Weapon locked={locked} onShoot={handleShoot} />
             <Enemies enemies={enemies} playerPosition={playerPos.current} />
             <Projectiles projectiles={projectiles} />
+            <Particles particles={particles} explosions={explosions} />
+            <Pickups pickups={pickups} />
+            <ScreenShake shakeIntensity={shakeIntensity} />
             <GameLoop
               enemies={enemies}
               setEnemies={setEnemies}
               projectiles={projectiles}
               setProjectiles={setProjectiles}
+              particles={particles}
+              setParticles={setParticles}
+              explosions={explosions}
+              setExplosions={setExplosions}
+              pickups={pickups}
+              setPickups={setPickups}
               playerPos={playerPos}
               health={health}
               setHealth={setHealth}
@@ -429,6 +674,11 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
               setDamageFlash={setDamageFlash}
               setWave={setWave}
               wave={wave}
+              shakeIntensity={shakeIntensity}
+              setHitMarker={setHitMarker}
+              setKills={setKills}
+              setDamageDirection={setDamageDirection}
+              setWaveAnnounce={setWaveAnnounce}
             />
             <PostProcessing />
           </Suspense>
@@ -447,6 +697,10 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
         onRestart={handleRestart}
         onScoreSubmit={onScoreSubmit}
         finalScore={finalScore}
+        hitMarker={hitMarker}
+        waveAnnounce={waveAnnounce}
+        damageDirection={damageDirection}
+        kills={kills}
       />
 
       <DamageFlash flash={damageFlash} />

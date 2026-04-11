@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 interface HUDProps {
   health: number;
@@ -14,6 +14,10 @@ interface HUDProps {
   onRestart: () => void;
   onScoreSubmit?: (name: string, score: number) => Promise<string | null>;
   finalScore?: number;
+  hitMarker: boolean;
+  waveAnnounce: number;
+  damageDirection: number | null;
+  kills: number;
 }
 
 export default function HUD({
@@ -28,11 +32,19 @@ export default function HUD({
   onRestart,
   onScoreSubmit,
   finalScore,
+  hitMarker,
+  waveAnnounce,
+  damageDirection,
+  kills,
 }: HUDProps) {
   const [submitName, setSubmitName] = useState("");
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [showWaveBanner, setShowWaveBanner] = useState(false);
+  const [waveBannerNum, setWaveBannerNum] = useState(0);
+  const [showDmgDir, setShowDmgDir] = useState(false);
+  const [dmgAngle, setDmgAngle] = useState(0);
 
   const healthPct = Math.max(0, (health / maxHealth) * 100);
   const healthColor =
@@ -59,6 +71,26 @@ export default function HUD({
     }
   }, [gameState]);
 
+  // Wave banner animation
+  useEffect(() => {
+    if (waveAnnounce > 0) {
+      setWaveBannerNum(waveAnnounce);
+      setShowWaveBanner(true);
+      const timer = setTimeout(() => setShowWaveBanner(false), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [waveAnnounce]);
+
+  // Damage direction indicator
+  useEffect(() => {
+    if (damageDirection !== null) {
+      setDmgAngle(damageDirection);
+      setShowDmgDir(true);
+      const timer = setTimeout(() => setShowDmgDir(false), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [damageDirection]);
+
   return (
     <div
       style={{
@@ -81,23 +113,66 @@ export default function HUD({
               transform: "translate(-50%, -50%)",
             }}
           >
-            <svg width="24" height="24" viewBox="0 0 24 24">
+            <svg width="28" height="28" viewBox="0 0 28 28">
+              {/* Outer ring — expands on hit */}
               <circle
-                cx="12"
-                cy="12"
-                r="8"
+                cx="14"
+                cy="14"
+                r={hitMarker ? 11 : 9}
                 fill="none"
-                stroke="#00d4ff"
-                strokeWidth="1"
-                opacity="0.6"
+                stroke={hitMarker ? "#ff2255" : "#00d4ff"}
+                strokeWidth={hitMarker ? 2 : 1}
+                opacity={hitMarker ? 1 : 0.5}
+                style={{ transition: "all 0.08s ease-out" }}
               />
-              <line x1="12" y1="2" x2="12" y2="8" stroke="#00d4ff" strokeWidth="1.5" opacity="0.8" />
-              <line x1="12" y1="16" x2="12" y2="22" stroke="#00d4ff" strokeWidth="1.5" opacity="0.8" />
-              <line x1="2" y1="12" x2="8" y2="12" stroke="#00d4ff" strokeWidth="1.5" opacity="0.8" />
-              <line x1="16" y1="12" x2="22" y2="12" stroke="#00d4ff" strokeWidth="1.5" opacity="0.8" />
-              <circle cx="12" cy="12" r="1.5" fill="#00d4ff" opacity="0.9" />
+              {/* Crosshair lines */}
+              <line x1="14" y1="2" x2="14" y2="9" stroke={hitMarker ? "#ff2255" : "#00d4ff"} strokeWidth="1.5" opacity="0.8" />
+              <line x1="14" y1="19" x2="14" y2="26" stroke={hitMarker ? "#ff2255" : "#00d4ff"} strokeWidth="1.5" opacity="0.8" />
+              <line x1="2" y1="14" x2="9" y2="14" stroke={hitMarker ? "#ff2255" : "#00d4ff"} strokeWidth="1.5" opacity="0.8" />
+              <line x1="19" y1="14" x2="26" y2="14" stroke={hitMarker ? "#ff2255" : "#00d4ff"} strokeWidth="1.5" opacity="0.8" />
+              {/* Center dot */}
+              <circle cx="14" cy="14" r={hitMarker ? 2.5 : 1.5} fill={hitMarker ? "#ff2255" : "#00d4ff"} opacity="0.9" />
+              {/* Hit X marks */}
+              {hitMarker && (
+                <>
+                  <line x1="8" y1="8" x2="11" y2="11" stroke="#ff2255" strokeWidth="2" opacity="0.9" />
+                  <line x1="20" y1="8" x2="17" y2="11" stroke="#ff2255" strokeWidth="2" opacity="0.9" />
+                  <line x1="8" y1="20" x2="11" y2="17" stroke="#ff2255" strokeWidth="2" opacity="0.9" />
+                  <line x1="20" y1="20" x2="17" y2="17" stroke="#ff2255" strokeWidth="2" opacity="0.9" />
+                </>
+              )}
             </svg>
           </div>
+
+          {/* Damage direction indicator */}
+          {showDmgDir && (
+            <div
+              style={{
+                position: "absolute",
+                top: "50%",
+                left: "50%",
+                transform: `translate(-50%, -50%) rotate(${dmgAngle}rad)`,
+                width: 160,
+                height: 160,
+                pointerEvents: "none",
+              }}
+            >
+              <div
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: "50%",
+                  transform: "translateX(-50%)",
+                  width: 30,
+                  height: 6,
+                  background: "#ff2255",
+                  borderRadius: 3,
+                  opacity: 0.7,
+                  boxShadow: "0 0 10px #ff2255",
+                }}
+              />
+            </div>
+          )}
 
           {/* Health bar — bottom left */}
           <div
@@ -176,6 +251,22 @@ export default function HUD({
             </div>
           </div>
 
+          {/* Kills — under wave */}
+          <div style={{ position: "absolute", top: 72, left: 30 }}>
+            <div style={{ color: "#ff225588", fontSize: 11, letterSpacing: 2 }}>
+              KILLS
+            </div>
+            <div
+              style={{
+                color: "#ff2255",
+                fontSize: 18,
+                fontWeight: "bold",
+              }}
+            >
+              {kills}
+            </div>
+          </div>
+
           {/* Ammo — bottom right */}
           <div
             style={{
@@ -196,7 +287,7 @@ export default function HUD({
                 textShadow: "0 0 8px #00d4ff",
               }}
             >
-              {ammo}
+              {ammo === 999 ? "∞" : ammo}
             </div>
           </div>
 
@@ -214,6 +305,43 @@ export default function HUD({
           >
             ESC to release cursor
           </div>
+
+          {/* ═══ WAVE ANNOUNCEMENT BANNER ═══ */}
+          {showWaveBanner && (
+            <div
+              style={{
+                position: "absolute",
+                top: "35%",
+                left: "50%",
+                transform: "translateX(-50%)",
+                textAlign: "center",
+                animation: "waveBannerIn 0.3s ease-out",
+              }}
+            >
+              <div
+                style={{
+                  color: "#7b2ff7",
+                  fontSize: 16,
+                  letterSpacing: 6,
+                  marginBottom: 4,
+                  textShadow: "0 0 15px #7b2ff7",
+                }}
+              >
+                INCOMING
+              </div>
+              <div
+                style={{
+                  color: "#fff",
+                  fontSize: 52,
+                  fontWeight: "bold",
+                  textShadow: "0 0 30px #00d4ff, 0 0 60px #00d4ff44",
+                  letterSpacing: 8,
+                }}
+              >
+                WAVE {waveBannerNum}
+              </div>
+            </div>
+          )}
         </>
       )}
 
@@ -360,10 +488,20 @@ export default function HUD({
               fontSize: 48,
               fontWeight: "bold",
               textShadow: "0 0 20px #00d4ff",
-              marginBottom: 30,
+              marginBottom: 10,
             }}
           >
             {(finalScore ?? score).toLocaleString()}
+          </div>
+          <div
+            style={{
+              color: "#ffffff66",
+              fontSize: 13,
+              letterSpacing: 2,
+              marginBottom: 30,
+            }}
+          >
+            WAVE {wave} • {kills} KILLS
           </div>
 
           {/* Score submission */}

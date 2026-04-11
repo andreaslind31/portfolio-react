@@ -18,10 +18,10 @@ const RECOIL_RECOVERY = 8;
 export default function Weapon({ locked, onShoot }: WeaponProps) {
   const groupRef = useRef<THREE.Group>(null);
   const muzzleFlashRef = useRef<THREE.Mesh>(null);
+  const muzzleLightRef = useRef<THREE.PointLight>(null);
   const lastShot = useRef(0);
   const recoil = useRef(0);
   const bobPhase = useRef(0);
-  const isMoving = useRef(false);
   const keys = useRef<Set<string>>(new Set());
   const { camera } = useThree();
 
@@ -45,13 +45,15 @@ export default function Weapon({ locked, onShoot }: WeaponProps) {
     lastShot.current = now;
     recoil.current = RECOIL_AMOUNT;
 
-    // Show muzzle flash
+    // Show muzzle flash + light
     if (muzzleFlashRef.current) {
       muzzleFlashRef.current.visible = true;
       muzzleFlashRef.current.scale.setScalar(0.8 + Math.random() * 0.4);
       muzzleFlashRef.current.rotation.z = Math.random() * Math.PI * 2;
+      if (muzzleLightRef.current) muzzleLightRef.current.intensity = 15;
       setTimeout(() => {
         if (muzzleFlashRef.current) muzzleFlashRef.current.visible = false;
+        if (muzzleLightRef.current) muzzleLightRef.current.intensity = 0;
       }, 50);
     }
 
@@ -188,12 +190,14 @@ export default function Weapon({ locked, onShoot }: WeaponProps) {
         />
       </mesh>
 
-      {/* Muzzle point light (brief flash handled by visibility toggle) */}
+      {/* Muzzle point light — flashes on shoot */}
       <pointLight
+        ref={muzzleLightRef}
         position={[0, 0, -0.4]}
         color="#00d4ff"
         intensity={0}
-        distance={3}
+        distance={5}
+        decay={2}
       />
     </group>
   );
