@@ -45,7 +45,9 @@ const PICKUP_DROP_CHANCE = 0.35;
 const DRONE_SHOOT_CD = 1.5;
 const SENTINEL_SHOOT_CD = 0.25; // burst interval
 const SENTINEL_BURST_PAUSE = 3; // pause between bursts
-const HEAVY_SHOOT_CD = 2.5;
+const HEAVY_MELEE_CD = 1.5; // seconds between melee hits
+const HEAVY_MELEE_RANGE = 3.5;
+const HEAVY_MELEE_DAMAGE = 20;
 
 // ── Spawn config per wave ────────────────────────────────
 function getWaveConfig(wave: number) {
@@ -212,27 +214,27 @@ function updateHeavyAI(
   dist: number,
   dt: number
 ) {
-  // Heavy: slow approach, then charge when close enough
+  // Heavy: slow approach, then charge — melee only, never retreats
   if (dist > 10) {
     e.aiState = "engage";
     e.position.addScaledVector(dir, e.speed * dt);
     e.chargeTimer = 0;
-  } else if (dist > 4) {
-    // Windup charge
+  } else if (dist > HEAVY_MELEE_RANGE) {
+    // Windup then charge toward player
     e.aiState = "charge";
     e.chargeTimer += dt;
     if (e.chargeTimer > 1) {
-      // Charge!
       e.position.addScaledVector(dir, e.speed * 3 * dt);
     } else {
-      // Slow approach during windup
-      e.position.addScaledVector(dir, e.speed * 0.3 * dt);
+      e.position.addScaledVector(dir, e.speed * 0.5 * dt);
     }
   } else {
-    // Too close, slow retreat and shoot
-    e.aiState = "retreat";
-    e.position.addScaledVector(dir, -e.speed * 0.4 * dt);
-    e.chargeTimer = 0;
+    // In melee range — stay close, slight strafe
+    e.aiState = "charge";
+    const strafe = new THREE.Vector3(-dir.z, 0, dir.x).multiplyScalar(e.strafeDir);
+    e.position.addScaledVector(strafe, e.speed * 0.3 * dt);
+    e.position.addScaledVector(dir, e.speed * 0.2 * dt);
+    if (Math.random() < 0.02) e.strafeDir *= -1;
   }
   e.lastMoveDir.copy(dir);
 }
@@ -429,16 +431,34 @@ function GameLoop({
             e.burstCount = 3;
           }
         } else if (e.type === "heavy") {
-          if (now - lastShot > HEAVY_SHOOT_CD && dist < 16) {
+          // Melee only — punch when in range
+          if (now - lastShot > HEAVY_MELEE_CD && dist < HEAVY_MELEE_RANGE) {
             enemyShootTimers.current.set(e.id, now);
-            fireEnemyProjectile(
-              e,
-              playerPos.current,
-              setProjectiles,
-              ENEMY_PROJECTILE_SPEED * 1.2
-            );
+            // Play punch animation
             e.isShooting = true;
             e.shootFrame = 0;
+            // Deal direct damage to player
+            setHealth((h) => Math.max(0, h - HEAVY_MELEE_DAMAGE));
+            setDamageFlash(true);
+            setTimeout(() => setDamageFlash(false), 150);
+            playDamageSound();
+            shakeIntensity.current = 0.2;
+
+            // Damage direction from heavy
+            const toEnemy = new THREE.Vector3()
+              .subVectors(e.position, playerPos.current)
+              .setY(0)
+              .normalize();
+            const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(
+              camera.quaternion
+            );
+            forward.y = 0;
+            forward.normalize();
+            const angle = Math.atan2(
+              forward.x * toEnemy.z - forward.z * toEnemy.x,
+              forward.x * toEnemy.x + forward.z * toEnemy.z
+            );
+            setDamageDirection(angle);
           }
         }
 
