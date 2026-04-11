@@ -124,7 +124,6 @@ interface EnemySpriteProps {
 function EnemySprite({ enemy, textures }: EnemySpriteProps) {
   const groupRef = useRef<THREE.Group>(null);
   const spriteMatRef = useRef<THREE.MeshBasicMaterial>(null);
-  const ringRef = useRef<THREE.Mesh>(null);
   const { camera } = useThree();
 
   const spriteScale =
@@ -176,12 +175,6 @@ function EnemySprite({ enemy, textures }: EnemySpriteProps) {
       spriteMatRef.current.needsUpdate = true;
     }
 
-    // Animate ring pulse
-    if (ringRef.current) {
-      const mat = ringRef.current.material as THREE.MeshStandardMaterial;
-      mat.emissiveIntensity =
-        2 + Math.sin(state.clock.elapsedTime * 4 + enemy.bobOffset) * 1;
-    }
   });
 
   return (
@@ -199,32 +192,6 @@ function EnemySprite({ enemy, textures }: EnemySpriteProps) {
           depthWrite={true}
         />
       </mesh>
-
-      {/* Type indicator ring at base */}
-      <mesh
-        ref={ringRef}
-        position={[0, 0.05, 0]}
-        rotation={[-Math.PI / 2, 0, 0]}
-      >
-        <torusGeometry
-          args={[
-            enemy.type === "heavy" ? 1.2 : enemy.type === "sentinel" ? 1.0 : 0.7,
-            0.08,
-            8,
-            24,
-          ]}
-        />
-        <meshStandardMaterial
-          color={colors.glow}
-          emissive={colors.glow}
-          emissiveIntensity={3}
-          toneMapped={false}
-          transparent
-          opacity={0.8}
-        />
-      </mesh>
-
-      {/* Type label - small text above health bar area */}
 
       {/* Health bar */}
       {enemy.hp < enemy.maxHp && (

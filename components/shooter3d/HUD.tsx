@@ -335,7 +335,7 @@ export default function HUD({
                   .map((dot, i) => {
                     const radarScale = 48 / 30; // 30 units = edge of radar
                     const rx = dot.x * radarScale;
-                    const rz = dot.z * radarScale;
+                    const rz = -dot.z * radarScale;
                     // Clamp to radar bounds
                     const dist = Math.sqrt(rx * rx + rz * rz);
                     const clampedDist = Math.min(dist, 46);
