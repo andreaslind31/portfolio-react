@@ -43,9 +43,13 @@ const SPRITE_SETS = {
     base: "/game-assets/enemies/imp",
     attackAnim: "Fireball-e746cbc0",
   },
-  impHeavy: {
+  impSentinel: {
     base: "/game-assets/enemies/imp-heavy",
     attackAnim: "Cross_Punch-b0a0bfd2",
+  },
+  impGiant: {
+    base: "/game-assets/enemies/giant_kicking_imp",
+    attackAnim: "Flying_Kick-5baba02b",
   },
 } as const;
 
@@ -264,9 +268,19 @@ interface EnemiesProps {
   playerPosition: THREE.Vector3;
 }
 
+function getTextureSet(
+  type: EnemyData["type"],
+  sets: { drone: SpriteTextures; sentinel: SpriteTextures; heavy: SpriteTextures }
+): SpriteTextures {
+  return sets[type];
+}
+
 export default function Enemies({ enemies, playerPosition }: EnemiesProps) {
-  const impTextures = useSpriteSet("imp");
-  const heavyTextures = useSpriteSet("impHeavy");
+  const droneTextures = useSpriteSet("imp");
+  const sentinelTextures = useSpriteSet("impSentinel");
+  const heavyTextures = useSpriteSet("impGiant");
+
+  const sets = { drone: droneTextures, sentinel: sentinelTextures, heavy: heavyTextures };
 
   return (
     <group>
@@ -274,7 +288,7 @@ export default function Enemies({ enemies, playerPosition }: EnemiesProps) {
         <EnemySprite
           key={enemy.id}
           enemy={enemy}
-          textures={enemy.type === "drone" ? impTextures : heavyTextures}
+          textures={getTextureSet(enemy.type, sets)}
         />
       ))}
     </group>
