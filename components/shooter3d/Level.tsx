@@ -6,11 +6,11 @@ import { RigidBody } from "@react-three/rapier";
 import * as THREE from "three";
 
 // ── Sci-fi palette ──────────────────────────────────────
-const FLOOR_COLOR = "#2a2a42";
-const FLOOR_DARK = "#1e1e35";
-const WALL_COLOR = "#263556";
-const TRIM_COLOR = "#1a4a7a";
-const CEILING_COLOR = "#151525";
+const FLOOR_COLOR = "#3d3d5c";
+const FLOOR_DARK = "#2e2e48";
+const WALL_COLOR = "#384868";
+const TRIM_COLOR = "#2a5a8a";
+const CEILING_COLOR = "#2a2a40";
 const EMISSIVE_CYAN = "#00d4ff";
 const EMISSIVE_PURPLE = "#7b2ff7";
 const EMISSIVE_RED = "#ff2255";
@@ -74,7 +74,7 @@ function Wall({
     <RigidBody type="fixed" position={position} rotation={rotation} colliders="cuboid">
       <mesh castShadow receiveShadow>
         <boxGeometry args={size} />
-        <meshStandardMaterial color={color} metalness={0.7} roughness={0.3} />
+        <meshStandardMaterial color={color} metalness={0.3} roughness={0.6} emissive={color} emissiveIntensity={0.08} />
       </mesh>
     </RigidBody>
   );
@@ -124,7 +124,7 @@ function EnergyPillar({
     <group position={position}>
       <mesh castShadow>
         <cylinderGeometry args={[0.3, 0.4, 0.3, 8]} />
-        <meshStandardMaterial color={TRIM_COLOR} metalness={0.9} roughness={0.1} />
+        <meshStandardMaterial color={TRIM_COLOR} metalness={0.3} roughness={0.5} emissive={TRIM_COLOR} emissiveIntensity={0.06} />
       </mesh>
       <mesh ref={meshRef} position={[0, 1.5, 0]} castShadow>
         <cylinderGeometry args={[0.15, 0.15, 2.7, 8]} />
@@ -132,7 +132,7 @@ function EnergyPillar({
       </mesh>
       <mesh position={[0, 3, 0]} castShadow>
         <cylinderGeometry args={[0.4, 0.3, 0.3, 8]} />
-        <meshStandardMaterial color={TRIM_COLOR} metalness={0.9} roughness={0.1} />
+        <meshStandardMaterial color={TRIM_COLOR} metalness={0.3} roughness={0.5} emissive={TRIM_COLOR} emissiveIntensity={0.06} />
       </mesh>
       <pointLight position={[0, 1.5, 0]} color={color} intensity={3} distance={8} decay={2} />
     </group>
@@ -163,15 +163,15 @@ function SpawnPortal({
       {/* Arch frame */}
       <mesh position={[-1.2, 1.5, 0]} castShadow>
         <boxGeometry args={[0.2, 3, 0.3]} />
-        <meshStandardMaterial color={TRIM_COLOR} metalness={0.9} roughness={0.1} />
+        <meshStandardMaterial color={TRIM_COLOR} metalness={0.3} roughness={0.5} emissive={TRIM_COLOR} emissiveIntensity={0.06} />
       </mesh>
       <mesh position={[1.2, 1.5, 0]} castShadow>
         <boxGeometry args={[0.2, 3, 0.3]} />
-        <meshStandardMaterial color={TRIM_COLOR} metalness={0.9} roughness={0.1} />
+        <meshStandardMaterial color={TRIM_COLOR} metalness={0.3} roughness={0.5} emissive={TRIM_COLOR} emissiveIntensity={0.06} />
       </mesh>
       <mesh position={[0, 3.1, 0]} castShadow>
         <boxGeometry args={[2.6, 0.2, 0.3]} />
-        <meshStandardMaterial color={TRIM_COLOR} metalness={0.9} roughness={0.1} />
+        <meshStandardMaterial color={TRIM_COLOR} metalness={0.3} roughness={0.5} emissive={TRIM_COLOR} emissiveIntensity={0.06} />
       </mesh>
       {/* Spinning energy ring */}
       <mesh ref={ringRef} position={[0, 1.5, 0]}>
@@ -204,7 +204,7 @@ function Crate({
     <RigidBody type="fixed" position={position} colliders="cuboid">
       <mesh castShadow receiveShadow>
         <boxGeometry args={size} />
-        <meshStandardMaterial color={color} metalness={0.6} roughness={0.4} />
+        <meshStandardMaterial color={color} metalness={0.3} roughness={0.5} emissive={color} emissiveIntensity={0.05} />
       </mesh>
       {/* Hazard stripe */}
       <mesh position={[0, 0, size[2] / 2 + 0.001]}>
@@ -239,7 +239,7 @@ function Terminal({
       {/* Console base */}
       <mesh position={[0, 0.4, 0]} castShadow>
         <boxGeometry args={[0.8, 0.8, 0.5]} />
-        <meshStandardMaterial color="#1a1a2e" metalness={0.8} roughness={0.2} />
+        <meshStandardMaterial color="#2e2e48" metalness={0.3} roughness={0.5} emissive="#2e2e48" emissiveIntensity={0.06} />
       </mesh>
       {/* Screen */}
       <mesh ref={screenRef} position={[0, 1, -0.05]} rotation={[-0.2, 0, 0]}>
@@ -266,7 +266,7 @@ function Ramp({
     <RigidBody type="fixed" position={position} rotation={rotation} colliders="cuboid">
       <mesh rotation={rampRotation} castShadow receiveShadow>
         <boxGeometry args={size} />
-        <meshStandardMaterial color={TRIM_COLOR} metalness={0.7} roughness={0.3} />
+        <meshStandardMaterial color={TRIM_COLOR} metalness={0.3} roughness={0.5} emissive={TRIM_COLOR} emissiveIntensity={0.06} />
       </mesh>
     </RigidBody>
   );
@@ -290,16 +290,16 @@ export default function Level() {
       <RigidBody type="fixed" colliders="cuboid">
         <mesh receiveShadow position={[0, -0.25, 0]}>
           <boxGeometry args={[W, 0.5, D]} />
-          <meshStandardMaterial color={FLOOR_COLOR} metalness={0.8} roughness={0.2} />
+          <meshStandardMaterial color={FLOOR_COLOR} metalness={0.2} roughness={0.7} emissive={FLOOR_COLOR} emissiveIntensity={0.06} />
         </mesh>
       </RigidBody>
-      <gridHelper args={[W, 50, EMISSIVE_CYAN, "#0a0a1a"]} position={[0, 0.01, 0]} />
+      <gridHelper args={[W, 50, EMISSIVE_CYAN, "#1a1a30"]} position={[0, 0.01, 0]} />
 
       {/* Ceiling */}
       <RigidBody type="fixed" colliders="cuboid">
         <mesh position={[0, WALL_H + 0.25, 0]}>
           <boxGeometry args={[W, 0.5, D]} />
-          <meshStandardMaterial color={CEILING_COLOR} metalness={0.9} roughness={0.1} />
+          <meshStandardMaterial color={CEILING_COLOR} metalness={0.2} roughness={0.7} emissive={CEILING_COLOR} emissiveIntensity={0.1} />
         </mesh>
       </RigidBody>
 
@@ -329,7 +329,7 @@ export default function Level() {
       <RigidBody type="fixed" colliders="cuboid">
         <mesh position={[0, 0.5, 0]} castShadow receiveShadow>
           <boxGeometry args={[8, 1, 8]} />
-          <meshStandardMaterial color={TRIM_COLOR} metalness={0.8} roughness={0.2} />
+          <meshStandardMaterial color={TRIM_COLOR} metalness={0.3} roughness={0.5} emissive={TRIM_COLOR} emissiveIntensity={0.06} />
         </mesh>
       </RigidBody>
       <GlowStrip position={[0, 1.02, 0]} scale={[7.5, 0.04, 7.5]} color={EMISSIVE_CYAN} intensity={1} />
@@ -389,7 +389,7 @@ export default function Level() {
       <RigidBody type="fixed" colliders="cuboid">
         <mesh position={[0, 1, 23]} castShadow>
           <cylinderGeometry args={[2, 2, 2, 12]} />
-          <meshStandardMaterial color={TRIM_COLOR} metalness={0.9} roughness={0.1} />
+          <meshStandardMaterial color={TRIM_COLOR} metalness={0.3} roughness={0.5} emissive={TRIM_COLOR} emissiveIntensity={0.06} />
         </mesh>
       </RigidBody>
       <GlowStrip position={[0, 2.1, 23]} scale={[3.5, 0.06, 3.5]} color={EMISSIVE_PURPLE} intensity={3} />
@@ -452,7 +452,7 @@ export default function Level() {
       <RigidBody type="fixed" colliders="cuboid">
         <mesh position={[-17, 2, 0]} castShadow receiveShadow>
           <boxGeometry args={[2, 0.15, 10]} />
-          <meshStandardMaterial color={TRIM_COLOR} metalness={0.8} roughness={0.2} />
+          <meshStandardMaterial color={TRIM_COLOR} metalness={0.3} roughness={0.5} emissive={TRIM_COLOR} emissiveIntensity={0.06} />
         </mesh>
       </RigidBody>
       <GlowStrip position={[-17, 2.08, 0]} scale={[1.8, 0.03, 9.5]} color={EMISSIVE_ORANGE} intensity={1} />
@@ -532,8 +532,8 @@ export default function Level() {
       <CeilingLight position={[-18, WALL_H - 0.1, 0]} color={EMISSIVE_ORANGE} />
 
       {/* Global ambient */}
-      <ambientLight intensity={0.4} color="#334466" />
-      <hemisphereLight color="#4466aa" groundColor="#1a1a2e" intensity={0.5} />
+      <ambientLight intensity={0.6} color="#556688" />
+      <hemisphereLight color="#6688bb" groundColor="#2a2a40" intensity={0.6} />
     </group>
   );
 }
