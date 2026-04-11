@@ -1,0 +1,92 @@
+{
+  "character": {
+    "id": "41851d13-d3cc-46c1-92d7-caf31985acf4",
+    "name": "giant kicking imp",
+    "prompt": "giant rocket imp",
+    "size": {
+      "width": 92,
+      "height": 92
+    },
+    "template_id": "mannequin",
+    "directions": 8,
+    "view": "low top-down",
+    "created_at": "2026-04-11T09:01:30.703422+00:00"
+  },
+  "frames": {
+    "rotations": {
+      "south": "rotations/south.png",
+      "south-east": "rotations/south-east.png",
+      "east": "rotations/east.png",
+      "north-east": "rotations/north-east.png",
+      "north": "rotations/north.png",
+      "north-west": "rotations/north-west.png",
+      "west": "rotations/west.png",
+      "south-west": "rotations/south-west.png"
+    },
+    "animations": {
+      "Flying_Kick-5baba02b": {
+        "south": [
+          "animations/Flying_Kick-5baba02b/south/frame_000.png",
+          "animations/Flying_Kick-5baba02b/south/frame_001.png",
+          "animations/Flying_Kick-5baba02b/south/frame_002.png",
+          "animations/Flying_Kick-5baba02b/south/frame_003.png",
+          "animations/Flying_Kick-5baba02b/south/frame_004.png",
+          "animations/Flying_Kick-5baba02b/south/frame_005.png"
+        ],
+        "south-east": [
+          "animations/Flying_Kick-5baba02b/south-east/frame_000.png",
+          "animations/Flying_Kick-5baba02b/south-east/frame_001.png",
+          "animations/Flying_Kick-5baba02b/south-east/frame_002.png",
+          "animations/Flying_Kick-5baba02b/south-east/frame_003.png",
+          "animations/Flying_Kick-5baba02b/south-east/frame_004.png",
+          "animations/Flying_Kick-5baba02b/south-east/frame_005.png"
+        ],
+        "south-west": [
+          "animations/Flying_Kick-5baba02b/south-west/frame_000.png",
+          "animations/Flying_Kick-5baba02b/south-west/frame_001.png",
+          "animations/Flying_Kick-5baba02b/south-west/frame_002.png",
+          "animations/Flying_Kick-5baba02b/south-west/frame_003.png",
+          "animations/Flying_Kick-5baba02b/south-west/frame_004.png",
+          "animations/Flying_Kick-5baba02b/south-west/frame_005.png"
+        ]
+      },
+      "Jumping-10e6225f": {
+        "north-east": [
+          "animations/Jumping-10e6225f/north-east/frame_000.png",
+          "animations/Jumping-10e6225f/north-east/frame_001.png",
+          "animations/Jumping-10e6225f/north-east/frame_002.png",
+          "animations/Jumping-10e6225f/north-east/frame_003.png",
+          "animations/Jumping-10e6225f/north-east/frame_004.png",
+          "animations/Jumping-10e6225f/north-east/frame_005.png",
+          "animations/Jumping-10e6225f/north-east/frame_006.png",
+          "animations/Jumping-10e6225f/north-east/frame_007.png",
+          "animations/Jumping-10e6225f/north-east/frame_008.png"
+        ],
+        "south": [
+          "animations/Jumping-10e6225f/south/frame_000.png",
+          "animations/Jumping-10e6225f/south/frame_001.png",
+          "animations/Jumping-10e6225f/south/frame_002.png",
+          "animations/Jumping-10e6225f/south/frame_003.png",
+          "animations/Jumping-10e6225f/south/frame_004.png",
+          "animations/Jumping-10e6225f/south/frame_005.png",
+          "animations/Jumping-10e6225f/south/frame_006.png",
+          "animations/Jumping-10e6225f/south/frame_007.png",
+          "animations/Jumping-10e6225f/south/frame_008.png"
+        ],
+        "north": [
+          "animations/Jumping-10e6225f/north/frame_000.png",
+          "animations/Jumping-10e6225f/north/frame_001.png",
+          "animations/Jumping-10e6225f/north/frame_002.png",
+          "animations/Jumping-10e6225f/north/frame_003.png",
+          "animations/Jumping-10e6225f/north/frame_004.png",
+          "animations/Jumping-10e6225f/north/frame_005.png",
+          "animations/Jumping-10e6225f/north/frame_006.png",
+          "animations/Jumping-10e6225f/north/frame_007.png",
+          "animations/Jumping-10e6225f/north/frame_008.png"
+        ]
+      }
+    }
+  },
+  "export_version": "2.0",
+  "export_date": "2026-04-11T09:47:20.024962"
+}
