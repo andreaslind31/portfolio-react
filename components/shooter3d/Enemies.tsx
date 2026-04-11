@@ -24,9 +24,9 @@ export interface EnemyData {
 
 // ── Type-specific visual config ─────────────────────────
 export const ENEMY_COLORS = {
-  drone: { tint: "#ff6666", glow: "#ff2255", projectile: "#ff2255", name: "DRONE" },
-  sentinel: { tint: "#ffaa44", glow: "#ff8800", projectile: "#ffaa00", name: "SENTINEL" },
-  heavy: { tint: "#cc44ff", glow: "#9933ff", projectile: "#cc44ff", name: "HEAVY" },
+  drone: { tint: "#ffffff", glow: "#ff2255", projectile: "#ff2255", name: "DRONE" },
+  sentinel: { tint: "#ffffff", glow: "#ff8800", projectile: "#ffaa00", name: "SENTINEL" },
+  heavy: { tint: "#ffffff", glow: "#9933ff", projectile: "#cc44ff", name: "HEAVY" },
 } as const;
 
 // ── Sprite configuration ────────────────────────────────
@@ -208,8 +208,8 @@ function EnemySprite({ enemy, textures }: EnemySpriteProps) {
       >
         <torusGeometry
           args={[
-            enemy.type === "heavy" ? 1.0 : enemy.type === "sentinel" ? 0.8 : 0.6,
-            0.06,
+            enemy.type === "heavy" ? 1.2 : enemy.type === "sentinel" ? 1.0 : 0.7,
+            0.08,
             8,
             24,
           ]}
@@ -217,7 +217,7 @@ function EnemySprite({ enemy, textures }: EnemySpriteProps) {
         <meshStandardMaterial
           color={colors.glow}
           emissive={colors.glow}
-          emissiveIntensity={2}
+          emissiveIntensity={3}
           toneMapped={false}
           transparent
           opacity={0.8}
