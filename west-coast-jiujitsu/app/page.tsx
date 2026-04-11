@@ -1,6 +1,9 @@
-"use client";
+import dynamic from "next/dynamic";
 
-import MembershipDashboard from "@/components/MembershipDashboard";
+const MembershipDashboard = dynamic(
+  () => import("@/components/MembershipDashboard"),
+  { ssr: false }
+);
 
 export default function Home() {
   return (
