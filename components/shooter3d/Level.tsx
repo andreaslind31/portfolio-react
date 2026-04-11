@@ -31,6 +31,73 @@ export const SPAWN_PORTALS: [number, number, number][] = [
   [-ARENA_HALF_W + 2, 0, 0], // West room
 ];
 
+// ── Wall collision boxes for enemy AI [cx, cz, halfW, halfD] ─
+// These match the interior wall geometry so enemies can't walk through.
+export const WALL_COLLIDERS: [number, number, number, number][] = [
+  // ── North corridor walls ──
+  [-5, -14, 0.5, 7],
+  [5, -14, 0.5, 7],
+  // North room side walls
+  [-12, -22, 0.5, 4],
+  [12, -22, 0.5, 4],
+  [-8.5, -18, 3.5, 0.5],
+  [8.5, -18, 3.5, 0.5],
+
+  // ── South corridor walls ──
+  [-5, 14, 0.5, 7],
+  [5, 14, 0.5, 7],
+  // South room side walls
+  [-12, 22, 0.5, 4],
+  [12, 22, 0.5, 4],
+  [-8.5, 18, 3.5, 0.5],
+  [8.5, 18, 3.5, 0.5],
+  // Reactor core
+  [0, 23, 2.2, 2.2],
+
+  // ── East corridor walls ──
+  [14, -5, 7, 0.5],
+  [14, 5, 7, 0.5],
+  // East room side walls
+  [22, -8, 4, 0.5],
+  [22, 8, 4, 0.5],
+  [18, -6.5, 0.5, 1.5],
+  [18, 6.5, 0.5, 1.5],
+
+  // ── West corridor walls ──
+  [-14, -5, 7, 0.5],
+  [-14, 5, 7, 0.5],
+  // West room side walls
+  [-22, -8, 4, 0.5],
+  [-22, 8, 4, 0.5],
+  [-18, -6.5, 0.5, 1.5],
+  [-18, 6.5, 0.5, 1.5],
+  // Catwalk support
+  [-17, 0, 1.2, 5],
+
+  // ── Central hub ──
+  // Central platform
+  [0, 0, 4.2, 4.2],
+  // Corner cover crates
+  [8, -8, 1.5, 1.5],
+  [-8, -8, 1.5, 1.5],
+  [8, 8, 1.5, 1.5],
+  [-8, 8, 1.5, 1.5],
+  // Half-height walls at corridor entrances
+  [3.5, -8, 0.7, 1.7],
+  [-3.5, -8, 0.7, 1.7],
+  [3.5, 8, 0.7, 1.7],
+  [-3.5, 8, 0.7, 1.7],
+
+  // ── Crates in rooms ──
+  [-10, -24, 1.2, 0.8],
+  [-10, -21, 1.2, 0.8],
+  [10, -24, 1.2, 0.8],
+  [-20, -6, 0.8, 0.8],
+  [-20, -3, 1, 1],
+  [-20, 3, 0.8, 0.8],
+  [-20, 6, 1, 1],
+];
+
 // ═══════════════════════════════════════════════════════════
 // Reusable building blocks
 // ═══════════════════════════════════════════════════════════

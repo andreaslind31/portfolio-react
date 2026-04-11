@@ -5,7 +5,7 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Physics } from "@react-three/rapier";
 import * as THREE from "three";
 import Player from "./Player";
-import Level, { ARENA_HALF_W, ARENA_HALF_D, SPAWN_PORTALS } from "./Level";
+import Level, { ARENA_HALF_W, ARENA_HALF_D, SPAWN_PORTALS, WALL_COLLIDERS } from "./Level";
 import Weapon from "./Weapon";
 import HUD, { type RadarDot } from "./HUD";
 import Enemies, { type EnemyData } from "./Enemies";
@@ -49,10 +49,10 @@ const HEAVY_SHOOT_CD = 2.5;
 
 // ── Spawn config per wave ────────────────────────────────
 function getWaveConfig(wave: number) {
-  const base = 2 + wave;
-  const drones = Math.min(base, 8);
-  const sentinels = wave >= 3 ? Math.floor((wave - 2) / 2) : 0;
-  const heavies = wave >= 5 ? Math.floor((wave - 4) / 3) : 0;
+  // Mix of all three types from wave 1 for variety
+  const drones = Math.min(1 + wave, 6);
+  const sentinels = Math.max(1, Math.floor(wave / 2) + 1);
+  const heavies = Math.max(1, Math.floor((wave + 1) / 3));
   return { drones, sentinels, heavies };
 }
 
@@ -237,6 +237,32 @@ function updateHeavyAI(
   e.lastMoveDir.copy(dir);
 }
 
+// ── Wall collision for enemies ───────────────────────────
+const ENEMY_RADIUS = 0.6;
+
+function resolveWallCollisions(pos: THREE.Vector3) {
+  for (const [cx, cz, hw, hd] of WALL_COLLIDERS) {
+    const padW = hw + ENEMY_RADIUS;
+    const padD = hd + ENEMY_RADIUS;
+
+    // Check if enemy center is inside the padded AABB
+    const dx = pos.x - cx;
+    const dz = pos.z - cz;
+
+    if (Math.abs(dx) < padW && Math.abs(dz) < padD) {
+      // Find shortest push-out axis
+      const overlapX = padW - Math.abs(dx);
+      const overlapZ = padD - Math.abs(dz);
+
+      if (overlapX < overlapZ) {
+        pos.x += dx > 0 ? overlapX : -overlapX;
+      } else {
+        pos.z += dz > 0 ? overlapZ : -overlapZ;
+      }
+    }
+  }
+}
+
 // ── Game Loop (runs inside Canvas) ───────────────────────
 function GameLoop({
   enemies,
@@ -348,6 +374,9 @@ function GameLoop({
             updateHeavyAI(e, dir, dist, dt);
             break;
         }
+
+        // Resolve wall collisions
+        resolveWallCollisions(e.position);
 
         // Clamp to arena bounds
         const margin = 1.5;
