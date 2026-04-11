@@ -316,13 +316,15 @@ export default function HUD({
             >
               {weaponAmmo[currentWeapon] === -1 ? "∞" : weaponAmmo[currentWeapon]}
             </div>
-            {/* Weapon slots */}
+            {/* Weapon slots — only show when other weapons are available */}
+            {(weaponAmmo.shotgun > 0 || weaponAmmo.plasma > 0) && (
             <div style={{ display: "flex", gap: 6, justifyContent: "flex-end", marginTop: 8 }}>
               {(["blaster", "shotgun", "plasma"] as WeaponType[]).map((w) => {
                 const display = WEAPON_DISPLAY[w];
                 const ammo = weaponAmmo[w];
                 const active = currentWeapon === w;
                 const available = ammo === -1 || ammo > 0;
+                if (!available && !active) return null;
                 return (
                   <div
                     key={w}
@@ -330,8 +332,8 @@ export default function HUD({
                       padding: "2px 6px",
                       fontSize: 9,
                       letterSpacing: 1,
-                      border: `1px solid ${active ? display.color : available ? display.color + "44" : "#333"}`,
-                      color: active ? display.color : available ? display.color + "88" : "#444",
+                      border: `1px solid ${active ? display.color : display.color + "44"}`,
+                      color: active ? display.color : display.color + "88",
                       background: active ? display.color + "22" : "transparent",
                       borderRadius: 2,
                     }}
@@ -341,6 +343,7 @@ export default function HUD({
                 );
               })}
             </div>
+            )}
           </div>
 
           {/* ═══ MINI-RADAR ═══ */}
