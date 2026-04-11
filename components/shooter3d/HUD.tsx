@@ -2,6 +2,13 @@
 
 import { useState, useEffect, useRef } from "react";
 
+export interface RadarDot {
+  x: number; // relative to player, world units
+  z: number;
+  type: "drone" | "sentinel" | "heavy";
+  alive: boolean;
+}
+
 interface HUDProps {
   health: number;
   maxHealth: number;
@@ -18,6 +25,8 @@ interface HUDProps {
   waveAnnounce: number;
   damageDirection: number | null;
   kills: number;
+  radarDots: RadarDot[];
+  playerYaw: number; // camera Y rotation for radar orientation
 }
 
 export default function HUD({
@@ -36,6 +45,8 @@ export default function HUD({
   waveAnnounce,
   damageDirection,
   kills,
+  radarDots,
+  playerYaw,
 }: HUDProps) {
   const [submitName, setSubmitName] = useState("");
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -288,6 +299,80 @@ export default function HUD({
               }}
             >
               {ammo === 999 ? "∞" : ammo}
+            </div>
+          </div>
+
+          {/* ═══ MINI-RADAR ═══ */}
+          <div
+            style={{
+              position: "absolute",
+              bottom: 70,
+              left: 30,
+              width: 100,
+              height: 100,
+            }}
+          >
+            <svg
+              width="100"
+              height="100"
+              viewBox="-50 -50 100 100"
+              style={{ overflow: "visible" }}
+            >
+              {/* Background circle */}
+              <circle cx="0" cy="0" r="48" fill="rgba(0,0,0,0.5)" stroke="#00d4ff33" strokeWidth="1" />
+              {/* Range rings */}
+              <circle cx="0" cy="0" r="24" fill="none" stroke="#00d4ff15" strokeWidth="0.5" />
+              <circle cx="0" cy="0" r="48" fill="none" stroke="#00d4ff22" strokeWidth="0.5" />
+              {/* Cross lines */}
+              <line x1="0" y1="-48" x2="0" y2="48" stroke="#00d4ff15" strokeWidth="0.5" />
+              <line x1="-48" y1="0" x2="48" y2="0" stroke="#00d4ff15" strokeWidth="0.5" />
+              {/* Forward direction indicator */}
+              <polygon points="0,-46 -3,-40 3,-40" fill="#00d4ff66" />
+              {/* Enemy dots — rotated to match camera facing */}
+              <g transform={`rotate(${(-playerYaw * 180) / Math.PI})`}>
+                {radarDots
+                  .filter((d) => d.alive)
+                  .map((dot, i) => {
+                    const radarScale = 48 / 30; // 30 units = edge of radar
+                    const rx = dot.x * radarScale;
+                    const rz = dot.z * radarScale;
+                    // Clamp to radar bounds
+                    const dist = Math.sqrt(rx * rx + rz * rz);
+                    const clampedDist = Math.min(dist, 46);
+                    const scale = dist > 0 ? clampedDist / dist : 0;
+                    const cx = rx * scale;
+                    const cy = rz * scale;
+                    const dotColor =
+                      dot.type === "drone"
+                        ? "#ff2255"
+                        : dot.type === "sentinel"
+                          ? "#ff8800"
+                          : "#ff0044";
+                    return (
+                      <circle
+                        key={i}
+                        cx={cx}
+                        cy={cy}
+                        r={dot.type === "heavy" ? 3.5 : 2.5}
+                        fill={dotColor}
+                        opacity={dist > 46 ? 0.4 : 0.9}
+                      />
+                    );
+                  })}
+              </g>
+              {/* Player dot */}
+              <circle cx="0" cy="0" r="2" fill="#00d4ff" />
+            </svg>
+            <div
+              style={{
+                textAlign: "center",
+                color: "#00d4ff44",
+                fontSize: 9,
+                letterSpacing: 2,
+                marginTop: 2,
+              }}
+            >
+              RADAR
             </div>
           </div>
 

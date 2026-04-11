@@ -1,13 +1,13 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Physics } from "@react-three/rapier";
 import * as THREE from "three";
 import Player from "./Player";
-import Level from "./Level";
+import Level, { ARENA_HALF_W, ARENA_HALF_D, SPAWN_PORTALS } from "./Level";
 import Weapon from "./Weapon";
-import HUD from "./HUD";
+import HUD, { type RadarDot } from "./HUD";
 import Enemies, { type EnemyData } from "./Enemies";
 import Projectiles, { type ProjectileData } from "./Projectiles";
 import Particles, {
@@ -32,17 +32,20 @@ import {
 const MAX_HEALTH = 100;
 const ENEMY_DAMAGE = 10;
 const PLAYER_BULLET_DAMAGE = 25;
-const ARENA_W = 30;
-const ARENA_D = 40;
 const PROJECTILE_SPEED = 40;
 const PROJECTILE_LIFE = 3;
-const ENEMY_SHOOT_COOLDOWN = 2;
 const ENEMY_PROJECTILE_SPEED = 15;
 const HIT_RADIUS = 1.0;
 const PLAYER_HIT_RADIUS = 0.8;
 const PICKUP_RADIUS = 1.5;
 const HEALTH_PICKUP_AMOUNT = 25;
 const PICKUP_DROP_CHANCE = 0.35;
+
+// ── Shoot cooldowns per enemy type ──────────────────────
+const DRONE_SHOOT_CD = 1.5;
+const SENTINEL_SHOOT_CD = 0.25; // burst interval
+const SENTINEL_BURST_PAUSE = 3; // pause between bursts
+const HEAVY_SHOOT_CD = 2.5;
 
 // ── Spawn config per wave ────────────────────────────────
 function getWaveConfig(wave: number) {
@@ -66,14 +69,20 @@ function spawnEnemies(wave: number): EnemyData[] {
     speed: number
   ) => {
     for (let i = 0; i < count; i++) {
-      const angle = Math.random() * Math.PI * 2;
-      const dist = 8 + Math.random() * 8;
+      // Spawn near a random portal
+      const portal =
+        SPAWN_PORTALS[Math.floor(Math.random() * SPAWN_PORTALS.length)];
+      const offset = new THREE.Vector3(
+        (Math.random() - 0.5) * 4,
+        0,
+        (Math.random() - 0.5) * 4
+      );
       enemies.push({
         id: nextId++,
         position: new THREE.Vector3(
-          Math.cos(angle) * dist,
+          portal[0] + offset.x,
           1.5,
-          Math.sin(angle) * dist
+          portal[2] + offset.z
         ),
         hp,
         maxHp: hp,
@@ -81,13 +90,17 @@ function spawnEnemies(wave: number): EnemyData[] {
         alive: true,
         speed,
         bobOffset: Math.random() * Math.PI * 2,
+        aiState: "engage",
+        strafeDir: Math.random() > 0.5 ? 1 : -1,
+        burstCount: type === "sentinel" ? 3 : 0,
+        chargeTimer: 0,
       });
     }
   };
 
-  spawn("drone", config.drones, 25 + wave * 5, 3 + wave * 0.2);
-  spawn("sentinel", config.sentinels, 40 + wave * 5, 2);
-  spawn("heavy", config.heavies, 80 + wave * 10, 1.2);
+  spawn("drone", config.drones, 25 + wave * 5, 4 + wave * 0.2);
+  spawn("sentinel", config.sentinels, 40 + wave * 5, 2.5);
+  spawn("heavy", config.heavies, 80 + wave * 10, 1.5);
 
   return enemies;
 }
@@ -109,14 +122,13 @@ function DamageFlash({ flash }: { flash: boolean }) {
   );
 }
 
-// ── Screen shake (runs inside Canvas) ────────────────────
+// ── Screen shake ─────────────────────────────────────────
 function ScreenShake({
   shakeIntensity,
 }: {
   shakeIntensity: React.MutableRefObject<number>;
 }) {
   const { camera } = useThree();
-  const basePos = useRef(new THREE.Vector3());
 
   useFrame(() => {
     if (shakeIntensity.current > 0.001) {
@@ -127,14 +139,96 @@ function ScreenShake({
       );
       offset.applyQuaternion(camera.quaternion);
       camera.position.add(offset);
-      shakeIntensity.current *= 0.88; // decay
+      shakeIntensity.current *= 0.88;
     }
   });
 
   return null;
 }
 
-// ── Enemy AI + projectile updater (runs inside Canvas) ───
+// ── Enemy AI helpers ─────────────────────────────────────
+function updateDroneAI(
+  e: EnemyData,
+  dir: THREE.Vector3,
+  dist: number,
+  dt: number
+) {
+  // Fast, erratic movement — strafe while approaching
+  const strafe = new THREE.Vector3(-dir.z, 0, dir.x).multiplyScalar(
+    e.strafeDir
+  );
+
+  if (dist > 8) {
+    // Rush in, zigzagging
+    e.position.addScaledVector(dir, e.speed * dt);
+    e.position.addScaledVector(strafe, e.speed * 0.6 * dt);
+  } else if (dist < 3) {
+    e.position.addScaledVector(dir, -e.speed * 0.8 * dt);
+  } else {
+    // Orbit at medium range
+    e.position.addScaledVector(strafe, e.speed * 0.8 * dt);
+    e.position.addScaledVector(dir, e.speed * 0.15 * dt);
+  }
+
+  // Randomly flip strafe direction
+  if (Math.random() < 0.01) e.strafeDir *= -1;
+}
+
+function updateSentinelAI(
+  e: EnemyData,
+  dir: THREE.Vector3,
+  dist: number,
+  dt: number
+) {
+  const strafe = new THREE.Vector3(-dir.z, 0, dir.x).multiplyScalar(
+    e.strafeDir
+  );
+
+  // Sentinels prefer medium range — stay 8-14 units away
+  if (dist > 14) {
+    e.position.addScaledVector(dir, e.speed * dt);
+  } else if (dist < 8) {
+    e.position.addScaledVector(dir, -e.speed * 0.6 * dt);
+    e.position.addScaledVector(strafe, e.speed * 0.3 * dt);
+  } else {
+    // Strafe at optimal range
+    e.position.addScaledVector(strafe, e.speed * 0.5 * dt);
+  }
+
+  if (Math.random() < 0.005) e.strafeDir *= -1;
+}
+
+function updateHeavyAI(
+  e: EnemyData,
+  dir: THREE.Vector3,
+  dist: number,
+  dt: number
+) {
+  // Heavy: slow approach, then charge when close enough
+  if (dist > 10) {
+    e.aiState = "engage";
+    e.position.addScaledVector(dir, e.speed * dt);
+    e.chargeTimer = 0;
+  } else if (dist > 4) {
+    // Windup charge
+    e.aiState = "charge";
+    e.chargeTimer += dt;
+    if (e.chargeTimer > 1) {
+      // Charge!
+      e.position.addScaledVector(dir, e.speed * 3 * dt);
+    } else {
+      // Slow approach during windup
+      e.position.addScaledVector(dir, e.speed * 0.3 * dt);
+    }
+  } else {
+    // Too close, slow retreat and shoot
+    e.aiState = "retreat";
+    e.position.addScaledVector(dir, -e.speed * 0.4 * dt);
+    e.chargeTimer = 0;
+  }
+}
+
+// ── Game Loop (runs inside Canvas) ───────────────────────
 function GameLoop({
   enemies,
   setEnemies,
@@ -147,6 +241,7 @@ function GameLoop({
   pickups,
   setPickups,
   playerPos,
+  playerYaw,
   health,
   setHealth,
   setScore,
@@ -159,6 +254,7 @@ function GameLoop({
   setKills,
   setDamageDirection,
   setWaveAnnounce,
+  setRadarDots,
 }: {
   enemies: EnemyData[];
   setEnemies: React.Dispatch<React.SetStateAction<EnemyData[]>>;
@@ -171,6 +267,7 @@ function GameLoop({
   pickups: PickupData[];
   setPickups: React.Dispatch<React.SetStateAction<PickupData[]>>;
   playerPos: React.MutableRefObject<THREE.Vector3>;
+  playerYaw: React.MutableRefObject<number>;
   health: number;
   setHealth: React.Dispatch<React.SetStateAction<number>>;
   setScore: React.Dispatch<React.SetStateAction<number>>;
@@ -183,20 +280,40 @@ function GameLoop({
   setKills: React.Dispatch<React.SetStateAction<number>>;
   setDamageDirection: React.Dispatch<React.SetStateAction<number | null>>;
   setWaveAnnounce: React.Dispatch<React.SetStateAction<number>>;
+  setRadarDots: React.Dispatch<React.SetStateAction<RadarDot[]>>;
 }) {
   const { camera } = useThree();
   const enemyShootTimers = useRef<Map<number, number>>(new Map());
+  const sentinelBurstTimers = useRef<Map<number, number>>(new Map());
   const waveCleared = useRef(false);
+  const radarUpdateTimer = useRef(0);
 
   useFrame((state, delta) => {
     if (gameState !== "playing") return;
 
-    // Sync player position ref
     playerPos.current.copy(camera.position);
 
-    const clampedDelta = Math.min(delta, 0.05);
+    // Extract yaw from camera quaternion
+    const euler = new THREE.Euler().setFromQuaternion(camera.quaternion, "YXZ");
+    playerYaw.current = euler.y;
 
-    // ── Update enemies (AI movement + shooting) ──
+    const dt = Math.min(delta, 0.05);
+
+    // ── Update radar (throttled to ~10fps) ──
+    radarUpdateTimer.current += dt;
+    if (radarUpdateTimer.current > 0.1) {
+      radarUpdateTimer.current = 0;
+      setRadarDots(
+        enemies.map((e) => ({
+          x: e.position.x - playerPos.current.x,
+          z: e.position.z - playerPos.current.z,
+          type: e.type,
+          alive: e.alive,
+        }))
+      );
+    }
+
+    // ── Update enemies ──
     let allDead = true;
     setEnemies((prev) =>
       prev.map((e) => {
@@ -207,52 +324,72 @@ function GameLoop({
           .subVectors(playerPos.current, e.position)
           .setY(0)
           .normalize();
+        const dist = new THREE.Vector3()
+          .subVectors(playerPos.current, e.position)
+          .setY(0)
+          .length();
 
-        const dist = playerPos.current.distanceTo(e.position);
-
-        if (dist > 5) {
-          e.position.addScaledVector(dir, e.speed * clampedDelta);
-        } else if (dist < 3) {
-          e.position.addScaledVector(dir, -e.speed * 0.5 * clampedDelta);
-        } else {
-          const strafe = new THREE.Vector3(-dir.z, 0, dir.x);
-          e.position.addScaledVector(strafe, e.speed * 0.5 * clampedDelta);
+        // Type-specific AI
+        switch (e.type) {
+          case "drone":
+            updateDroneAI(e, dir, dist, dt);
+            break;
+          case "sentinel":
+            updateSentinelAI(e, dir, dist, dt);
+            break;
+          case "heavy":
+            updateHeavyAI(e, dir, dist, dt);
+            break;
         }
 
-        const margin = 1;
+        // Clamp to arena bounds
+        const margin = 1.5;
         e.position.x = THREE.MathUtils.clamp(
           e.position.x,
-          -ARENA_W / 2 + margin,
-          ARENA_W / 2 - margin
+          -ARENA_HALF_W + margin,
+          ARENA_HALF_W - margin
         );
         e.position.z = THREE.MathUtils.clamp(
           e.position.z,
-          -ARENA_D / 2 + margin,
-          ARENA_D / 2 - margin
+          -ARENA_HALF_D + margin,
+          ARENA_HALF_D - margin
         );
 
-        // Shooting
+        // ── Shooting logic per type ──
         const lastShot = enemyShootTimers.current.get(e.id) || 0;
         const now = performance.now() / 1000;
-        if (now - lastShot > ENEMY_SHOOT_COOLDOWN && dist < 20) {
-          enemyShootTimers.current.set(e.id, now);
-          const shootDir = new THREE.Vector3()
-            .subVectors(playerPos.current, e.position)
-            .normalize();
-          setProjectiles((prev) => [
-            ...prev,
-            {
-              id: nextId++,
-              position: e.position
-                .clone()
-                .add(new THREE.Vector3(0, 1.5, 0)),
-              direction: shootDir,
-              speed: ENEMY_PROJECTILE_SPEED,
-              alive: true,
-              friendly: false,
-              life: PROJECTILE_LIFE,
-            },
-          ]);
+
+        if (e.type === "drone") {
+          if (now - lastShot > DRONE_SHOOT_CD && dist < 18) {
+            enemyShootTimers.current.set(e.id, now);
+            fireEnemyProjectile(e, playerPos.current, setProjectiles);
+          }
+        } else if (e.type === "sentinel") {
+          const lastBurst = sentinelBurstTimers.current.get(e.id) || 0;
+          if (e.burstCount > 0 && now - lastShot > SENTINEL_SHOOT_CD && dist < 22) {
+            enemyShootTimers.current.set(e.id, now);
+            e.burstCount--;
+            fireEnemyProjectile(e, playerPos.current, setProjectiles);
+            if (e.burstCount <= 0) {
+              sentinelBurstTimers.current.set(e.id, now);
+            }
+          } else if (
+            e.burstCount <= 0 &&
+            now - lastBurst > SENTINEL_BURST_PAUSE
+          ) {
+            e.burstCount = 3;
+          }
+        } else if (e.type === "heavy") {
+          if (now - lastShot > HEAVY_SHOOT_CD && dist < 16) {
+            enemyShootTimers.current.set(e.id, now);
+            // Heavy fires a slightly faster, higher damage projectile
+            fireEnemyProjectile(
+              e,
+              playerPos.current,
+              setProjectiles,
+              ENEMY_PROJECTILE_SPEED * 1.2
+            );
+          }
         }
 
         return e;
@@ -267,6 +404,7 @@ function GameLoop({
           const next = w + 1;
           setEnemies(spawnEnemies(next));
           enemyShootTimers.current.clear();
+          sentinelBurstTimers.current.clear();
           waveCleared.current = false;
           setWaveAnnounce(next);
           playWaveStartSound();
@@ -281,23 +419,26 @@ function GameLoop({
         .map((p) => {
           if (!p.alive) return p;
 
-          p.position.addScaledVector(p.direction, p.speed * clampedDelta);
-          p.life -= clampedDelta;
+          p.position.addScaledVector(p.direction, p.speed * dt);
+          p.life -= dt;
 
-          // Out of bounds or expired
           if (
             p.life <= 0 ||
-            Math.abs(p.position.x) > ARENA_W / 2 ||
-            Math.abs(p.position.z) > ARENA_D / 2 ||
+            Math.abs(p.position.x) > ARENA_HALF_W ||
+            Math.abs(p.position.z) > ARENA_HALF_D ||
             p.position.y < -1 ||
             p.position.y > 6
           ) {
-            // Wall impact sparks for player bullets hitting walls
             if (p.friendly && p.life > 0) {
               const normal = new THREE.Vector3(0, 1, 0);
               setParticles((pp) => [
                 ...pp,
-                ...createImpactSparks(p.position.clone(), normal, "#00d4ff", 5),
+                ...createImpactSparks(
+                  p.position.clone(),
+                  normal,
+                  "#00d4ff",
+                  5
+                ),
               ]);
             }
             p.alive = false;
@@ -312,7 +453,6 @@ function GameLoop({
               if (p.position.distanceTo(enemyWorldPos) < HIT_RADIUS) {
                 p.alive = false;
 
-                // Impact sparks
                 const hitNormal = new THREE.Vector3()
                   .subVectors(p.position, enemyWorldPos)
                   .normalize();
@@ -327,7 +467,6 @@ function GameLoop({
                 ]);
                 playHitSound();
 
-                // Hit marker
                 setHitMarker(true);
                 setTimeout(() => setHitMarker(false), 100);
 
@@ -343,7 +482,6 @@ function GameLoop({
                   setScore((s) => s + points);
                   setKills((k) => k + 1);
 
-                  // Death explosion
                   const deathColor =
                     e.type === "drone"
                       ? "#ff2255"
@@ -370,9 +508,8 @@ function GameLoop({
                     },
                   ]);
                   playExplosionSound();
-                  shakeIntensity.current = 0.08;
+                  shakeIntensity.current = e.type === "heavy" ? 0.15 : 0.08;
 
-                  // Chance to drop health pickup
                   if (Math.random() < PICKUP_DROP_CHANCE) {
                     setPickups((pk) => [
                       ...pk,
@@ -403,7 +540,6 @@ function GameLoop({
               playDamageSound();
               shakeIntensity.current = 0.12;
 
-              // Compute damage direction (angle from player forward to projectile source)
               const toProjectile = new THREE.Vector3()
                 .subVectors(p.position, playerPos.current)
                 .setY(0)
@@ -426,7 +562,7 @@ function GameLoop({
         .filter((p) => p.alive)
     );
 
-    // ── Update pickups (collect if near player) ──
+    // ── Update pickups ──
     setPickups((prev) =>
       prev
         .map((pk) => {
@@ -434,11 +570,12 @@ function GameLoop({
           if (pk.position.distanceTo(playerPos.current) < PICKUP_RADIUS) {
             pk.alive = false;
             if (pk.type === "health") {
-              setHealth((h) => Math.min(MAX_HEALTH, h + HEALTH_PICKUP_AMOUNT));
+              setHealth((h) =>
+                Math.min(MAX_HEALTH, h + HEALTH_PICKUP_AMOUNT)
+              );
             }
             playPickupSound();
           }
-          // Despawn after 15 seconds
           if (state.clock.elapsedTime - pk.spawnTime > 15) {
             pk.alive = false;
           }
@@ -447,10 +584,8 @@ function GameLoop({
         .filter((pk) => pk.alive)
     );
 
-    // ── Clean up expired particles ──
+    // ── Clean up ──
     setParticles((prev) => prev.filter((p) => p.life > 0));
-
-    // ── Clean up expired explosions ──
     setExplosions((prev) =>
       prev.filter(
         (e) => state.clock.elapsedTime - e.startTime < e.duration + 0.1
@@ -459,6 +594,36 @@ function GameLoop({
   });
 
   return null;
+}
+
+// Helper to fire an enemy projectile
+function fireEnemyProjectile(
+  e: EnemyData,
+  playerPosition: THREE.Vector3,
+  setProjectiles: React.Dispatch<React.SetStateAction<ProjectileData[]>>,
+  speed: number = ENEMY_PROJECTILE_SPEED
+) {
+  const shootDir = new THREE.Vector3()
+    .subVectors(playerPosition, e.position)
+    .normalize();
+  // Add slight inaccuracy
+  shootDir.x += (Math.random() - 0.5) * 0.1;
+  shootDir.y += (Math.random() - 0.5) * 0.05;
+  shootDir.z += (Math.random() - 0.5) * 0.1;
+  shootDir.normalize();
+
+  setProjectiles((prev) => [
+    ...prev,
+    {
+      id: nextId++,
+      position: e.position.clone().add(new THREE.Vector3(0, 1.5, 0)),
+      direction: shootDir,
+      speed,
+      alive: true,
+      friendly: false,
+      life: PROJECTILE_LIFE,
+    },
+  ]);
 }
 
 // ── Main component ───────────────────────────────────────
@@ -485,33 +650,31 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
   const [kills, setKills] = useState(0);
   const [waveAnnounce, setWaveAnnounce] = useState(0);
   const [damageDirection, setDamageDirection] = useState<number | null>(null);
+  const [radarDots, setRadarDots] = useState<RadarDot[]>([]);
   const [finalScore, setFinalScore] = useState(0);
   const [isTouchDevice, setIsTouchDevice] = useState(false);
 
   const playerPos = useRef(new THREE.Vector3(0, 2, 5));
+  const playerYaw = useRef(0);
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const shakeIntensity = useRef(0);
   const stopAmbient = useRef<(() => void) | null>(null);
 
-  // Detect touch device
   useEffect(() => {
     setIsTouchDevice("ontouchstart" in window || navigator.maxTouchPoints > 0);
   }, []);
 
-  // Watch health for game over
   useEffect(() => {
     if (health <= 0 && gameState === "playing") {
       setFinalScore(score);
       setGameState("gameover");
       document.exitPointerLock?.();
       setLocked(false);
-      // Stop ambient
       stopAmbient.current?.();
       stopAmbient.current = null;
     }
   }, [health, gameState, score]);
 
-  // Pointer lock change listener
   useEffect(() => {
     const handleChange = () => {
       const isLocked =
@@ -523,7 +686,6 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
       document.removeEventListener("pointerlockchange", handleChange);
   }, []);
 
-  // Cleanup ambient on unmount
   useEffect(() => {
     return () => {
       stopAmbient.current?.();
@@ -541,6 +703,7 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
     setParticles([]);
     setExplosions([]);
     setPickups([]);
+    setRadarDots([]);
     setHitMarker(false);
     setWaveAnnounce(1);
     setDamageDirection(null);
@@ -548,10 +711,8 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
     shakeIntensity.current = 0;
     setEnemies(spawnEnemies(1));
 
-    // Start ambient sound
     stopAmbient.current?.();
     stopAmbient.current = startAmbientHum();
-
     playWaveStartSound();
 
     canvasContainerRef.current?.requestPointerLock?.();
@@ -644,7 +805,7 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
           camera={{ fov: 75, near: 0.1, far: 100 }}
         >
           <Suspense fallback={null}>
-            <fog attach="fog" args={["#0a0a15", 15, 45]} />
+            <fog attach="fog" args={["#0a0a15", 20, 55]} />
             <Physics gravity={[0, -15, 0]}>
               <Player locked={locked} />
               <Level />
@@ -667,6 +828,7 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
               pickups={pickups}
               setPickups={setPickups}
               playerPos={playerPos}
+              playerYaw={playerYaw}
               health={health}
               setHealth={setHealth}
               setScore={setScore}
@@ -679,6 +841,7 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
               setKills={setKills}
               setDamageDirection={setDamageDirection}
               setWaveAnnounce={setWaveAnnounce}
+              setRadarDots={setRadarDots}
             />
             <PostProcessing />
           </Suspense>
@@ -701,6 +864,8 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
         waveAnnounce={waveAnnounce}
         damageDirection={damageDirection}
         kills={kills}
+        radarDots={radarDots}
+        playerYaw={playerYaw.current}
       />
 
       <DamageFlash flash={damageFlash} />

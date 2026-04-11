@@ -108,9 +108,9 @@ export default function Player({ locked }: PlayerProps) {
       true
     );
 
-    // Ground check: position near floor and vertical velocity near zero
+    // Ground check: vertical velocity near zero (works on ramps too)
     const pos = body.translation();
-    const isGrounded = pos.y < 1.1 && Math.abs(currentVel.y) < 0.1;
+    const isGrounded = pos.y < 3.5 && Math.abs(currentVel.y) < 0.5;
 
     if (
       (keys.current.has("Space") || keys.current.has("KeySpace")) &&
