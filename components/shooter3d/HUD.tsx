@@ -14,6 +14,7 @@ const WEAPON_DISPLAY: Record<WeaponType, { name: string; color: string }> = {
   blaster: { name: "BLASTER", color: "#00d4ff" },
   shotgun: { name: "SHOTGUN", color: "#ff8800" },
   plasma: { name: "PLASMA", color: "#44ff44" },
+  rocket: { name: "ROCKET", color: "#ff4444" },
 };
 
 interface HUDProps {
@@ -317,9 +318,9 @@ export default function HUD({
               {weaponAmmo[currentWeapon] === -1 ? "∞" : weaponAmmo[currentWeapon]}
             </div>
             {/* Weapon slots — only show when other weapons are available */}
-            {(weaponAmmo.shotgun > 0 || weaponAmmo.plasma > 0) && (
+            {(weaponAmmo.shotgun > 0 || weaponAmmo.plasma > 0 || weaponAmmo.rocket > 0) && (
             <div style={{ display: "flex", gap: 6, justifyContent: "flex-end", marginTop: 8 }}>
-              {(["blaster", "shotgun", "plasma"] as WeaponType[]).map((w) => {
+              {(["blaster", "shotgun", "plasma", "rocket"] as WeaponType[]).map((w) => {
                 const display = WEAPON_DISPLAY[w];
                 const ammo = weaponAmmo[w];
                 const active = currentWeapon === w;
@@ -338,7 +339,7 @@ export default function HUD({
                       borderRadius: 2,
                     }}
                   >
-                    {w === "blaster" ? "1" : w === "shotgun" ? "2" : "3"}
+                    {w === "blaster" ? "1" : w === "shotgun" ? "2" : w === "plasma" ? "3" : "4"}
                   </div>
                 );
               })}

@@ -8,6 +8,7 @@ export type PickupType =
   | "health"
   | "shotgun"
   | "plasma"
+  | "rocket"
   | "speed"
   | "damage";
 
@@ -26,6 +27,7 @@ const PICKUP_CONFIG: Record<
   health: { color: "#00ff88", label: "HP" },
   shotgun: { color: "#ff8800", label: "SG" },
   plasma: { color: "#44ff44", label: "PL" },
+  rocket: { color: "#ff4444", label: "RL" },
   speed: { color: "#00ddff", label: "SP" },
   damage: { color: "#ff4444", label: "DM" },
 };
@@ -94,6 +96,21 @@ function PickupMesh({ pickup }: PickupMeshProps) {
           <sphereGeometry args={[0.15, 8, 8]} />
           <meshStandardMaterial color={cfg.color} emissive={cfg.color} emissiveIntensity={4} toneMapped={false} transparent opacity={0.9} />
         </mesh>
+      )}
+
+      {pickup.type === "rocket" && (
+        <group>
+          {/* Rocket body */}
+          <mesh rotation={[0, 0, Math.PI / 6]}>
+            <cylinderGeometry args={[0.05, 0.07, 0.3, 8]} />
+            <meshStandardMaterial color={cfg.color} emissive={cfg.color} emissiveIntensity={2} toneMapped={false} />
+          </mesh>
+          {/* Nose cone */}
+          <mesh position={[0.08, 0.13, 0]} rotation={[0, 0, Math.PI / 6]}>
+            <coneGeometry args={[0.05, 0.1, 8]} />
+            <meshStandardMaterial color="#ffaa44" emissive="#ffaa44" emissiveIntensity={2} toneMapped={false} />
+          </mesh>
+        </group>
       )}
 
       {pickup.type === "speed" && (

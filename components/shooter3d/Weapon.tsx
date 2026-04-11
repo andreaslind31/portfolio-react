@@ -4,7 +4,7 @@ import { useRef, useCallback, useEffect, useMemo } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 
-export type WeaponType = "blaster" | "shotgun" | "plasma";
+export type WeaponType = "blaster" | "shotgun" | "plasma" | "rocket";
 
 export interface WeaponConfig {
   cooldown: number;
@@ -13,10 +13,12 @@ export interface WeaponConfig {
   flashColor: string;
   damage: number;
   speed: number;
-  spread: number; // 0 = perfect accuracy, higher = more spread
-  pellets: number; // shots per click
+  spread: number;
+  pellets: number;
   projectileSize: number;
   projectileLife: number;
+  explosive?: boolean;
+  explosionRadius?: number;
 }
 
 export const WEAPON_CONFIGS: Record<WeaponType, WeaponConfig> = {
@@ -55,6 +57,20 @@ export const WEAPON_CONFIGS: Record<WeaponType, WeaponConfig> = {
     pellets: 1,
     projectileSize: 2.5,
     projectileLife: 4,
+  },
+  rocket: {
+    cooldown: 1.2,
+    recoil: 0.25,
+    color: "#ff4444",
+    flashColor: "#ff8866",
+    damage: 80,
+    speed: 20,
+    spread: 0,
+    pellets: 1,
+    projectileSize: 3,
+    projectileLife: 5,
+    explosive: true,
+    explosionRadius: 5,
   },
 };
 
@@ -270,6 +286,60 @@ export default function Weapon({ locked, weaponType, ammo, onShoot }: WeaponProp
           <mesh position={[-0.05, 0, -0.1]}>
             <boxGeometry args={[0.008, 0.02, 0.3]} />
             <meshStandardMaterial color="#44ff44" emissive="#44ff44" emissiveIntensity={3} toneMapped={false} />
+          </mesh>
+        </>
+      )}
+
+      {/* ── ROCKET LAUNCHER ── */}
+      {weaponType === "rocket" && (
+        <>
+          {/* Wide tube barrel */}
+          <mesh position={[0, 0, -0.12]} castShadow>
+            <cylinderGeometry args={[0.045, 0.045, 0.5, 10]} />
+            <meshStandardMaterial color="#4a3030" metalness={0.8} roughness={0.2} />
+          </mesh>
+          {/* Inner bore (darker) */}
+          <mesh position={[0, 0, -0.38]}>
+            <cylinderGeometry args={[0.035, 0.035, 0.02, 10]} />
+            <meshStandardMaterial color="#1a0a0a" metalness={0.5} roughness={0.5} />
+          </mesh>
+          {/* Receiver body */}
+          <mesh position={[0, -0.02, 0.1]} castShadow>
+            <boxGeometry args={[0.1, 0.1, 0.2]} />
+            <meshStandardMaterial color="#3a2020" metalness={0.7} roughness={0.3} />
+          </mesh>
+          {/* Grip */}
+          <mesh position={[0, -0.1, 0.12]} rotation={[0.3, 0, 0]} castShadow>
+            <boxGeometry args={[0.05, 0.12, 0.06]} />
+            <meshStandardMaterial color="#2a1515" metalness={0.6} roughness={0.4} />
+          </mesh>
+          {/* Rear exhaust port */}
+          <mesh position={[0, 0, 0.15]}>
+            <cylinderGeometry args={[0.04, 0.05, 0.06, 8]} />
+            <meshStandardMaterial color="#1a0a0a" metalness={0.8} roughness={0.2} />
+          </mesh>
+          {/* Red warning stripes */}
+          <mesh position={[0, 0.05, -0.05]}>
+            <boxGeometry args={[0.1, 0.008, 0.15]} />
+            <meshStandardMaterial color="#ff4444" emissive="#ff4444" emissiveIntensity={1.5} toneMapped={false} />
+          </mesh>
+          <mesh position={[0, -0.05, -0.05]}>
+            <boxGeometry args={[0.1, 0.008, 0.15]} />
+            <meshStandardMaterial color="#ff4444" emissive="#ff4444" emissiveIntensity={1.5} toneMapped={false} />
+          </mesh>
+          {/* Side glow strips */}
+          <mesh position={[0.05, 0, -0.1]}>
+            <boxGeometry args={[0.006, 0.015, 0.3]} />
+            <meshStandardMaterial color="#ff4444" emissive="#ff4444" emissiveIntensity={2} toneMapped={false} />
+          </mesh>
+          <mesh position={[-0.05, 0, -0.1]}>
+            <boxGeometry args={[0.006, 0.015, 0.3]} />
+            <meshStandardMaterial color="#ff4444" emissive="#ff4444" emissiveIntensity={2} toneMapped={false} />
+          </mesh>
+          {/* Sight on top */}
+          <mesh position={[0, 0.06, -0.15]}>
+            <boxGeometry args={[0.02, 0.03, 0.08]} />
+            <meshStandardMaterial color="#4a3030" metalness={0.9} roughness={0.1} />
           </mesh>
         </>
       )}

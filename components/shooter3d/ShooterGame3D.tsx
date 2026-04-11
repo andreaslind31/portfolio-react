@@ -42,7 +42,7 @@ const HEALTH_PICKUP_AMOUNT = 25;
 const MAX_POWERUPS_ON_MAP = 2;
 const POWERUP_RESPAWN_DELAY = 8; // seconds after all collected
 const POWERUP_DESPAWN_TIME = 20; // seconds before despawn
-const POWERUP_TYPES: PickupType[] = ["health", "shotgun", "plasma", "speed", "damage"];
+const POWERUP_TYPES: PickupType[] = ["health", "shotgun", "plasma", "rocket", "speed", "damage"];
 const SPEED_BOOST_DURATION = 8; // seconds
 const DAMAGE_BOOST_DURATION = 8; // seconds
 const DAMAGE_BOOST_MULTIPLIER = 2;
@@ -50,6 +50,7 @@ const DAMAGE_BOOST_MULTIPLIER = 2;
 // Weapon ammo amounts given by pickups
 const SHOTGUN_PICKUP_AMMO = 8;
 const PLASMA_PICKUP_AMMO = 5;
+const ROCKET_PICKUP_AMMO = 3;
 
 // ── Shoot cooldowns per enemy type ──────────────────────
 const DRONE_SHOOT_CD = 1.5;
@@ -543,76 +544,73 @@ function GameLoop({
 
           // Friendly projectile hits enemy
           if (p.friendly && p.alive) {
+            // Check if this projectile is explosive (rocket)
+            const isExplosive = p.size && p.size >= 3 && p.color === "#ff4444";
+            const explosionRadius = isExplosive ? 5 : 0;
+
+            let directHit = false;
             for (const e of enemies) {
               if (!e.alive) continue;
               const enemyWorldPos = e.position.clone();
-              enemyWorldPos.y += 1.0; // center of sprite
+              enemyWorldPos.y += 1.0;
               if (p.position.distanceTo(enemyWorldPos) < HIT_RADIUS) {
+                directHit = true;
                 p.alive = false;
 
-                const hitNormal = new THREE.Vector3()
-                  .subVectors(p.position, enemyWorldPos)
-                  .normalize();
-                setParticles((pp) => [
-                  ...pp,
-                  ...createImpactSparks(
-                    p.position.clone(),
-                    hitNormal,
-                    "#00d4ff",
-                    6
-                  ),
-                ]);
-                playHitSound();
-
-                setHitMarker(true);
-                setTimeout(() => setHitMarker(false), 100);
-
-                const weaponDmg = WEAPON_CONFIGS[currentWeapon].damage;
-                const dmgMult = state.clock.elapsedTime < damageBoostEnd ? DAMAGE_BOOST_MULTIPLIER : 1;
-                e.hp -= weaponDmg * dmgMult;
-                if (e.hp <= 0) {
-                  e.alive = false;
-                  const points =
-                    e.type === "drone"
-                      ? 100
-                      : e.type === "sentinel"
-                        ? 200
-                        : 500;
-                  setScore((s) => s + points);
-                  setKills((k) => k + 1);
-
-                  const deathColor =
-                    e.type === "drone"
-                      ? "#ff2255"
-                      : e.type === "sentinel"
-                        ? "#ff8800"
-                        : "#ff0044";
+                if (isExplosive) {
+                  // Rocket: splash damage to ALL enemies in radius
+                  rocketExplode(
+                    p.position.clone(), enemies, state, currentWeapon,
+                    damageBoostEnd, explosionRadius, setParticles,
+                    setExplosions, setScore, setKills, setHitMarker,
+                    shakeIntensity
+                  );
+                } else {
+                  // Normal hit: single target
+                  const hitNormal = new THREE.Vector3()
+                    .subVectors(p.position, enemyWorldPos)
+                    .normalize();
                   setParticles((pp) => [
                     ...pp,
-                    ...createDeathExplosion(
-                      enemyWorldPos.clone(),
-                      deathColor,
-                      15
-                    ),
+                    ...createImpactSparks(p.position.clone(), hitNormal, "#00d4ff", 6),
                   ]);
-                  setExplosions((ex) => [
-                    ...ex,
-                    {
-                      id: nextId++,
-                      position: enemyWorldPos.clone(),
-                      color: deathColor,
-                      startTime: state.clock.elapsedTime,
-                      duration: 0.4,
-                      size: e.type === "heavy" ? 1.5 : 1,
-                    },
-                  ]);
-                  playExplosionSound();
-                  shakeIntensity.current = e.type === "heavy" ? 0.15 : 0.08;
+                  playHitSound();
+                  setHitMarker(true);
+                  setTimeout(() => setHitMarker(false), 100);
 
-                  // Powerups now spawn on a timer, not on kill
+                  const weaponDmg = WEAPON_CONFIGS[currentWeapon].damage;
+                  const dmgMult = state.clock.elapsedTime < damageBoostEnd ? DAMAGE_BOOST_MULTIPLIER : 1;
+                  e.hp -= weaponDmg * dmgMult;
+                  if (e.hp <= 0) {
+                    e.alive = false;
+                    const points = e.type === "drone" ? 100 : e.type === "sentinel" ? 200 : 500;
+                    setScore((s) => s + points);
+                    setKills((k) => k + 1);
+                    const deathColor = e.type === "drone" ? "#ff2255" : e.type === "sentinel" ? "#ff8800" : "#ff0044";
+                    setParticles((pp) => [
+                      ...pp,
+                      ...createDeathExplosion(enemyWorldPos.clone(), deathColor, 15),
+                    ]);
+                    setExplosions((ex) => [
+                      ...ex,
+                      { id: nextId++, position: enemyWorldPos.clone(), color: deathColor, startTime: state.clock.elapsedTime, duration: 0.4, size: e.type === "heavy" ? 1.5 : 1 },
+                    ]);
+                    playExplosionSound();
+                    shakeIntensity.current = e.type === "heavy" ? 0.15 : 0.08;
+                  }
                 }
                 break;
               }
+            }
+
+            // Rocket that hit a wall (died from bounds) should also explode
+            if (!p.alive && isExplosive && !directHit) {
+              rocketExplode(
+                p.position.clone(), enemies, state, currentWeapon,
+                damageBoostEnd, explosionRadius, setParticles,
+                setExplosions, setScore, setKills, setHitMarker,
+                shakeIntensity
+              );
             }
           }
 
@@ -677,6 +675,13 @@ function GameLoop({
                 }));
                 setCurrentWeapon("plasma");
                 break;
+              case "rocket":
+                setWeaponAmmo((prev) => ({
+                  ...prev,
+                  rocket: prev.rocket + ROCKET_PICKUP_AMMO,
+                }));
+                setCurrentWeapon("rocket");
+                break;
               case "speed":
                 setSpeedBoostEnd(state.clock.elapsedTime + SPEED_BOOST_DURATION);
                 break;
@@ -739,6 +744,65 @@ function GameLoop({
 }
 
 // Helper to fire an enemy projectile
+// Rocket explosion — splash damage to all enemies in radius
+function rocketExplode(
+  pos: THREE.Vector3,
+  enemies: EnemyData[],
+  state: { clock: { elapsedTime: number } },
+  currentWeapon: WeaponType,
+  damageBoostEnd: number,
+  radius: number,
+  setParticles: React.Dispatch<React.SetStateAction<ParticleData[]>>,
+  setExplosions: React.Dispatch<React.SetStateAction<ExplosionData[]>>,
+  setScore: React.Dispatch<React.SetStateAction<number>>,
+  setKills: React.Dispatch<React.SetStateAction<number>>,
+  setHitMarker: React.Dispatch<React.SetStateAction<boolean>>,
+  shakeIntensity: React.MutableRefObject<number>
+) {
+  // Big explosion visual
+  setParticles((pp) => [
+    ...pp,
+    ...createDeathExplosion(pos, "#ff4444", 25),
+  ]);
+  setExplosions((ex) => [
+    ...ex,
+    { id: nextId++, position: pos.clone(), color: "#ff4444", startTime: state.clock.elapsedTime, duration: 0.6, size: 2.5 },
+  ]);
+  playExplosionSound();
+  shakeIntensity.current = 0.25;
+  setHitMarker(true);
+  setTimeout(() => setHitMarker(false), 150);
+
+  const weaponDmg = WEAPON_CONFIGS[currentWeapon].damage;
+  const dmgMult = state.clock.elapsedTime < damageBoostEnd ? DAMAGE_BOOST_MULTIPLIER : 1;
+
+  // Damage all enemies in radius (falloff with distance)
+  for (const e of enemies) {
+    if (!e.alive) continue;
+    const enemyWorldPos = e.position.clone();
+    enemyWorldPos.y += 1.0;
+    const dist = pos.distanceTo(enemyWorldPos);
+    if (dist < radius) {
+      const falloff = 1 - dist / radius; // 1 at center, 0 at edge
+      const damage = weaponDmg * dmgMult * falloff;
+      e.hp -= damage;
+      playHitSound();
+
+      if (e.hp <= 0) {
+        e.alive = false;
+        const points = e.type === "drone" ? 100 : e.type === "sentinel" ? 200 : 500;
+        setScore((s) => s + points);
+        setKills((k) => k + 1);
+        const deathColor = e.type === "drone" ? "#ff2255" : e.type === "sentinel" ? "#ff8800" : "#ff0044";
+        setParticles((pp) => [
+          ...pp,
+          ...createDeathExplosion(enemyWorldPos.clone(), deathColor, 12),
+        ]);
+      }
+    }
+  }
+}
+
 function fireEnemyProjectile(
   e: EnemyData,
   playerPosition: THREE.Vector3,
@@ -791,6 +855,7 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
     blaster: -1, // infinite
     shotgun: 0,
     plasma: 0,
+    rocket: 0,
   });
   const [locked, setLocked] = useState(false);
   const [enemies, setEnemies] = useState<EnemyData[]>([]);
@@ -855,6 +920,7 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
       if (e.code === "Digit1") setCurrentWeapon("blaster");
       if (e.code === "Digit2" && weaponAmmo.shotgun > 0) setCurrentWeapon("shotgun");
       if (e.code === "Digit3" && weaponAmmo.plasma > 0) setCurrentWeapon("plasma");
+      if (e.code === "Digit4" && weaponAmmo.rocket > 0) setCurrentWeapon("rocket");
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
@@ -866,7 +932,7 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
     setScore(0);
     setWave(1);
     setCurrentWeapon("blaster");
-    setWeaponAmmo({ blaster: -1, shotgun: 0, plasma: 0 });
+    setWeaponAmmo({ blaster: -1, shotgun: 0, plasma: 0, rocket: 0 });
     setKills(0);
     setSpeedBoostEnd(0);
     setDamageBoostEnd(0);
