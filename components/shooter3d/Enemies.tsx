@@ -13,33 +13,31 @@ export interface EnemyData {
   alive: boolean;
   speed: number;
   bobOffset: number;
-  // AI state
   aiState: "patrol" | "engage" | "strafe" | "charge" | "retreat";
   strafeDir: number;
   burstCount: number;
   chargeTimer: number;
-  // Sprite state
   isShooting: boolean;
   shootFrame: number;
   lastMoveDir: THREE.Vector3;
 }
 
+// ── Type-specific visual config ─────────────────────────
+export const ENEMY_COLORS = {
+  drone: { tint: "#ff6666", glow: "#ff2255", projectile: "#ff2255", name: "DRONE" },
+  sentinel: { tint: "#ffaa44", glow: "#ff8800", projectile: "#ffaa00", name: "SENTINEL" },
+  heavy: { tint: "#cc44ff", glow: "#9933ff", projectile: "#cc44ff", name: "HEAVY" },
+} as const;
+
 // ── Sprite configuration ────────────────────────────────
 const ROTATION_DIRS = [
-  "south",
-  "south-west",
-  "west",
-  "north-west",
-  "north",
-  "north-east",
-  "east",
-  "south-east",
+  "south", "south-west", "west", "north-west",
+  "north", "north-east", "east", "south-east",
 ] as const;
 
 const ATTACK_DIRS = ["south", "south-east", "south-west"] as const;
 const ATTACK_FRAME_COUNT = 6;
 
-// Sprite sets: small imp (drone/sentinel) and heavy imp (heavy)
 const SPRITE_SETS = {
   imp: {
     base: "/game-assets/enemies/imp",
@@ -58,7 +56,6 @@ interface SpriteTextures {
   attacks: THREE.Texture[];
 }
 
-// ── Preload all textures for a sprite set ───────────────
 function useSpriteSet(key: SpriteSetKey): SpriteTextures {
   const cfg = SPRITE_SETS[key];
 
@@ -100,20 +97,15 @@ function getDirectionIndex(
     .subVectors(cameraPos, enemyPos)
     .setY(0)
     .normalize();
-
   const facing = enemyFacingDir.clone().setY(0).normalize();
-
   const dot = facing.x * toCamera.x + facing.z * toCamera.z;
   const cross = facing.x * toCamera.z - facing.z * toCamera.x;
   let angle = Math.atan2(cross, dot);
-
   if (angle < 0) angle += Math.PI * 2;
-
   return Math.round((angle / (Math.PI * 2)) * 8) % 8;
 }
 
 function getAttackDirIndex(dirIndex: number): number {
-  // Map 8 dirs → 3 available attack dirs: 0=south, 1=south-east, 2=south-west
   const mapping = [0, 2, 2, 2, 0, 1, 1, 1];
   return mapping[dirIndex];
 }
@@ -128,23 +120,21 @@ interface EnemySpriteProps {
 function EnemySprite({ enemy, textures }: EnemySpriteProps) {
   const groupRef = useRef<THREE.Group>(null);
   const spriteMatRef = useRef<THREE.MeshBasicMaterial>(null);
+  const ringRef = useRef<THREE.Mesh>(null);
   const { camera } = useThree();
 
   const spriteScale =
     enemy.type === "heavy" ? 2.8 : enemy.type === "sentinel" ? 2.2 : 1.8;
   const hoverHeight = enemy.type === "heavy" ? 0.0 : 0.2;
 
-  const color =
-    enemy.type === "drone"
-      ? "#ff2255"
-      : enemy.type === "sentinel"
-        ? "#ff8800"
-        : "#ff0044";
+  const colors = ENEMY_COLORS[enemy.type];
+
+  // Color tint applied to sprite (multiply with texture)
+  const tintColor = useMemo(() => new THREE.Color(colors.tint), [colors.tint]);
 
   useFrame((state) => {
     if (!groupRef.current || !enemy.alive) return;
 
-    // Position + bob
     const bob =
       Math.sin(state.clock.elapsedTime * 2 + enemy.bobOffset) * 0.08;
     groupRef.current.position.set(
@@ -153,7 +143,7 @@ function EnemySprite({ enemy, textures }: EnemySpriteProps) {
       enemy.position.z
     );
 
-    // Billboard: face camera (Y axis only)
+    // Billboard
     groupRef.current.lookAt(
       camera.position.x,
       groupRef.current.position.y,
@@ -181,22 +171,56 @@ function EnemySprite({ enemy, textures }: EnemySpriteProps) {
       }
       spriteMatRef.current.needsUpdate = true;
     }
+
+    // Animate ring pulse
+    if (ringRef.current) {
+      const mat = ringRef.current.material as THREE.MeshStandardMaterial;
+      mat.emissiveIntensity =
+        2 + Math.sin(state.clock.elapsedTime * 4 + enemy.bobOffset) * 1;
+    }
   });
 
   return (
     <group ref={groupRef} visible={enemy.alive}>
-      {/* Sprite plane */}
+      {/* Sprite plane with color tint */}
       <mesh position={[0, spriteScale / 2, 0]}>
         <planeGeometry args={[spriteScale, spriteScale]} />
         <meshBasicMaterial
           ref={spriteMatRef}
           map={textures.rotations[0]}
+          color={tintColor}
           transparent
           alphaTest={0.1}
           side={THREE.DoubleSide}
           depthWrite={true}
         />
       </mesh>
+
+      {/* Type indicator ring at base */}
+      <mesh
+        ref={ringRef}
+        position={[0, 0.05, 0]}
+        rotation={[-Math.PI / 2, 0, 0]}
+      >
+        <torusGeometry
+          args={[
+            enemy.type === "heavy" ? 1.0 : enemy.type === "sentinel" ? 0.8 : 0.6,
+            0.06,
+            8,
+            24,
+          ]}
+        />
+        <meshStandardMaterial
+          color={colors.glow}
+          emissive={colors.glow}
+          emissiveIntensity={2}
+          toneMapped={false}
+          transparent
+          opacity={0.8}
+        />
+      </mesh>
+
+      {/* Type label - small text above health bar area */}
 
       {/* Health bar */}
       {enemy.hp < enemy.maxHp && (
@@ -216,15 +240,15 @@ function EnemySprite({ enemy, textures }: EnemySpriteProps) {
             <planeGeometry
               args={[(enemy.hp / enemy.maxHp) * 1.2, 0.08]}
             />
-            <meshBasicMaterial color={color} side={THREE.DoubleSide} />
+            <meshBasicMaterial color={colors.glow} side={THREE.DoubleSide} />
           </mesh>
         </group>
       )}
 
-      {/* Glow light */}
+      {/* Glow light matching type color */}
       <pointLight
         position={[0, spriteScale / 2, 0]}
-        color={color}
+        color={colors.glow}
         intensity={enemy.aiState === "charge" ? 5 : 2}
         distance={8}
         decay={2}

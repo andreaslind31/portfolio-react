@@ -8,7 +8,7 @@ import Player from "./Player";
 import Level, { ARENA_HALF_W, ARENA_HALF_D, SPAWN_PORTALS, WALL_COLLIDERS } from "./Level";
 import Weapon from "./Weapon";
 import HUD, { type RadarDot } from "./HUD";
-import Enemies, { type EnemyData } from "./Enemies";
+import Enemies, { type EnemyData, ENEMY_COLORS } from "./Enemies";
 import Projectiles, { type ProjectileData } from "./Projectiles";
 import Particles, {
   type ParticleData,
@@ -659,11 +659,15 @@ function fireEnemyProjectile(
   const shootDir = new THREE.Vector3()
     .subVectors(playerPosition, e.position)
     .normalize();
-  // Add slight inaccuracy
-  shootDir.x += (Math.random() - 0.5) * 0.1;
-  shootDir.y += (Math.random() - 0.5) * 0.05;
-  shootDir.z += (Math.random() - 0.5) * 0.1;
+  // Add slight inaccuracy (less for sentinels, more for heavies)
+  const inaccuracy = e.type === "sentinel" ? 0.05 : e.type === "heavy" ? 0.15 : 0.1;
+  shootDir.x += (Math.random() - 0.5) * inaccuracy;
+  shootDir.y += (Math.random() - 0.5) * inaccuracy * 0.5;
+  shootDir.z += (Math.random() - 0.5) * inaccuracy;
   shootDir.normalize();
+
+  const colors = ENEMY_COLORS[e.type];
+  const projSize = e.type === "heavy" ? 2.5 : e.type === "sentinel" ? 1.5 : 1;
 
   setProjectiles((prev) => [
     ...prev,
@@ -675,6 +679,8 @@ function fireEnemyProjectile(
       alive: true,
       friendly: false,
       life: PROJECTILE_LIFE,
+      color: colors.projectile,
+      size: projSize,
     },
   ]);
 }
