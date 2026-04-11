@@ -314,11 +314,9 @@ function GameLoop({
     }
 
     // ── Update enemies ──
-    let allDead = true;
     setEnemies((prev) =>
       prev.map((e) => {
         if (!e.alive) return e;
-        allDead = false;
 
         const dir = new THREE.Vector3()
           .subVectors(playerPos.current, e.position)
@@ -397,7 +395,10 @@ function GameLoop({
     );
 
     // ── Wave cleared? ──
-    if (allDead && enemies.length > 0 && !waveCleared.current) {
+    // Compute from render-state directly (not from inside a state updater,
+    // which React 18 may defer in useFrame).
+    const allDead = enemies.length > 0 && enemies.every((e) => !e.alive);
+    if (allDead && !waveCleared.current) {
       waveCleared.current = true;
       setTimeout(() => {
         setWave((w) => {
