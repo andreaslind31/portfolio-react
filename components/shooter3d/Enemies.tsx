@@ -44,12 +44,12 @@ const SPRITE_SETS = {
     attackAnim: "Fireball-e746cbc0",
   },
   impSentinel: {
-    base: "/game-assets/enemies/imp-heavy",
-    attackAnim: "Cross_Punch-b0a0bfd2",
-  },
-  impGiant: {
     base: "/game-assets/enemies/giant_kicking_imp",
     attackAnim: "Flying_Kick-5baba02b",
+  },
+  impHeavy: {
+    base: "/game-assets/enemies/imp-heavy",
+    attackAnim: "Cross_Punch-b0a0bfd2",
   },
 } as const;
 
@@ -278,7 +278,7 @@ function getTextureSet(
 export default function Enemies({ enemies, playerPosition }: EnemiesProps) {
   const droneTextures = useSpriteSet("imp");
   const sentinelTextures = useSpriteSet("impSentinel");
-  const heavyTextures = useSpriteSet("impGiant");
+  const heavyTextures = useSpriteSet("impHeavy");
 
   const sets = { drone: droneTextures, sentinel: sentinelTextures, heavy: heavyTextures };
 
