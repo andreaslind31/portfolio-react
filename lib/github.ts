@@ -31,12 +31,29 @@ export interface GitHubRepo {
 }
 
 export async function getGitHubUser(): Promise<GitHubUser> {
-  const res = await fetch(
-    `https://api.github.com/users/${GITHUB_USERNAME}`,
-    { next: { revalidate: 3600 } }
-  );
-  if (!res.ok) throw new Error("Failed to fetch GitHub user");
-  return res.json();
+  try {
+    const res = await fetch(
+      `https://api.github.com/users/${GITHUB_USERNAME}`,
+      { next: { revalidate: 3600 } }
+    );
+    if (!res.ok) throw new Error("Failed to fetch GitHub user");
+    return res.json();
+  } catch {
+    // Return fallback data so the build doesn't crash
+    return {
+      login: GITHUB_USERNAME,
+      name: "Andreas Lind",
+      avatar_url: `https://avatars.githubusercontent.com/u/70567910?v=4`,
+      html_url: `https://github.com/${GITHUB_USERNAME}`,
+      bio: "Software developer based in Varberg.",
+      location: "Varberg, Sweden",
+      company: null,
+      blog: "",
+      public_repos: 0,
+      followers: 0,
+      following: 0,
+    };
+  }
 }
 
 export interface ContributionDay {
@@ -89,11 +106,15 @@ export async function getGitHubContributions(): Promise<ContributionDay[]> {
 }
 
 export async function getGitHubRepos(): Promise<GitHubRepo[]> {
-  const res = await fetch(
-    `https://api.github.com/users/${GITHUB_USERNAME}/repos?per_page=100&sort=updated`,
-    { next: { revalidate: 3600 } }
-  );
-  if (!res.ok) throw new Error("Failed to fetch GitHub repos");
-  const repos: GitHubRepo[] = await res.json();
-  return repos.filter((repo) => !repo.fork);
+  try {
+    const res = await fetch(
+      `https://api.github.com/users/${GITHUB_USERNAME}/repos?per_page=100&sort=updated`,
+      { next: { revalidate: 3600 } }
+    );
+    if (!res.ok) throw new Error("Failed to fetch GitHub repos");
+    const repos: GitHubRepo[] = await res.json();
+    return repos.filter((repo) => !repo.fork);
+  } catch {
+    return [];
+  }
 }
