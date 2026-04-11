@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useMemo, useEffect } from "react";
+import { useRef, useMemo } from "react";
 import { useFrame, useThree, useLoader } from "@react-three/fiber";
 import * as THREE from "three";
 
@@ -24,8 +24,7 @@ export interface EnemyData {
   lastMoveDir: THREE.Vector3;
 }
 
-// ── Sprite asset paths ──────────────────────────────────
-const BASE = "/game-assets/enemies/imp";
+// ── Sprite configuration ────────────────────────────────
 const ROTATION_DIRS = [
   "south",
   "south-west",
@@ -40,104 +39,99 @@ const ROTATION_DIRS = [
 const ATTACK_DIRS = ["south", "south-east", "south-west"] as const;
 const ATTACK_FRAME_COUNT = 6;
 
-// ── Preload all textures ────────────────────────────────
-function useEnemyTextures() {
-  // Rotation idle sprites
-  const rotationTextures = useLoader(
+// Sprite sets: small imp (drone/sentinel) and heavy imp (heavy)
+const SPRITE_SETS = {
+  imp: {
+    base: "/game-assets/enemies/imp",
+    attackAnim: "Fireball-e746cbc0",
+  },
+  impHeavy: {
+    base: "/game-assets/enemies/imp-heavy",
+    attackAnim: "Cross_Punch-b0a0bfd2",
+  },
+} as const;
+
+type SpriteSetKey = keyof typeof SPRITE_SETS;
+
+interface SpriteTextures {
+  rotations: THREE.Texture[];
+  attacks: THREE.Texture[];
+}
+
+// ── Preload all textures for a sprite set ───────────────
+function useSpriteSet(key: SpriteSetKey): SpriteTextures {
+  const cfg = SPRITE_SETS[key];
+
+  const rotations = useLoader(
     THREE.TextureLoader,
-    ROTATION_DIRS.map((dir) => `${BASE}/rotations/${dir}.png`)
+    ROTATION_DIRS.map((dir) => `${cfg.base}/rotations/${dir}.png`)
   );
 
-  // Attack animation frames (south, south-east, south-west × 6 frames)
-  const attackTextures = useLoader(
+  const attacks = useLoader(
     THREE.TextureLoader,
     ATTACK_DIRS.flatMap((dir) =>
       Array.from(
         { length: ATTACK_FRAME_COUNT },
         (_, i) =>
-          `${BASE}/animations/Fireball-e746cbc0/${dir}/frame_${String(i).padStart(3, "0")}.png`
+          `${cfg.base}/animations/${cfg.attackAnim}/${dir}/frame_${String(i).padStart(3, "0")}.png`
       )
     )
   );
 
-  // Set nearest-neighbor filtering for pixel art crispness
   useMemo(() => {
-    [...rotationTextures, ...attackTextures].forEach((tex) => {
+    [...rotations, ...attacks].forEach((tex) => {
       tex.magFilter = THREE.NearestFilter;
       tex.minFilter = THREE.NearestFilter;
       tex.colorSpace = THREE.SRGBColorSpace;
     });
-  }, [rotationTextures, attackTextures]);
+  }, [rotations, attacks]);
 
-  return { rotationTextures, attackTextures };
+  return { rotations, attacks };
 }
 
-/**
- * Given the angle from the camera to the enemy (in world space),
- * and the enemy's facing direction, pick the right sprite rotation index.
- *
- * The 8 directions are indexed 0-7 starting from "south" (facing camera)
- * going clockwise: S, SW, W, NW, N, NE, E, SE.
- */
+// ── Direction helpers ───────────────────────────────────
+
 function getDirectionIndex(
   enemyPos: THREE.Vector3,
   enemyFacingDir: THREE.Vector3,
   cameraPos: THREE.Vector3
 ): number {
-  // Vector from enemy to camera
   const toCamera = new THREE.Vector3()
     .subVectors(cameraPos, enemyPos)
     .setY(0)
     .normalize();
 
-  // Angle between enemy's facing direction and the direction to camera
   const facing = enemyFacingDir.clone().setY(0).normalize();
 
-  // Cross product Y gives sign, dot gives cosine
   const dot = facing.x * toCamera.x + facing.z * toCamera.z;
   const cross = facing.x * toCamera.z - facing.z * toCamera.x;
-  let angle = Math.atan2(cross, dot); // radians, -PI to PI
+  let angle = Math.atan2(cross, dot);
 
-  // Normalize to 0-2PI
   if (angle < 0) angle += Math.PI * 2;
 
-  // Quantize to 8 directions (each spans PI/4 = 45°)
-  const index = Math.round((angle / (Math.PI * 2)) * 8) % 8;
-  return index;
+  return Math.round((angle / (Math.PI * 2)) * 8) % 8;
 }
 
-/**
- * For attack animation, map the 8-dir index to the nearest available
- * attack direction (only south, south-east, south-west have frames).
- * Returns the attack dir index (0=south, 1=south-east, 2=south-west)
- * or falls back to south.
- */
 function getAttackDirIndex(dirIndex: number): number {
-  // Map: 0=S→0, 1=SW→2, 2=W→2, 3=NW→2, 4=N→0, 5=NE→1, 6=E→1, 7=SE→1
+  // Map 8 dirs → 3 available attack dirs: 0=south, 1=south-east, 2=south-west
   const mapping = [0, 2, 2, 2, 0, 1, 1, 1];
   return mapping[dirIndex];
 }
 
 // ── Single enemy sprite ─────────────────────────────────
-interface EnemyMeshProps {
+
+interface EnemySpriteProps {
   enemy: EnemyData;
-  playerPosition: THREE.Vector3;
-  rotationTextures: THREE.Texture[];
-  attackTextures: THREE.Texture[];
+  textures: SpriteTextures;
 }
 
-function EnemySprite({
-  enemy,
-  playerPosition,
-  rotationTextures,
-  attackTextures,
-}: EnemyMeshProps) {
+function EnemySprite({ enemy, textures }: EnemySpriteProps) {
   const groupRef = useRef<THREE.Group>(null);
   const spriteMatRef = useRef<THREE.MeshBasicMaterial>(null);
   const { camera } = useThree();
 
-  // Size scales per enemy type
-  const spriteScale = enemy.type === "heavy" ? 2.8 : enemy.type === "sentinel" ? 2.2 : 1.8;
+  const spriteScale =
+    enemy.type === "heavy" ? 2.8 : enemy.type === "sentinel" ? 2.2 : 1.8;
   const hoverHeight = enemy.type === "heavy" ? 0.0 : 0.2;
 
   const color =
@@ -150,7 +144,7 @@ function EnemySprite({
   useFrame((state) => {
     if (!groupRef.current || !enemy.alive) return;
 
-    // Position
+    // Position + bob
     const bob =
       Math.sin(state.clock.elapsedTime * 2 + enemy.bobOffset) * 0.08;
     groupRef.current.position.set(
@@ -159,7 +153,7 @@ function EnemySprite({
       enemy.position.z
     );
 
-    // Billboard: always face camera (only Y rotation)
+    // Billboard: face camera (Y axis only)
     groupRef.current.lookAt(
       camera.position.x,
       groupRef.current.position.y,
@@ -175,17 +169,15 @@ function EnemySprite({
       );
 
       if (enemy.isShooting) {
-        // Attack animation
         const attackDir = getAttackDirIndex(dirIdx);
         const frameIdx = Math.min(
-          enemy.shootFrame,
+          Math.floor(enemy.shootFrame),
           ATTACK_FRAME_COUNT - 1
         );
         const texIdx = attackDir * ATTACK_FRAME_COUNT + frameIdx;
-        spriteMatRef.current.map = attackTextures[texIdx];
+        spriteMatRef.current.map = textures.attacks[texIdx];
       } else {
-        // Idle rotation
-        spriteMatRef.current.map = rotationTextures[dirIdx];
+        spriteMatRef.current.map = textures.rotations[dirIdx];
       }
       spriteMatRef.current.needsUpdate = true;
     }
@@ -198,7 +190,7 @@ function EnemySprite({
         <planeGeometry args={[spriteScale, spriteScale]} />
         <meshBasicMaterial
           ref={spriteMatRef}
-          map={rotationTextures[0]}
+          map={textures.rotations[0]}
           transparent
           alphaTest={0.1}
           side={THREE.DoubleSide}
@@ -206,7 +198,7 @@ function EnemySprite({
         />
       </mesh>
 
-      {/* Health bar — above sprite */}
+      {/* Health bar */}
       {enemy.hp < enemy.maxHp && (
         <group position={[0, spriteScale + 0.3, 0]}>
           <mesh>
@@ -219,11 +211,7 @@ function EnemySprite({
             />
           </mesh>
           <mesh
-            position={[
-              -(1 - enemy.hp / enemy.maxHp) * 0.6,
-              0,
-              0.001,
-            ]}
+            position={[-(1 - enemy.hp / enemy.maxHp) * 0.6, 0, 0.001]}
           >
             <planeGeometry
               args={[(enemy.hp / enemy.maxHp) * 1.2, 0.08]}
@@ -246,13 +234,15 @@ function EnemySprite({
 }
 
 // ── Main Enemies renderer ───────────────────────────────
+
 interface EnemiesProps {
   enemies: EnemyData[];
   playerPosition: THREE.Vector3;
 }
 
 export default function Enemies({ enemies, playerPosition }: EnemiesProps) {
-  const { rotationTextures, attackTextures } = useEnemyTextures();
+  const impTextures = useSpriteSet("imp");
+  const heavyTextures = useSpriteSet("impHeavy");
 
   return (
     <group>
@@ -260,9 +250,7 @@ export default function Enemies({ enemies, playerPosition }: EnemiesProps) {
         <EnemySprite
           key={enemy.id}
           enemy={enemy}
-          playerPosition={playerPosition}
-          rotationTextures={rotationTextures}
-          attackTextures={attackTextures}
+          textures={enemy.type === "heavy" ? heavyTextures : impTextures}
         />
       ))}
     </group>
