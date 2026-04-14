@@ -429,6 +429,8 @@ function GameLoop({
   setShotsHit,
   setWeaponKills,
   combatMusic,
+  speedBoostEnd,
+  setPlayerSpeedMult,
 }: {
   enemies: EnemyData[];
   setEnemies: React.Dispatch<React.SetStateAction<EnemyData[]>>;
@@ -477,6 +479,8 @@ function GameLoop({
   setShotsHit: React.Dispatch<React.SetStateAction<number>>;
   setWeaponKills: React.Dispatch<React.SetStateAction<Record<WeaponType, number>>>;
   combatMusic: React.MutableRefObject<{ setIntensity: (v: number) => void; stop: () => void } | null>;
+  speedBoostEnd: number;
+  setPlayerSpeedMult: React.Dispatch<React.SetStateAction<number>>;
 }) {
   const { camera } = useThree();
   const enemyShootTimers = useRef<Map<number, number>>(new Map());
@@ -487,6 +491,9 @@ function GameLoop({
   useFrame((state, delta) => {
     if (gameState !== "playing") return;
 
+    // Measure movement BEFORE updating playerPos
+    const posDelta = playerPos.current.distanceTo(camera.position);
+    const isPlayerMoving = posDelta > 0.02;
     playerPos.current.copy(camera.position);
 
     const euler = new THREE.Euler().setFromQuaternion(camera.quaternion, "YXZ");
@@ -497,9 +504,7 @@ function GameLoop({
     // ── Difficulty scaling ──
     const diff = getDifficultyMultiplier(wave);
 
-    // ── Footstep sound (detect movement by position change) ──
-    const posDelta = playerPos.current.distanceTo(camera.position);
-    const isPlayerMoving = posDelta > 0.02;
+    // ── Footstep sound ──
     footstepTimer.current += dt;
     const stepInterval = 0.35; // seconds between footsteps
     if (isPlayerMoving && footstepTimer.current > stepInterval) {
@@ -712,7 +717,7 @@ function GameLoop({
     // ── Wave cleared? ──
     // Compute from render-state directly (not from inside a state updater,
     // which React 18 may defer in useFrame).
-    const allDead = enemies.length > 0 && enemies.every((e) => !e.alive);
+    const allDead = enemies.length > 0 && enemies.every((e) => !e.alive && !e.dying);
     if (allDead && !waveCleared.current) {
       waveCleared.current = true;
       setTimeout(() => {
@@ -805,13 +810,11 @@ function GameLoop({
                     e.dying = true;
                     e.deathTimer = 0;
                     const basePoints = e.type === "drone" ? 100 : e.type === "sentinel" ? 200 : e.type === "boss" ? 2000 : 500;
-                    // Combo multiplier — increases with rapid kills
-                    setComboTimer(3); // 3 seconds to maintain combo
-                    setComboMultiplier((m) => {
-                      const newM = Math.min(m + 0.5, 5);
-                      return newM;
-                    });
-                    const points = Math.round(basePoints * comboMultiplier);
+                    // Combo multiplier — compute new value inline to avoid stale closure
+                    const newCombo = Math.min(comboMultiplier + 0.5, 5);
+                    setComboTimer(3);
+                    setComboMultiplier(newCombo);
+                    const points = Math.round(basePoints * newCombo);
                     setScore((s) => s + points);
                     setKills((k) => k + 1);
                     setWeaponKills((prev) => ({ ...prev, [currentWeapon]: prev[currentWeapon] + 1 }));
@@ -1065,6 +1068,9 @@ function GameLoop({
       }
     }
 
+    // ── Speed boost check ──
+    setPlayerSpeedMult(state.clock.elapsedTime < speedBoostEnd ? 1.5 : 1);
+
     // ── Combo timer decay ──
     setComboTimer((t) => {
       if (t > 0) {
@@ -1236,6 +1242,7 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
   const [crates, setCrates] = useState<CrateData[]>([]);
   // Settings
   const [mouseSensitivity, setMouseSensitivity] = useState(0.002);
+  const [playerSpeedMult, setPlayerSpeedMult] = useState(1);
   // Combo system
   const [comboMultiplier, setComboMultiplier] = useState(1);
   const [comboTimer, setComboTimer] = useState(0);
@@ -1365,8 +1372,8 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
       const ammo = weaponAmmo[currentWeapon];
       if (ammo === 0) return;
 
-      // Track shots fired
-      setShotsFired((s) => s + 1);
+      // Track shots fired (per pellet for accurate accuracy calc)
+      setShotsFired((s) => s + config.pellets);
 
       // Per-weapon sound
       switch (currentWeapon) {
@@ -1494,7 +1501,7 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
           <Suspense fallback={null}>
             <fog attach="fog" args={["#0a0812", 20, 50]} />
             <Physics gravity={[0, -15, 0]}>
-              <Player locked={locked} sensitivity={mouseSensitivity} speedMultiplier={Date.now() / 1000 < speedBoostEnd ? 1.5 : 1} />
+              <Player locked={locked} sensitivity={mouseSensitivity} speedMultiplier={playerSpeedMult} />
               <Level />
             </Physics>
             <Weapon locked={locked} weaponType={currentWeapon} ammo={weaponAmmo[currentWeapon]} onShoot={handleShoot} />
@@ -1553,6 +1560,8 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
               setShotsHit={setShotsHit}
               setWeaponKills={setWeaponKills}
               combatMusic={combatMusic}
+              speedBoostEnd={speedBoostEnd}
+              setPlayerSpeedMult={setPlayerSpeedMult}
             />
             <PostProcessing />
           </Suspense>

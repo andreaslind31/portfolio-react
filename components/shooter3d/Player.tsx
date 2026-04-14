@@ -50,7 +50,7 @@ export default function Player({ locked, sensitivity = DEFAULT_SENSITIVITY, spee
         Math.min(Math.PI / 2.5, euler.current.x)
       );
     },
-    [locked]
+    [locked, sensitivity]
   );
 
   useEffect(() => {
