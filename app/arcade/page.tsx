@@ -42,10 +42,10 @@ export default function ArcadeHubPage() {
         <Link href="/arcade/shooter" className="arcade-hub-card group">
           <div className="text-3xl mb-3">🔫</div>
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
-            Neon Striker
+            Sector Breach
           </h2>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            First-person sci-fi arena shooter with 3D graphics.
+            Doom-style FPS. Breach the sector, survive the horde.
           </p>
         </Link>
       </div>

@@ -1024,6 +1024,12 @@ html {
   50% { transform: translateY(-20px); }
 }
 
+/* Shooter score popup animation */
+@keyframes scorePopup {
+  0% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-40px) scale(1.3); }
+}
+
 .wordle-tile-flip {
   animation: wordle-flip 0.5s ease forwards;
 }

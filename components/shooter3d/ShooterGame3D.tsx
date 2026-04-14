@@ -28,6 +28,8 @@ import {
   playDamageSound,
   playWaveStartSound,
   playPickupSound,
+  playFootstepSound,
+  playKillStreakSound,
   startAmbientHum,
 } from "./SoundEngine";
 
@@ -113,6 +115,8 @@ function spawnEnemies(wave: number): EnemyData[] {
         isShooting: false,
         shootFrame: 0,
         lastMoveDir: new THREE.Vector3(0, 0, 1),
+        dying: false,
+        deathTimer: 0,
       });
     }
   };
@@ -313,6 +317,11 @@ function GameLoop({
   setSpeedBoostEnd,
   setDamageBoostEnd,
   lastPowerupSpawn,
+  lastKillTime,
+  footstepTimer,
+  setKillStreak,
+  setKillStreakText,
+  setScorePopups,
 }: {
   enemies: EnemyData[];
   setEnemies: React.Dispatch<React.SetStateAction<EnemyData[]>>;
@@ -346,6 +355,11 @@ function GameLoop({
   setSpeedBoostEnd: React.Dispatch<React.SetStateAction<number>>;
   setDamageBoostEnd: React.Dispatch<React.SetStateAction<number>>;
   lastPowerupSpawn: React.MutableRefObject<number>;
+  lastKillTime: React.MutableRefObject<number>;
+  footstepTimer: React.MutableRefObject<number>;
+  setKillStreak: React.Dispatch<React.SetStateAction<number>>;
+  setKillStreakText: React.Dispatch<React.SetStateAction<string>>;
+  setScorePopups: React.Dispatch<React.SetStateAction<{ id: number; text: string; x: number; y: number; time: number }[]>>;
 }) {
   const { camera } = useThree();
   const enemyShootTimers = useRef<Map<number, number>>(new Map());
@@ -358,11 +372,35 @@ function GameLoop({
 
     playerPos.current.copy(camera.position);
 
-    // Extract yaw from camera quaternion
     const euler = new THREE.Euler().setFromQuaternion(camera.quaternion, "YXZ");
     playerYaw.current = euler.y;
 
     const dt = Math.min(delta, 0.05);
+
+    // ── Footstep sound (detect movement by position change) ──
+    const posDelta = playerPos.current.distanceTo(camera.position);
+    const isPlayerMoving = posDelta > 0.02;
+    footstepTimer.current += dt;
+    const stepInterval = 0.35; // seconds between footsteps
+    if (isPlayerMoving && footstepTimer.current > stepInterval) {
+      footstepTimer.current = 0;
+      playFootstepSound();
+    }
+    if (!isPlayerMoving) footstepTimer.current = stepInterval * 0.8; // nearly ready for next step
+
+    // ── Advance death timers ──
+    setEnemies((prev) =>
+      prev.map((e) => {
+        if (e.dying) {
+          e.deathTimer += dt;
+          if (e.deathTimer >= 0.6) {
+            e.dying = false;
+            // Fully dead now
+          }
+        }
+        return e;
+      })
+    );
 
     // ── Update radar (throttled to ~10fps) ──
     radarUpdateTimer.current += dt;
@@ -586,6 +624,8 @@ function GameLoop({
                   e.hp -= weaponDmg * dmgMult;
                   if (e.hp <= 0) {
                     e.alive = false;
+                    e.dying = true;
+                    e.deathTimer = 0;
                     const points = e.type === "drone" ? 100 : e.type === "sentinel" ? 200 : 500;
                     setScore((s) => s + points);
                     setKills((k) => k + 1);
@@ -600,6 +640,30 @@ function GameLoop({
                     ]);
                     playExplosionSound();
                     shakeIntensity.current = e.type === "heavy" ? 0.15 : 0.08;
+
+                    // Score popup
+                    setScorePopups((prev) => [
+                      ...prev,
+                      { id: nextId++, text: `+${points}`, x: 50 + (Math.random() - 0.5) * 10, y: 40 + (Math.random() - 0.5) * 10, time: state.clock.elapsedTime },
+                    ]);
+
+                    // Kill streak
+                    const now = performance.now() / 1000;
+                    if (now - lastKillTime.current < 2) {
+                      setKillStreak((s) => {
+                        const streak = s + 1;
+                        if (streak >= 2) {
+                          const labels = ["", "", "DOUBLE KILL", "TRIPLE KILL", "QUAD KILL", "RAMPAGE"];
+                          setKillStreakText(labels[Math.min(streak, 5)]);
+                          playKillStreakSound(streak);
+                          setTimeout(() => setKillStreakText(""), 1500);
+                        }
+                        return streak;
+                      });
+                    } else {
+                      setKillStreak(1);
+                    }
+                    lastKillTime.current = now;
                   }
                 }
                 break;
@@ -741,6 +805,10 @@ function GameLoop({
         (e) => state.clock.elapsedTime - e.startTime < e.duration + 0.1
       )
     );
+    // Clean up old score popups (1s lifetime)
+    setScorePopups((prev) =>
+      prev.filter((p) => state.clock.elapsedTime - p.time < 1)
+    );
   });
 
   return null;
@@ -793,6 +861,8 @@ function rocketExplode(
 
       if (e.hp <= 0) {
         e.alive = false;
+        e.dying = true;
+        e.deathTimer = 0;
         const points = e.type === "drone" ? 100 : e.type === "sentinel" ? 200 : 500;
         setScore((s) => s + points);
         setKills((k) => k + 1);
@@ -876,12 +946,19 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
   const [isTouchDevice, setIsTouchDevice] = useState(false);
   const [speedBoostEnd, setSpeedBoostEnd] = useState(0);
   const [damageBoostEnd, setDamageBoostEnd] = useState(0);
+  const [killStreak, setKillStreak] = useState(0);
+  const [killStreakText, setKillStreakText] = useState("");
+  const [scorePopups, setScorePopups] = useState<
+    { id: number; text: string; x: number; y: number; time: number }[]
+  >([]);
 
   const playerPos = useRef(new THREE.Vector3(0, 2, 5));
   const playerYaw = useRef(0);
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const shakeIntensity = useRef(0);
   const lastPowerupSpawn = useRef(0);
+  const lastKillTime = useRef(0);
+  const footstepTimer = useRef(0);
   const stopAmbient = useRef<(() => void) | null>(null);
 
   useEffect(() => {
@@ -940,6 +1017,10 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
     setSpeedBoostEnd(0);
     setDamageBoostEnd(0);
     lastPowerupSpawn.current = 0;
+    lastKillTime.current = 0;
+    setKillStreak(0);
+    setKillStreakText("");
+    setScorePopups([]);
     setProjectiles([]);
     setParticles([]);
     setExplosions([]);
@@ -1139,6 +1220,11 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
               setSpeedBoostEnd={setSpeedBoostEnd}
               setDamageBoostEnd={setDamageBoostEnd}
               lastPowerupSpawn={lastPowerupSpawn}
+              lastKillTime={lastKillTime}
+              footstepTimer={footstepTimer}
+              setKillStreak={setKillStreak}
+              setKillStreakText={setKillStreakText}
+              setScorePopups={setScorePopups}
             />
             <PostProcessing />
           </Suspense>
@@ -1164,6 +1250,8 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
         kills={kills}
         radarDots={radarDots}
         playerYaw={playerYaw.current}
+        killStreakText={killStreakText}
+        scorePopups={scorePopups}
       />
 
       <DamageFlash flash={damageFlash} />

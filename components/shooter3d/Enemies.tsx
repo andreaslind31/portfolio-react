@@ -20,6 +20,9 @@ export interface EnemyData {
   isShooting: boolean;
   shootFrame: number;
   lastMoveDir: THREE.Vector3;
+  // Death animation
+  dying: boolean;
+  deathTimer: number;
 }
 
 // ── Type-specific visual config ─────────────────────────
@@ -135,9 +138,42 @@ function EnemySprite({ enemy, textures }: EnemySpriteProps) {
   // Color tint applied to sprite (multiply with texture)
   const tintColor = useMemo(() => new THREE.Color(colors.tint), [colors.tint]);
 
-  useFrame((state) => {
-    if (!groupRef.current || !enemy.alive) return;
+  const DEATH_DURATION = 0.6;
 
+  useFrame((state) => {
+    if (!groupRef.current) return;
+    if (!enemy.alive && !enemy.dying) {
+      groupRef.current.visible = false;
+      return;
+    }
+
+    groupRef.current.visible = true;
+
+    // Death animation: flash red, shrink Y, fade out
+    if (enemy.dying) {
+      const t = Math.min(enemy.deathTimer / DEATH_DURATION, 1);
+      // Collapse downward
+      groupRef.current.scale.set(1 + t * 0.3, Math.max(0, 1 - t), 1);
+      groupRef.current.position.set(
+        enemy.position.x,
+        enemy.position.y - t * 0.5,
+        enemy.position.z
+      );
+      // Fade + flash
+      if (spriteMatRef.current) {
+        spriteMatRef.current.opacity = 1 - t;
+        spriteMatRef.current.color.setRGB(1, 1 - t * 0.7, 1 - t * 0.7); // flash red
+      }
+      // Billboard
+      groupRef.current.lookAt(
+        camera.position.x,
+        groupRef.current.position.y,
+        camera.position.z
+      );
+      return;
+    }
+
+    // Alive — normal rendering
     const bob =
       Math.sin(state.clock.elapsedTime * 2 + enemy.bobOffset) * 0.08;
     groupRef.current.position.set(
@@ -145,6 +181,7 @@ function EnemySprite({ enemy, textures }: EnemySpriteProps) {
       enemy.position.y + hoverHeight + bob,
       enemy.position.z
     );
+    groupRef.current.scale.set(1, 1, 1);
 
     // Billboard
     groupRef.current.lookAt(
@@ -155,6 +192,9 @@ function EnemySprite({ enemy, textures }: EnemySpriteProps) {
 
     // Pick sprite direction
     if (spriteMatRef.current) {
+      spriteMatRef.current.opacity = 1;
+      spriteMatRef.current.color.set(tintColor);
+
       const dirIdx = getDirectionIndex(
         enemy.position,
         enemy.lastMoveDir,

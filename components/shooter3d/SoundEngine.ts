@@ -360,6 +360,66 @@ export function playPickupSound() {
   }
 }
 
+/** Footstep — short thud */
+export function playFootstepSound() {
+  try {
+    const ctx = getCtx();
+    const now = ctx.currentTime;
+
+    const bufferSize = ctx.sampleRate * 0.04;
+    const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * 0.3;
+    }
+    const noise = ctx.createBufferSource();
+    noise.buffer = noiseBuffer;
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.06, now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = "lowpass";
+    filter.frequency.value = 600;
+
+    noise.connect(filter).connect(noiseGain).connect(ctx.destination);
+    noise.start(now);
+  } catch {}
+}
+
+/** Kill streak sound — ascending tone */
+export function playKillStreakSound(streak: number) {
+  try {
+    const ctx = getCtx();
+    const now = ctx.currentTime;
+
+    const baseFreq = 400 + streak * 100;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(baseFreq, now);
+    osc.frequency.exponentialRampToValueAtTime(baseFreq * 1.5, now + 0.15);
+    gain.gain.setValueAtTime(0.001, now);
+    gain.gain.linearRampToValueAtTime(0.12, now + 0.03);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.2);
+
+    // Harmony
+    const osc2 = ctx.createOscillator();
+    const gain2 = ctx.createGain();
+    osc2.type = "sine";
+    osc2.frequency.value = baseFreq * 1.25;
+    gain2.gain.setValueAtTime(0.001, now + 0.05);
+    gain2.gain.linearRampToValueAtTime(0.06, now + 0.08);
+    gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+    osc2.connect(gain2).connect(ctx.destination);
+    osc2.start(now + 0.05);
+    osc2.stop(now + 0.25);
+  } catch {}
+}
+
 /** Start ambient hum — returns a stop function */
 export function startAmbientHum(): () => void {
   try {

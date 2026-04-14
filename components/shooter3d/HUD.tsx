@@ -36,6 +36,8 @@ interface HUDProps {
   kills: number;
   radarDots: RadarDot[];
   playerYaw: number;
+  killStreakText: string;
+  scorePopups: { id: number; text: string; x: number; y: number; time: number }[];
 }
 
 export default function HUD({
@@ -57,6 +59,8 @@ export default function HUD({
   kills,
   radarDots,
   playerYaw,
+  killStreakText,
+  scorePopups,
 }: HUDProps) {
   const [submitName, setSubmitName] = useState("");
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -472,6 +476,46 @@ export default function HUD({
               </div>
             </div>
           )}
+
+          {/* ═══ KILL STREAK BANNER ═══ */}
+          {killStreakText && (
+            <div
+              style={{
+                position: "absolute",
+                top: "25%",
+                left: "50%",
+                transform: "translateX(-50%)",
+                color: "#ff4444",
+                fontSize: 32,
+                fontWeight: "bold",
+                letterSpacing: 6,
+                textShadow: "0 0 20px #ff4444, 0 0 40px #ff444444",
+                textAlign: "center",
+              }}
+            >
+              {killStreakText}
+            </div>
+          )}
+
+          {/* ═══ SCORE POPUPS ═══ */}
+          {scorePopups.map((popup) => (
+            <div
+              key={popup.id}
+              style={{
+                position: "absolute",
+                left: `${popup.x}%`,
+                top: `${popup.y}%`,
+                color: "#ffdd44",
+                fontSize: 20,
+                fontWeight: "bold",
+                textShadow: "0 0 8px #ffdd44",
+                pointerEvents: "none",
+                animation: "scorePopup 1s ease-out forwards",
+              }}
+            >
+              {popup.text}
+            </div>
+          ))}
         </>
       )}
 
@@ -499,7 +543,7 @@ export default function HUD({
               letterSpacing: 6,
             }}
           >
-            NEON STRIKER
+            SECTOR BREACH
           </h1>
           <p
             style={{
@@ -509,7 +553,7 @@ export default function HUD({
               marginBottom: 40,
             }}
           >
-            SCI-FI ARENA SHOOTER
+            BREACH THE SECTOR. KILL THE HORDE.
           </p>
 
           <div

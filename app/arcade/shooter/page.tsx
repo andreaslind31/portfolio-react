@@ -46,10 +46,10 @@ export default function ShooterPage() {
           &larr; Back to Arcade
         </a>
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
-          Neon Striker
+          Sector Breach
         </h1>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          First-person sci-fi arena shooter. Survive the waves, set a high
+          Doom-style FPS. Survive the waves, set a high
           score.
         </p>
       </div>
