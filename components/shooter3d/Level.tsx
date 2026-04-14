@@ -1,16 +1,22 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
 import { RigidBody } from "@react-three/rapier";
 import * as THREE from "three";
+import {
+  createWallTexture,
+  createFloorTexture,
+  createCeilingTexture,
+  createTrimTexture,
+  createCrateTexture,
+} from "./Textures";
 
-// ── Sci-fi palette ──────────────────────────────────────
-const FLOOR_COLOR = "#3d3d5c";
-const FLOOR_DARK = "#2e2e48";
-const WALL_COLOR = "#384868";
-const TRIM_COLOR = "#2a5a8a";
-const CEILING_COLOR = "#2a2a40";
+// ── Grittier Doom-inspired palette ──────────────────────
+const FLOOR_COLOR = "#2a2830";
+const WALL_COLOR = "#2e2c34";
+const TRIM_COLOR = "#2a2428";
+const CEILING_COLOR = "#1a1820";
 const EMISSIVE_CYAN = "#00d4ff";
 const EMISSIVE_PURPLE = "#7b2ff7";
 const EMISSIVE_RED = "#ff2255";
@@ -130,18 +136,45 @@ function Wall({
   position,
   rotation,
   size,
-  color = WALL_COLOR,
+  texture,
 }: {
   position: [number, number, number];
   rotation?: [number, number, number];
   size: [number, number, number];
-  color?: string;
+  texture?: THREE.CanvasTexture;
 }) {
+  // Scale UV repeat based on wall dimensions
+  const mat = useMemo(() => {
+    if (texture) {
+      const t = texture.clone();
+      // Repeat based on the largest face dimensions
+      const maxDim = Math.max(size[0], size[2]);
+      const heightDim = size[1];
+      t.repeat.set(maxDim / 2, heightDim / 2);
+      t.wrapS = THREE.RepeatWrapping;
+      t.wrapT = THREE.RepeatWrapping;
+      t.needsUpdate = true;
+      return new THREE.MeshStandardMaterial({
+        map: t,
+        metalness: 0.3,
+        roughness: 0.7,
+        emissive: new THREE.Color(WALL_COLOR),
+        emissiveIntensity: 0.05,
+      });
+    }
+    return new THREE.MeshStandardMaterial({
+      color: WALL_COLOR,
+      metalness: 0.3,
+      roughness: 0.7,
+      emissive: new THREE.Color(WALL_COLOR),
+      emissiveIntensity: 0.05,
+    });
+  }, [texture, size]);
+
   return (
     <RigidBody type="fixed" position={position} rotation={rotation} colliders="cuboid">
-      <mesh castShadow receiveShadow>
+      <mesh castShadow receiveShadow material={mat}>
         <boxGeometry args={size} />
-        <meshStandardMaterial color={color} metalness={0.3} roughness={0.6} emissive={color} emissiveIntensity={0.08} />
       </mesh>
     </RigidBody>
   );
@@ -259,19 +292,23 @@ function SpawnPortal({
 function Crate({
   position,
   size = [1.2, 1.2, 1.2] as [number, number, number],
-  color = TRIM_COLOR,
   stripeColor = EMISSIVE_ORANGE,
+  texture,
 }: {
   position: [number, number, number];
   size?: [number, number, number];
-  color?: string;
   stripeColor?: string;
+  texture?: THREE.CanvasTexture;
 }) {
   return (
     <RigidBody type="fixed" position={position} colliders="cuboid">
       <mesh castShadow receiveShadow>
         <boxGeometry args={size} />
-        <meshStandardMaterial color={color} metalness={0.3} roughness={0.5} emissive={color} emissiveIntensity={0.05} />
+        {texture ? (
+          <meshStandardMaterial map={texture} metalness={0.3} roughness={0.7} />
+        ) : (
+          <meshStandardMaterial color={TRIM_COLOR} metalness={0.3} roughness={0.7} />
+        )}
       </mesh>
       {/* Hazard stripe */}
       <mesh position={[0, 0, size[2] / 2 + 0.001]}>
@@ -347,6 +384,21 @@ export default function Level() {
   const W = ARENA_HALF_W * 2; // 50
   const D = ARENA_HALF_D * 2; // 60
 
+  // Create textures once
+  const wallTex = useMemo(() => createWallTexture(), []);
+  const floorTex = useMemo(() => {
+    const t = createFloorTexture();
+    t.repeat.set(W / 3, D / 3);
+    return t;
+  }, []);
+  const ceilingTex = useMemo(() => {
+    const t = createCeilingTexture();
+    t.repeat.set(W / 4, D / 4);
+    return t;
+  }, []);
+  const trimTex = useMemo(() => createTrimTexture(), []);
+  const crateTex = useMemo(() => createCrateTexture(), []);
+
   return (
     <group>
       {/* ═══════════════════════════════════════════════════
@@ -357,25 +409,37 @@ export default function Level() {
       <RigidBody type="fixed" colliders="cuboid">
         <mesh receiveShadow position={[0, -0.25, 0]}>
           <boxGeometry args={[W, 0.5, D]} />
-          <meshStandardMaterial color={FLOOR_COLOR} metalness={0.2} roughness={0.7} emissive={FLOOR_COLOR} emissiveIntensity={0.06} />
+          <meshStandardMaterial
+            map={floorTex}
+            metalness={0.2}
+            roughness={0.8}
+            emissive={new THREE.Color(FLOOR_COLOR)}
+            emissiveIntensity={0.04}
+          />
         </mesh>
       </RigidBody>
-      <gridHelper args={[W, 50, EMISSIVE_CYAN, "#1a1a30"]} position={[0, 0.01, 0]} />
+      <gridHelper args={[W, 50, EMISSIVE_CYAN, "#0e0c14"]} position={[0, 0.01, 0]} />
 
       {/* Ceiling */}
       <RigidBody type="fixed" colliders="cuboid">
         <mesh position={[0, WALL_H + 0.25, 0]}>
           <boxGeometry args={[W, 0.5, D]} />
-          <meshStandardMaterial color={CEILING_COLOR} metalness={0.2} roughness={0.7} emissive={CEILING_COLOR} emissiveIntensity={0.1} />
+          <meshStandardMaterial
+            map={ceilingTex}
+            metalness={0.2}
+            roughness={0.8}
+            emissive={new THREE.Color(CEILING_COLOR)}
+            emissiveIntensity={0.06}
+          />
         </mesh>
       </RigidBody>
 
       {/* Outer walls — North/South */}
-      <Wall position={[0, WALL_H / 2, -ARENA_HALF_D]} size={[W, WALL_H, WALL_T]} />
-      <Wall position={[0, WALL_H / 2, ARENA_HALF_D]} size={[W, WALL_H, WALL_T]} />
+      <Wall position={[0, WALL_H / 2, -ARENA_HALF_D]} size={[W, WALL_H, WALL_T]} texture={wallTex} />
+      <Wall position={[0, WALL_H / 2, ARENA_HALF_D]} size={[W, WALL_H, WALL_T]} texture={wallTex} />
       {/* Outer walls — East/West */}
-      <Wall position={[ARENA_HALF_W, WALL_H / 2, 0]} rotation={[0, Math.PI / 2, 0]} size={[D, WALL_H, WALL_T]} />
-      <Wall position={[-ARENA_HALF_W, WALL_H / 2, 0]} rotation={[0, Math.PI / 2, 0]} size={[D, WALL_H, WALL_T]} />
+      <Wall position={[ARENA_HALF_W, WALL_H / 2, 0]} rotation={[0, Math.PI / 2, 0]} size={[D, WALL_H, WALL_T]} texture={wallTex} />
+      <Wall position={[-ARENA_HALF_W, WALL_H / 2, 0]} rotation={[0, Math.PI / 2, 0]} size={[D, WALL_H, WALL_T]} texture={wallTex} />
 
       {/* Perimeter glow strips — floor level */}
       <GlowStrip position={[0, 0.15, -ARENA_HALF_D + 0.3]} scale={[W - 1, 0.08, 0.08]} />
@@ -412,8 +476,8 @@ export default function Level() {
           ═══════════════════════════════════════════════════ */}
 
       {/* Corridor walls (narrow passage) */}
-      <Wall position={[-5, WALL_H / 2, -14]} size={[0.5, WALL_H, 14]} />
-      <Wall position={[5, WALL_H / 2, -14]} size={[0.5, WALL_H, 14]} />
+      <Wall position={[-5, WALL_H / 2, -14]} size={[0.5, WALL_H, 14]} texture={wallTex} />
+      <Wall position={[5, WALL_H / 2, -14]} size={[0.5, WALL_H, 14]} texture={wallTex} />
       {/* Corridor glow strips */}
       <GlowStrip position={[-4.7, 0.15, -14]} scale={[0.08, 0.08, 14]} color={EMISSIVE_RED} />
       <GlowStrip position={[4.7, 0.15, -14]} scale={[0.08, 0.08, 14]} color={EMISSIVE_RED} />
@@ -421,16 +485,16 @@ export default function Level() {
       <GlowStrip position={[4.7, 2.5, -14]} scale={[0.05, 0.05, 14]} color={EMISSIVE_RED} />
 
       {/* North room — wider opening */}
-      <Wall position={[-12, WALL_H / 2, -22]} size={[0.5, WALL_H, 8]} />
-      <Wall position={[12, WALL_H / 2, -22]} size={[0.5, WALL_H, 8]} />
+      <Wall position={[-12, WALL_H / 2, -22]} size={[0.5, WALL_H, 8]} texture={wallTex} />
+      <Wall position={[12, WALL_H / 2, -22]} size={[0.5, WALL_H, 8]} texture={wallTex} />
       {/* North room side walls connecting corridor to room */}
-      <Wall position={[-8.5, WALL_H / 2, -18]} size={[7, WALL_H, 0.5]} />
-      <Wall position={[8.5, WALL_H / 2, -18]} size={[7, WALL_H, 0.5]} />
+      <Wall position={[-8.5, WALL_H / 2, -18]} size={[7, WALL_H, 0.5]} texture={wallTex} />
+      <Wall position={[8.5, WALL_H / 2, -18]} size={[7, WALL_H, 0.5]} texture={wallTex} />
 
       {/* Weapon rack crates */}
-      <Crate position={[-10, 0.6, -24]} size={[2, 1.2, 1.2]} stripeColor={EMISSIVE_RED} />
-      <Crate position={[-10, 0.6, -21]} size={[2, 1.2, 1.2]} stripeColor={EMISSIVE_RED} />
-      <Crate position={[10, 0.6, -24]} size={[2, 1.2, 1.2]} stripeColor={EMISSIVE_RED} />
+      <Crate position={[-10, 0.6, -24]} size={[2, 1.2, 1.2]} stripeColor={EMISSIVE_RED} texture={crateTex} />
+      <Crate position={[-10, 0.6, -21]} size={[2, 1.2, 1.2]} stripeColor={EMISSIVE_RED} texture={crateTex} />
+      <Crate position={[10, 0.6, -24]} size={[2, 1.2, 1.2]} stripeColor={EMISSIVE_RED} texture={crateTex} />
 
       {/* Spawn portal — north */}
       <SpawnPortal position={[0, 0, -ARENA_HALF_D + 1.5]} color={EMISSIVE_RED} />
@@ -439,18 +503,18 @@ export default function Level() {
           SOUTH CORRIDOR — Reactor Room
           ═══════════════════════════════════════════════════ */}
 
-      <Wall position={[-5, WALL_H / 2, 14]} size={[0.5, WALL_H, 14]} />
-      <Wall position={[5, WALL_H / 2, 14]} size={[0.5, WALL_H, 14]} />
+      <Wall position={[-5, WALL_H / 2, 14]} size={[0.5, WALL_H, 14]} texture={wallTex} />
+      <Wall position={[5, WALL_H / 2, 14]} size={[0.5, WALL_H, 14]} texture={wallTex} />
       <GlowStrip position={[-4.7, 0.15, 14]} scale={[0.08, 0.08, 14]} color={EMISSIVE_PURPLE} />
       <GlowStrip position={[4.7, 0.15, 14]} scale={[0.08, 0.08, 14]} color={EMISSIVE_PURPLE} />
       <GlowStrip position={[-4.7, 2.5, 14]} scale={[0.05, 0.05, 14]} color={EMISSIVE_PURPLE} />
       <GlowStrip position={[4.7, 2.5, 14]} scale={[0.05, 0.05, 14]} color={EMISSIVE_PURPLE} />
 
       {/* South room */}
-      <Wall position={[-12, WALL_H / 2, 22]} size={[0.5, WALL_H, 8]} />
-      <Wall position={[12, WALL_H / 2, 22]} size={[0.5, WALL_H, 8]} />
-      <Wall position={[-8.5, WALL_H / 2, 18]} size={[7, WALL_H, 0.5]} />
-      <Wall position={[8.5, WALL_H / 2, 18]} size={[7, WALL_H, 0.5]} />
+      <Wall position={[-12, WALL_H / 2, 22]} size={[0.5, WALL_H, 8]} texture={wallTex} />
+      <Wall position={[12, WALL_H / 2, 22]} size={[0.5, WALL_H, 8]} texture={wallTex} />
+      <Wall position={[-8.5, WALL_H / 2, 18]} size={[7, WALL_H, 0.5]} texture={wallTex} />
+      <Wall position={[8.5, WALL_H / 2, 18]} size={[7, WALL_H, 0.5]} texture={wallTex} />
 
       {/* Reactor core — elevated cylinder */}
       <RigidBody type="fixed" colliders="cuboid">
@@ -471,16 +535,16 @@ export default function Level() {
           EAST CORRIDOR — Server Room
           ═══════════════════════════════════════════════════ */}
 
-      <Wall position={[14, WALL_H / 2, -5]} rotation={[0, Math.PI / 2, 0]} size={[0.5, WALL_H, 14]} />
-      <Wall position={[14, WALL_H / 2, 5]} rotation={[0, Math.PI / 2, 0]} size={[0.5, WALL_H, 14]} />
+      <Wall position={[14, WALL_H / 2, -5]} rotation={[0, Math.PI / 2, 0]} size={[0.5, WALL_H, 14]} texture={wallTex} />
+      <Wall position={[14, WALL_H / 2, 5]} rotation={[0, Math.PI / 2, 0]} size={[0.5, WALL_H, 14]} texture={wallTex} />
       <GlowStrip position={[14, 0.15, -4.7]} scale={[14, 0.08, 0.08]} color={EMISSIVE_CYAN} />
       <GlowStrip position={[14, 0.15, 4.7]} scale={[14, 0.08, 0.08]} color={EMISSIVE_CYAN} />
 
       {/* East room */}
-      <Wall position={[22, WALL_H / 2, -8]} rotation={[0, Math.PI / 2, 0]} size={[0.5, WALL_H, 8]} />
-      <Wall position={[22, WALL_H / 2, 8]} rotation={[0, Math.PI / 2, 0]} size={[0.5, WALL_H, 8]} />
-      <Wall position={[18, WALL_H / 2, -6.5]} size={[0.5, WALL_H, 3]} />
-      <Wall position={[18, WALL_H / 2, 6.5]} size={[0.5, WALL_H, 3]} />
+      <Wall position={[22, WALL_H / 2, -8]} rotation={[0, Math.PI / 2, 0]} size={[0.5, WALL_H, 8]} texture={wallTex} />
+      <Wall position={[22, WALL_H / 2, 8]} rotation={[0, Math.PI / 2, 0]} size={[0.5, WALL_H, 8]} texture={wallTex} />
+      <Wall position={[18, WALL_H / 2, -6.5]} size={[0.5, WALL_H, 3]} texture={wallTex} />
+      <Wall position={[18, WALL_H / 2, 6.5]} size={[0.5, WALL_H, 3]} texture={wallTex} />
 
       {/* Server racks */}
       <Terminal position={[20, 0, -6.5]} screenColor={EMISSIVE_CYAN} />
@@ -496,24 +560,24 @@ export default function Level() {
           WEST CORRIDOR — Cargo Bay
           ═══════════════════════════════════════════════════ */}
 
-      <Wall position={[-14, WALL_H / 2, -5]} rotation={[0, Math.PI / 2, 0]} size={[0.5, WALL_H, 14]} />
-      <Wall position={[-14, WALL_H / 2, 5]} rotation={[0, Math.PI / 2, 0]} size={[0.5, WALL_H, 14]} />
+      <Wall position={[-14, WALL_H / 2, -5]} rotation={[0, Math.PI / 2, 0]} size={[0.5, WALL_H, 14]} texture={wallTex} />
+      <Wall position={[-14, WALL_H / 2, 5]} rotation={[0, Math.PI / 2, 0]} size={[0.5, WALL_H, 14]} texture={wallTex} />
       <GlowStrip position={[-14, 0.15, -4.7]} scale={[14, 0.08, 0.08]} color={EMISSIVE_ORANGE} />
       <GlowStrip position={[-14, 0.15, 4.7]} scale={[14, 0.08, 0.08]} color={EMISSIVE_ORANGE} />
 
       {/* West room */}
-      <Wall position={[-22, WALL_H / 2, -8]} rotation={[0, Math.PI / 2, 0]} size={[0.5, WALL_H, 8]} />
-      <Wall position={[-22, WALL_H / 2, 8]} rotation={[0, Math.PI / 2, 0]} size={[0.5, WALL_H, 8]} />
-      <Wall position={[-18, WALL_H / 2, -6.5]} size={[0.5, WALL_H, 3]} />
-      <Wall position={[-18, WALL_H / 2, 6.5]} size={[0.5, WALL_H, 3]} />
+      <Wall position={[-22, WALL_H / 2, -8]} rotation={[0, Math.PI / 2, 0]} size={[0.5, WALL_H, 8]} texture={wallTex} />
+      <Wall position={[-22, WALL_H / 2, 8]} rotation={[0, Math.PI / 2, 0]} size={[0.5, WALL_H, 8]} texture={wallTex} />
+      <Wall position={[-18, WALL_H / 2, -6.5]} size={[0.5, WALL_H, 3]} texture={wallTex} />
+      <Wall position={[-18, WALL_H / 2, 6.5]} size={[0.5, WALL_H, 3]} texture={wallTex} />
 
       {/* Cargo stacks */}
-      <Crate position={[-20, 0.6, -6]} stripeColor={EMISSIVE_ORANGE} />
-      <Crate position={[-20, 1.8, -6]} size={[1, 1, 1]} stripeColor={EMISSIVE_ORANGE} />
-      <Crate position={[-20, 0.6, -3]} size={[1.5, 1.2, 1.5]} stripeColor={EMISSIVE_ORANGE} />
-      <Crate position={[-20, 0.6, 3]} stripeColor={EMISSIVE_ORANGE} />
-      <Crate position={[-20, 0.6, 6]} size={[1.5, 1.2, 1.5]} stripeColor={EMISSIVE_ORANGE} />
-      <Crate position={[-20, 1.8, 6]} size={[1, 1, 1]} stripeColor={EMISSIVE_ORANGE} />
+      <Crate position={[-20, 0.6, -6]} stripeColor={EMISSIVE_ORANGE} texture={crateTex} />
+      <Crate position={[-20, 1.8, -6]} size={[1, 1, 1]} stripeColor={EMISSIVE_ORANGE} texture={crateTex} />
+      <Crate position={[-20, 0.6, -3]} size={[1.5, 1.2, 1.5]} stripeColor={EMISSIVE_ORANGE} texture={crateTex} />
+      <Crate position={[-20, 0.6, 3]} stripeColor={EMISSIVE_ORANGE} texture={crateTex} />
+      <Crate position={[-20, 0.6, 6]} size={[1.5, 1.2, 1.5]} stripeColor={EMISSIVE_ORANGE} texture={crateTex} />
+      <Crate position={[-20, 1.8, 6]} size={[1, 1, 1]} stripeColor={EMISSIVE_ORANGE} texture={crateTex} />
 
       {/* Elevated catwalk in cargo bay */}
       <RigidBody type="fixed" colliders="cuboid">
@@ -544,6 +608,7 @@ export default function Level() {
           position={[x, 0.7, z]}
           size={[2.5, 1.4, 2.5]}
           stripeColor={i < 2 ? EMISSIVE_CYAN : EMISSIVE_PURPLE}
+          texture={crateTex}
         />
       ))}
 
@@ -598,9 +663,9 @@ export default function Level() {
       <CeilingLight position={[-12, WALL_H - 0.1, 0]} color={EMISSIVE_ORANGE} />
       <CeilingLight position={[-18, WALL_H - 0.1, 0]} color={EMISSIVE_ORANGE} />
 
-      {/* Global ambient */}
-      <ambientLight intensity={0.6} color="#556688" />
-      <hemisphereLight color="#6688bb" groundColor="#2a2a40" intensity={0.6} />
+      {/* Global ambient — darker for Doom feel */}
+      <ambientLight intensity={0.35} color="#443344" />
+      <hemisphereLight color="#554466" groundColor="#1a1820" intensity={0.4} />
     </group>
   );
 }

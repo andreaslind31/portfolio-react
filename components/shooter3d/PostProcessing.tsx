@@ -8,15 +8,15 @@ export default function PostProcessing() {
   return (
     <EffectComposer>
       <Bloom
-        intensity={0.8}
-        luminanceThreshold={0.2}
-        luminanceSmoothing={0.9}
+        intensity={1.0}
+        luminanceThreshold={0.15}
+        luminanceSmoothing={0.8}
         mipmapBlur
       />
       <Vignette
         eskil={false}
-        offset={0.35}
-        darkness={0.35}
+        offset={0.3}
+        darkness={0.5}
         blendFunction={BlendFunction.NORMAL}
       />
       <ChromaticAberration
