@@ -526,3 +526,73 @@ export function startAmbientHum(): () => void {
     return () => {};
   }
 }
+
+/**
+ * Procedural combat music — ambient drone that can be intensified.
+ * Returns an object with setIntensity(0-1) and stop() methods.
+ */
+export function startCombatMusic(): { setIntensity: (v: number) => void; stop: () => void } {
+  try {
+    const ctx = getCtx();
+
+    // Bass drone
+    const bass = ctx.createOscillator();
+    const bassGain = ctx.createGain();
+    bass.type = "sawtooth";
+    bass.frequency.value = 40;
+    bassGain.gain.value = 0.02;
+    bass.connect(bassGain).connect(ctx.destination);
+    bass.start();
+
+    // Mid-range pulse
+    const mid = ctx.createOscillator();
+    const midGain = ctx.createGain();
+    mid.type = "square";
+    mid.frequency.value = 55;
+    midGain.gain.value = 0;
+    mid.connect(midGain).connect(ctx.destination);
+    mid.start();
+
+    // High tension
+    const high = ctx.createOscillator();
+    const highGain = ctx.createGain();
+    high.type = "sine";
+    high.frequency.value = 220;
+    highGain.gain.value = 0;
+    high.connect(highGain).connect(ctx.destination);
+    high.start();
+
+    // LFO on bass for pulsing
+    const lfo = ctx.createOscillator();
+    const lfoGain = ctx.createGain();
+    lfo.frequency.value = 0.5;
+    lfoGain.gain.value = 0.01;
+    lfo.connect(lfoGain).connect(bassGain.gain);
+    lfo.start();
+
+    return {
+      setIntensity: (v: number) => {
+        const t = ctx.currentTime + 0.1;
+        // Scale layers based on intensity (0 = calm, 1 = full combat)
+        bassGain.gain.linearRampToValueAtTime(0.02 + v * 0.03, t);
+        midGain.gain.linearRampToValueAtTime(v * 0.015, t);
+        highGain.gain.linearRampToValueAtTime(v * v * 0.01, t);
+        lfo.frequency.linearRampToValueAtTime(0.5 + v * 3, t);
+        bass.frequency.linearRampToValueAtTime(40 + v * 10, t);
+      },
+      stop: () => {
+        try {
+          const t = ctx.currentTime;
+          bassGain.gain.linearRampToValueAtTime(0.001, t + 0.5);
+          midGain.gain.linearRampToValueAtTime(0.001, t + 0.5);
+          highGain.gain.linearRampToValueAtTime(0.001, t + 0.5);
+          setTimeout(() => {
+            bass.stop(); mid.stop(); high.stop(); lfo.stop();
+          }, 600);
+        } catch {}
+      },
+    };
+  } catch {
+    return { setIntensity: () => {}, stop: () => {} };
+  }
+}

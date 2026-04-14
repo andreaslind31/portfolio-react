@@ -35,6 +35,7 @@ import {
   playDistantRumble,
   playPipeHiss,
   startAmbientHum,
+  startCombatMusic,
 } from "./SoundEngine";
 
 // ── Game constants ───────────────────────────────────────
@@ -421,6 +422,13 @@ function GameLoop({
   crates,
   setCrates,
   ambientSoundTimer,
+  comboMultiplier,
+  setComboMultiplier,
+  setComboTimer,
+  setShotsFired,
+  setShotsHit,
+  setWeaponKills,
+  combatMusic,
 }: {
   enemies: EnemyData[];
   setEnemies: React.Dispatch<React.SetStateAction<EnemyData[]>>;
@@ -462,6 +470,13 @@ function GameLoop({
   crates: CrateData[];
   setCrates: React.Dispatch<React.SetStateAction<CrateData[]>>;
   ambientSoundTimer: React.MutableRefObject<number>;
+  comboMultiplier: number;
+  setComboMultiplier: React.Dispatch<React.SetStateAction<number>>;
+  setComboTimer: React.Dispatch<React.SetStateAction<number>>;
+  setShotsFired: React.Dispatch<React.SetStateAction<number>>;
+  setShotsHit: React.Dispatch<React.SetStateAction<number>>;
+  setWeaponKills: React.Dispatch<React.SetStateAction<Record<WeaponType, number>>>;
+  combatMusic: React.MutableRefObject<{ setIntensity: (v: number) => void; stop: () => void } | null>;
 }) {
   const { camera } = useThree();
   const enemyShootTimers = useRef<Map<number, number>>(new Map());
@@ -778,6 +793,7 @@ function GameLoop({
                     ...createImpactSparks(p.position.clone(), hitNormal, "#00d4ff", 6),
                   ]);
                   playHitSound();
+                  setShotsHit((h) => h + 1);
                   setHitMarker(true);
                   setTimeout(() => setHitMarker(false), 100);
 
@@ -788,9 +804,17 @@ function GameLoop({
                     e.alive = false;
                     e.dying = true;
                     e.deathTimer = 0;
-                    const points = e.type === "drone" ? 100 : e.type === "sentinel" ? 200 : e.type === "boss" ? 2000 : 500;
+                    const basePoints = e.type === "drone" ? 100 : e.type === "sentinel" ? 200 : e.type === "boss" ? 2000 : 500;
+                    // Combo multiplier — increases with rapid kills
+                    setComboTimer(3); // 3 seconds to maintain combo
+                    setComboMultiplier((m) => {
+                      const newM = Math.min(m + 0.5, 5);
+                      return newM;
+                    });
+                    const points = Math.round(basePoints * comboMultiplier);
                     setScore((s) => s + points);
                     setKills((k) => k + 1);
+                    setWeaponKills((prev) => ({ ...prev, [currentWeapon]: prev[currentWeapon] + 1 }));
                     const deathColor = e.type === "drone" ? "#ff2255" : e.type === "sentinel" ? "#ff8800" : "#ff0044";
                     setParticles((pp) => [
                       ...pp,
@@ -1040,6 +1064,31 @@ function GameLoop({
         playPipeHiss();
       }
     }
+
+    // ── Combo timer decay ──
+    setComboTimer((t) => {
+      if (t > 0) {
+        const newT = t - dt;
+        if (newT <= 0) {
+          setComboMultiplier(1); // Reset multiplier when combo expires
+          return 0;
+        }
+        return newT;
+      }
+      return 0;
+    });
+
+    // ── Update combat music intensity ──
+    if (combatMusic.current) {
+      const aliveCount = enemies.filter((e) => e.alive).length;
+      const nearestDist = enemies.reduce((min, e) => {
+        if (!e.alive) return min;
+        return Math.min(min, e.position.distanceTo(playerPos.current));
+      }, 100);
+      const proximity = Math.max(0, 1 - nearestDist / 20);
+      const density = Math.min(1, aliveCount / 8);
+      combatMusic.current.setIntensity(Math.max(proximity, density));
+    }
   });
 
   return null;
@@ -1185,6 +1234,19 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
     { id: number; text: string; x: number; y: number; time: number }[]
   >([]);
   const [crates, setCrates] = useState<CrateData[]>([]);
+  // Settings
+  const [mouseSensitivity, setMouseSensitivity] = useState(0.002);
+  // Combo system
+  const [comboMultiplier, setComboMultiplier] = useState(1);
+  const [comboTimer, setComboTimer] = useState(0);
+  // Game stats
+  const [shotsFired, setShotsFired] = useState(0);
+  const [shotsHit, setShotsHit] = useState(0);
+  const [gameStartTime, setGameStartTime] = useState(0);
+  const [gameEndTime, setGameEndTime] = useState(0);
+  const [weaponKills, setWeaponKills] = useState<Record<WeaponType, number>>({
+    blaster: 0, shotgun: 0, plasma: 0, rocket: 0,
+  });
 
   const playerPos = useRef(new THREE.Vector3(0, 2, 5));
   const playerYaw = useRef(0);
@@ -1195,6 +1257,7 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
   const ambientSoundTimer = useRef(0);
   const footstepTimer = useRef(0);
   const stopAmbient = useRef<(() => void) | null>(null);
+  const combatMusic = useRef<{ setIntensity: (v: number) => void; stop: () => void } | null>(null);
 
   useEffect(() => {
     setIsTouchDevice("ontouchstart" in window || navigator.maxTouchPoints > 0);
@@ -1203,11 +1266,14 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
   useEffect(() => {
     if (health <= 0 && gameState === "playing") {
       setFinalScore(score);
+      setGameEndTime(Date.now());
       setGameState("gameover");
       document.exitPointerLock?.();
       setLocked(false);
       stopAmbient.current?.();
       stopAmbient.current = null;
+      combatMusic.current?.stop();
+      combatMusic.current = null;
     }
   }, [health, gameState, score]);
 
@@ -1225,6 +1291,7 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
   useEffect(() => {
     return () => {
       stopAmbient.current?.();
+      combatMusic.current?.stop();
     };
   }, []);
 
@@ -1258,6 +1325,13 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
     setScorePopups([]);
     setCrates(createInitialCrates());
     ambientSoundTimer.current = 0;
+    setComboMultiplier(1);
+    setComboTimer(0);
+    setShotsFired(0);
+    setShotsHit(0);
+    setGameStartTime(Date.now());
+    setGameEndTime(0);
+    setWeaponKills({ blaster: 0, shotgun: 0, plasma: 0, rocket: 0 });
     setProjectiles([]);
     setParticles([]);
     setExplosions([]);
@@ -1272,6 +1346,8 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
 
     stopAmbient.current?.();
     stopAmbient.current = startAmbientHum();
+    combatMusic.current?.stop();
+    combatMusic.current = startCombatMusic();
     playWaveStartSound();
 
     canvasContainerRef.current?.requestPointerLock?.();
@@ -1288,6 +1364,9 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
       const config = WEAPON_CONFIGS[currentWeapon];
       const ammo = weaponAmmo[currentWeapon];
       if (ammo === 0) return;
+
+      // Track shots fired
+      setShotsFired((s) => s + 1);
 
       // Per-weapon sound
       switch (currentWeapon) {
@@ -1415,7 +1494,7 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
           <Suspense fallback={null}>
             <fog attach="fog" args={["#0a0812", 20, 50]} />
             <Physics gravity={[0, -15, 0]}>
-              <Player locked={locked} />
+              <Player locked={locked} sensitivity={mouseSensitivity} speedMultiplier={Date.now() / 1000 < speedBoostEnd ? 1.5 : 1} />
               <Level />
             </Physics>
             <Weapon locked={locked} weaponType={currentWeapon} ammo={weaponAmmo[currentWeapon]} onShoot={handleShoot} />
@@ -1467,6 +1546,13 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
               crates={crates}
               setCrates={setCrates}
               ambientSoundTimer={ambientSoundTimer}
+              comboMultiplier={comboMultiplier}
+              setComboMultiplier={setComboMultiplier}
+              setComboTimer={setComboTimer}
+              setShotsFired={setShotsFired}
+              setShotsHit={setShotsHit}
+              setWeaponKills={setWeaponKills}
+              combatMusic={combatMusic}
             />
             <PostProcessing />
           </Suspense>
@@ -1496,6 +1582,15 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
         scorePopups={scorePopups}
         bossHp={enemies.find((e) => e.type === "boss" && e.alive)?.hp ?? 0}
         bossMaxHp={enemies.find((e) => e.type === "boss")?.maxHp ?? 0}
+        comboMultiplier={comboMultiplier}
+        comboTimer={comboTimer}
+        mouseSensitivity={mouseSensitivity}
+        onSensitivityChange={setMouseSensitivity}
+        shotsFired={shotsFired}
+        shotsHit={shotsHit}
+        gameStartTime={gameStartTime}
+        gameEndTime={gameEndTime}
+        weaponKills={weaponKills}
       />
 
       <DamageFlash flash={damageFlash} />

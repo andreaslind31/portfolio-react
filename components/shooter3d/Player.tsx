@@ -8,13 +8,15 @@ import * as THREE from "three";
 
 interface PlayerProps {
   locked: boolean;
+  sensitivity?: number;
+  speedMultiplier?: number;
 }
 
 const SPEED = 7;
 const JUMP_FORCE = 5;
-const MOUSE_SENSITIVITY = 0.002;
+const DEFAULT_SENSITIVITY = 0.002;
 
-export default function Player({ locked }: PlayerProps) {
+export default function Player({ locked, sensitivity = DEFAULT_SENSITIVITY, speedMultiplier = 1 }: PlayerProps) {
   const rigidBodyRef = useRef<RapierRigidBody>(null);
   const { camera } = useThree();
 
@@ -41,8 +43,8 @@ export default function Player({ locked }: PlayerProps) {
   const onMouseMove = useCallback(
     (e: MouseEvent) => {
       if (!locked) return;
-      euler.current.y -= e.movementX * MOUSE_SENSITIVITY;
-      euler.current.x -= e.movementY * MOUSE_SENSITIVITY;
+      euler.current.y -= e.movementX * sensitivity;
+      euler.current.x -= e.movementY * sensitivity;
       euler.current.x = Math.max(
         -Math.PI / 2.5,
         Math.min(Math.PI / 2.5, euler.current.x)
@@ -101,9 +103,9 @@ export default function Player({ locked }: PlayerProps) {
     const currentVel = body.linvel();
     body.setLinvel(
       {
-        x: moveDir.x * SPEED,
+        x: moveDir.x * SPEED * speedMultiplier,
         y: currentVel.y,
-        z: moveDir.z * SPEED,
+        z: moveDir.z * SPEED * speedMultiplier,
       },
       true
     );

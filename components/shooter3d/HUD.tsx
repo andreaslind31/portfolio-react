@@ -40,6 +40,17 @@ interface HUDProps {
   scorePopups: { id: number; text: string; x: number; y: number; time: number }[];
   bossHp: number;
   bossMaxHp: number;
+  comboMultiplier: number;
+  comboTimer: number;
+  // Settings
+  mouseSensitivity: number;
+  onSensitivityChange: (v: number) => void;
+  // Game over stats
+  shotsFired: number;
+  shotsHit: number;
+  gameStartTime: number;
+  gameEndTime: number;
+  weaponKills: Record<WeaponType, number>;
 }
 
 export default function HUD({
@@ -65,6 +76,15 @@ export default function HUD({
   scorePopups,
   bossHp,
   bossMaxHp,
+  comboMultiplier,
+  comboTimer,
+  mouseSensitivity,
+  onSensitivityChange,
+  shotsFired,
+  shotsHit,
+  gameStartTime,
+  gameEndTime,
+  weaponKills,
 }: HUDProps) {
   const [submitName, setSubmitName] = useState("");
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -261,6 +281,11 @@ export default function HUD({
             >
               {score.toLocaleString()}
             </div>
+            {comboMultiplier > 1 && comboTimer > 0 && (
+              <div style={{ color: "#ffdd44", fontSize: 14, fontWeight: "bold", textShadow: "0 0 8px #ffdd44", marginTop: 2 }}>
+                x{comboMultiplier.toFixed(1)}
+              </div>
+            )}
           </div>
 
           {/* Wave — top left */}
@@ -626,6 +651,25 @@ export default function HUD({
             </div>
           </div>
 
+          {/* Sensitivity slider */}
+          <div style={{ marginBottom: 30, textAlign: "center" }}>
+            <div style={{ color: "#ffffff88", fontSize: 11, letterSpacing: 2, marginBottom: 6 }}>
+              MOUSE SENSITIVITY
+            </div>
+            <input
+              type="range"
+              min="0.0005"
+              max="0.005"
+              step="0.0005"
+              value={mouseSensitivity}
+              onChange={(e) => onSensitivityChange(parseFloat(e.target.value))}
+              style={{ width: 180, accentColor: "#00d4ff" }}
+            />
+            <div style={{ color: "#00d4ff88", fontSize: 10, marginTop: 2 }}>
+              {(mouseSensitivity * 1000).toFixed(1)}
+            </div>
+          </div>
+
           <button
             onClick={onStart}
             style={{
@@ -723,6 +767,26 @@ export default function HUD({
             }}
           >
             WAVE {wave} • {kills} KILLS
+          </div>
+
+          {/* Detailed stats */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 20px", marginBottom: 20, fontSize: 11, color: "#ffffff88", letterSpacing: 1 }}>
+            <div>ACCURACY</div>
+            <div style={{ color: "#00d4ff", textAlign: "right" }}>
+              {shotsFired > 0 ? `${Math.round((shotsHit / shotsFired) * 100)}%` : "—"}
+            </div>
+            <div>TIME SURVIVED</div>
+            <div style={{ color: "#00d4ff", textAlign: "right" }}>
+              {gameEndTime > 0 ? `${Math.floor((gameEndTime - gameStartTime) / 1000)}s` : "—"}
+            </div>
+            <div>BEST WEAPON</div>
+            <div style={{ color: "#00d4ff", textAlign: "right" }}>
+              {(() => {
+                const best = (Object.entries(weaponKills) as [WeaponType, number][])
+                  .sort((a, b) => b[1] - a[1])[0];
+                return best && best[1] > 0 ? `${WEAPON_DISPLAY[best[0]].name} (${best[1]})` : "—";
+              })()}
+            </div>
           </div>
 
           {/* Score submission */}
