@@ -65,13 +65,33 @@ const HEAVY_MELEE_CD = 1.5; // seconds between melee hits
 const HEAVY_MELEE_RANGE = 3.5;
 const HEAVY_MELEE_DAMAGE = 20;
 
+// ── Difficulty scaling ────────────────────────────────────
+function getDifficultyMultiplier(wave: number) {
+  return {
+    speedMult: 1 + wave * 0.05,        // enemies get 5% faster each wave
+    accuracyMult: 1 - wave * 0.03,     // inaccuracy reduces 3% per wave (min 0.3)
+    shootCdMult: 1 - wave * 0.02,      // shoot cooldown reduces 2% per wave (min 0.5)
+    hpMult: 1 + wave * 0.08,           // enemies get 8% more HP each wave
+  };
+}
+
 // ── Spawn config per wave ────────────────────────────────
 function getWaveConfig(wave: number) {
-  // Mix of all three types from wave 1 for variety
+  const isBossWave = wave % 5 === 0 && wave > 0;
+  if (isBossWave) {
+    // Boss wave: boss + reduced escort
+    return {
+      drones: Math.min(2 + Math.floor(wave / 5), 5),
+      sentinels: Math.floor(wave / 5),
+      heavies: 0,
+      boss: 1,
+    };
+  }
+  // Normal wave
   const drones = Math.min(1 + wave, 6);
   const sentinels = Math.max(1, Math.floor(wave / 2) + 1);
   const heavies = Math.max(1, Math.floor((wave + 1) / 3));
-  return { drones, sentinels, heavies };
+  return { drones, sentinels, heavies, boss: 0 };
 }
 
 let nextId = 1;
@@ -121,9 +141,14 @@ function spawnEnemies(wave: number): EnemyData[] {
     }
   };
 
-  spawn("drone", config.drones, 25 + wave * 5, 4 + wave * 0.2);
-  spawn("sentinel", config.sentinels, 40 + wave * 5, 2.5);
-  spawn("heavy", config.heavies, 80 + wave * 10, 1.5);
+  const diff = getDifficultyMultiplier(wave);
+
+  spawn("drone", config.drones, (25 + wave * 5) * diff.hpMult, (4 + wave * 0.2) * diff.speedMult);
+  spawn("sentinel", config.sentinels, (40 + wave * 5) * diff.hpMult, 2.5 * diff.speedMult);
+  spawn("heavy", config.heavies, (80 + wave * 10) * diff.hpMult, 1.5 * diff.speedMult);
+  if (config.boss > 0) {
+    spawn("boss", config.boss, 400 + wave * 30, 2.0 * diff.speedMult);
+  }
 
   return enemies;
 }
@@ -257,6 +282,73 @@ function updateHeavyAI(
   e.lastMoveDir.copy(dir);
 }
 
+// ── Boss AI ──────────────────────────────────────────────
+const BOSS_MELEE_RANGE = 4.5;
+const BOSS_MELEE_DAMAGE = 30;
+const BOSS_SHOOT_CD = 1.0;
+const BOSS_MELEE_CD = 1.2;
+
+function updateBossAI(
+  e: EnemyData,
+  dir: THREE.Vector3,
+  dist: number,
+  dt: number
+) {
+  // Boss alternates between ranged and charge phases
+  const phase = e.chargeTimer; // reuse chargeTimer as phase timer
+
+  if (dist > 8) {
+    // Approach + strafe while shooting
+    e.aiState = "engage";
+    e.position.addScaledVector(dir, e.speed * dt);
+    const strafe = new THREE.Vector3(-dir.z, 0, dir.x).multiplyScalar(e.strafeDir);
+    e.position.addScaledVector(strafe, e.speed * 0.4 * dt);
+    if (Math.random() < 0.01) e.strafeDir *= -1;
+  } else if (dist > BOSS_MELEE_RANGE) {
+    // Charge in!
+    e.aiState = "charge";
+    e.position.addScaledVector(dir, e.speed * 2.5 * dt);
+  } else {
+    // Melee range — strafe aggressively
+    e.aiState = "charge";
+    const strafe = new THREE.Vector3(-dir.z, 0, dir.x).multiplyScalar(e.strafeDir);
+    e.position.addScaledVector(strafe, e.speed * 0.6 * dt);
+    e.position.addScaledVector(dir, e.speed * 0.2 * dt);
+    if (Math.random() < 0.03) e.strafeDir *= -1;
+  }
+
+  e.chargeTimer += dt;
+  e.lastMoveDir.copy(dir);
+}
+
+// ── Enemy separation force ──────────────────────────────
+const SEPARATION_RADIUS = 2.0;
+const SEPARATION_FORCE = 3.0;
+
+function applySeparation(enemies: EnemyData[]) {
+  for (let i = 0; i < enemies.length; i++) {
+    const a = enemies[i];
+    if (!a.alive) continue;
+    for (let j = i + 1; j < enemies.length; j++) {
+      const b = enemies[j];
+      if (!b.alive) continue;
+      const dx = a.position.x - b.position.x;
+      const dz = a.position.z - b.position.z;
+      const distSq = dx * dx + dz * dz;
+      if (distSq < SEPARATION_RADIUS * SEPARATION_RADIUS && distSq > 0.01) {
+        const dist = Math.sqrt(distSq);
+        const overlap = SEPARATION_RADIUS - dist;
+        const pushX = (dx / dist) * overlap * 0.5;
+        const pushZ = (dz / dist) * overlap * 0.5;
+        a.position.x += pushX;
+        a.position.z += pushZ;
+        b.position.x -= pushX;
+        b.position.z -= pushZ;
+      }
+    }
+  }
+}
+
 // ── Wall collision for enemies ───────────────────────────
 const ENEMY_RADIUS = 0.6;
 
@@ -377,6 +469,9 @@ function GameLoop({
 
     const dt = Math.min(delta, 0.05);
 
+    // ── Difficulty scaling ──
+    const diff = getDifficultyMultiplier(wave);
+
     // ── Footstep sound (detect movement by position change) ──
     const posDelta = playerPos.current.distanceTo(camera.position);
     const isPlayerMoving = posDelta > 0.02;
@@ -441,6 +536,9 @@ function GameLoop({
           case "heavy":
             updateHeavyAI(e, dir, dist, dt);
             break;
+          case "boss":
+            updateBossAI(e, dir, dist, dt);
+            break;
         }
 
         // Resolve wall collisions
@@ -473,18 +571,20 @@ function GameLoop({
         }
 
         if (e.type === "drone") {
-          if (now - lastShot > DRONE_SHOOT_CD && dist < 18) {
+          const cd = DRONE_SHOOT_CD * Math.max(0.5, diff.shootCdMult);
+          if (now - lastShot > cd && dist < 18) {
             enemyShootTimers.current.set(e.id, now);
-            fireEnemyProjectile(e, playerPos.current, setProjectiles);
+            fireEnemyProjectile(e, playerPos.current, setProjectiles, ENEMY_PROJECTILE_SPEED, diff.accuracyMult);
             e.isShooting = true;
             e.shootFrame = 0;
           }
         } else if (e.type === "sentinel") {
           const lastBurst = sentinelBurstTimers.current.get(e.id) || 0;
-          if (e.burstCount > 0 && now - lastShot > SENTINEL_SHOOT_CD && dist < 22) {
+          const cd = SENTINEL_SHOOT_CD * Math.max(0.5, diff.shootCdMult);
+          if (e.burstCount > 0 && now - lastShot > cd && dist < 22) {
             enemyShootTimers.current.set(e.id, now);
             e.burstCount--;
-            fireEnemyProjectile(e, playerPos.current, setProjectiles);
+            fireEnemyProjectile(e, playerPos.current, setProjectiles, ENEMY_PROJECTILE_SPEED, diff.accuracyMult);
             e.isShooting = true;
             e.shootFrame = 0;
             if (e.burstCount <= 0) {
@@ -526,11 +626,63 @@ function GameLoop({
             );
             setDamageDirection(angle);
           }
+        } else if (e.type === "boss") {
+          // Boss: ranged attack at distance, melee when close
+          if (dist < BOSS_MELEE_RANGE) {
+            // Melee slam
+            if (now - lastShot > BOSS_MELEE_CD) {
+              enemyShootTimers.current.set(e.id, now);
+              e.isShooting = true;
+              e.shootFrame = 0;
+              setHealth((h) => Math.max(0, h - BOSS_MELEE_DAMAGE));
+              setDamageFlash(true);
+              setTimeout(() => setDamageFlash(false), 150);
+              playDamageSound();
+              shakeIntensity.current = 0.3;
+
+              const toEnemy = new THREE.Vector3()
+                .subVectors(e.position, playerPos.current)
+                .setY(0).normalize();
+              const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+              forward.y = 0; forward.normalize();
+              setDamageDirection(Math.atan2(
+                forward.x * toEnemy.z - forward.z * toEnemy.x,
+                forward.x * toEnemy.x + forward.z * toEnemy.z
+              ));
+            }
+          } else if (dist < 20) {
+            // Ranged: fire 3 projectiles in a spread
+            if (now - lastShot > BOSS_SHOOT_CD) {
+              enemyShootTimers.current.set(e.id, now);
+              e.isShooting = true;
+              e.shootFrame = 0;
+              for (let s = -1; s <= 1; s++) {
+                const shootDir = new THREE.Vector3()
+                  .subVectors(playerPos.current, e.position).normalize();
+                shootDir.x += s * 0.12;
+                shootDir.normalize();
+                setProjectiles((prev) => [...prev, {
+                  id: nextId++,
+                  position: e.position.clone().add(new THREE.Vector3(0, 1.5, 0)),
+                  direction: shootDir,
+                  speed: ENEMY_PROJECTILE_SPEED * 1.3,
+                  alive: true,
+                  friendly: false,
+                  life: ENEMY_PROJECTILE_LIFE,
+                  color: "#ff0000",
+                  size: 2,
+                }]);
+              }
+            }
+          }
         }
 
         return e;
       })
     );
+
+    // ── Enemy separation ──
+    applySeparation(enemies);
 
     // ── Wave cleared? ──
     // Compute from render-state directly (not from inside a state updater,
@@ -626,7 +778,7 @@ function GameLoop({
                     e.alive = false;
                     e.dying = true;
                     e.deathTimer = 0;
-                    const points = e.type === "drone" ? 100 : e.type === "sentinel" ? 200 : 500;
+                    const points = e.type === "drone" ? 100 : e.type === "sentinel" ? 200 : e.type === "boss" ? 2000 : 500;
                     setScore((s) => s + points);
                     setKills((k) => k + 1);
                     const deathColor = e.type === "drone" ? "#ff2255" : e.type === "sentinel" ? "#ff8800" : "#ff0044";
@@ -863,7 +1015,7 @@ function rocketExplode(
         e.alive = false;
         e.dying = true;
         e.deathTimer = 0;
-        const points = e.type === "drone" ? 100 : e.type === "sentinel" ? 200 : 500;
+        const points = e.type === "drone" ? 100 : e.type === "sentinel" ? 200 : e.type === "boss" ? 2000 : 500;
         setScore((s) => s + points);
         setKills((k) => k + 1);
         const deathColor = e.type === "drone" ? "#ff2255" : e.type === "sentinel" ? "#ff8800" : "#ff0044";
@@ -880,20 +1032,22 @@ function fireEnemyProjectile(
   e: EnemyData,
   playerPosition: THREE.Vector3,
   setProjectiles: React.Dispatch<React.SetStateAction<ProjectileData[]>>,
-  speed: number = ENEMY_PROJECTILE_SPEED
+  speed: number = ENEMY_PROJECTILE_SPEED,
+  accuracyMult: number = 1
 ) {
   const shootDir = new THREE.Vector3()
     .subVectors(playerPosition, e.position)
     .normalize();
-  // Add slight inaccuracy (less for sentinels, more for heavies)
-  const inaccuracy = e.type === "sentinel" ? 0.05 : e.type === "heavy" ? 0.15 : 0.1;
+  // Inaccuracy per type, reduced by difficulty scaling
+  const baseInaccuracy = e.type === "sentinel" ? 0.05 : e.type === "boss" ? 0.06 : e.type === "heavy" ? 0.15 : 0.1;
+  const inaccuracy = baseInaccuracy * Math.max(0.3, accuracyMult);
   shootDir.x += (Math.random() - 0.5) * inaccuracy;
   shootDir.y += (Math.random() - 0.5) * inaccuracy * 0.5;
   shootDir.z += (Math.random() - 0.5) * inaccuracy;
   shootDir.normalize();
 
   const colors = ENEMY_COLORS[e.type];
-  const projSize = e.type === "heavy" ? 2.5 : e.type === "sentinel" ? 1.5 : 1;
+  const projSize = e.type === "boss" ? 2 : e.type === "heavy" ? 2.5 : e.type === "sentinel" ? 1.5 : 1;
 
   setProjectiles((prev) => [
     ...prev,
@@ -1252,6 +1406,8 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
         playerYaw={playerYaw.current}
         killStreakText={killStreakText}
         scorePopups={scorePopups}
+        bossHp={enemies.find((e) => e.type === "boss" && e.alive)?.hp ?? 0}
+        bossMaxHp={enemies.find((e) => e.type === "boss")?.maxHp ?? 0}
       />
 
       <DamageFlash flash={damageFlash} />

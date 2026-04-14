@@ -6,7 +6,7 @@ import type { WeaponType } from "./Weapon";
 export interface RadarDot {
   x: number;
   z: number;
-  type: "drone" | "sentinel" | "heavy";
+  type: "drone" | "sentinel" | "heavy" | "boss";
   alive: boolean;
 }
 
@@ -38,6 +38,8 @@ interface HUDProps {
   playerYaw: number;
   killStreakText: string;
   scorePopups: { id: number; text: string; x: number; y: number; time: number }[];
+  bossHp: number;
+  bossMaxHp: number;
 }
 
 export default function HUD({
@@ -61,6 +63,8 @@ export default function HUD({
   playerYaw,
   killStreakText,
   scorePopups,
+  bossHp,
+  bossMaxHp,
 }: HUDProps) {
   const [submitName, setSubmitName] = useState("");
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -351,6 +355,44 @@ export default function HUD({
             )}
           </div>
 
+          {/* ═══ BOSS HEALTH BAR ═══ */}
+          {bossHp > 0 && bossMaxHp > 0 && (
+            <div
+              style={{
+                position: "absolute",
+                top: 65,
+                left: "50%",
+                transform: "translateX(-50%)",
+                textAlign: "center",
+                width: 300,
+              }}
+            >
+              <div style={{ color: "#ff0000", fontSize: 11, letterSpacing: 3, marginBottom: 4, textShadow: "0 0 8px #ff0000" }}>
+                BOSS
+              </div>
+              <div
+                style={{
+                  width: "100%",
+                  height: 10,
+                  background: "rgba(255,255,255,0.1)",
+                  borderRadius: 5,
+                  overflow: "hidden",
+                  border: "1px solid #ff000044",
+                }}
+              >
+                <div
+                  style={{
+                    width: `${Math.max(0, (bossHp / bossMaxHp) * 100)}%`,
+                    height: "100%",
+                    background: "linear-gradient(90deg, #ff0000, #ff4444)",
+                    boxShadow: "0 0 10px #ff0000",
+                    transition: "width 0.2s",
+                  }}
+                />
+              </div>
+            </div>
+          )}
+
           {/* ═══ MINI-RADAR ═══ */}
           <div
             style={{
@@ -392,17 +434,19 @@ export default function HUD({
                     const cx = rx * scale;
                     const cy = rz * scale;
                     const dotColor =
-                      dot.type === "drone"
-                        ? "#ff2255"
-                        : dot.type === "sentinel"
-                          ? "#ff8800"
-                          : "#ff0044";
+                      dot.type === "boss"
+                        ? "#ff0000"
+                        : dot.type === "drone"
+                          ? "#ff2255"
+                          : dot.type === "sentinel"
+                            ? "#ff8800"
+                            : "#ff0044";
                     return (
                       <circle
                         key={i}
                         cx={cx}
                         cy={cy}
-                        r={dot.type === "heavy" ? 3.5 : 2.5}
+                        r={dot.type === "boss" ? 5 : dot.type === "heavy" ? 3.5 : 2.5}
                         fill={dotColor}
                         opacity={dist > 46 ? 0.4 : 0.9}
                       />

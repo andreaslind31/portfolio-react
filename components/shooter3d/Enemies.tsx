@@ -9,7 +9,7 @@ export interface EnemyData {
   position: THREE.Vector3;
   hp: number;
   maxHp: number;
-  type: "drone" | "sentinel" | "heavy";
+  type: "drone" | "sentinel" | "heavy" | "boss";
   alive: boolean;
   speed: number;
   bobOffset: number;
@@ -30,6 +30,7 @@ export const ENEMY_COLORS = {
   drone: { tint: "#ffffff", glow: "#ff2255", projectile: "#ff2255", name: "DRONE" },
   sentinel: { tint: "#ffffff", glow: "#ff8800", projectile: "#ffaa00", name: "SENTINEL" },
   heavy: { tint: "#ffffff", glow: "#9933ff", projectile: "#cc44ff", name: "HEAVY" },
+  boss: { tint: "#ff8888", glow: "#ff0000", projectile: "#ff0000", name: "BOSS" },
 } as const;
 
 // ── Sprite configuration ────────────────────────────────
@@ -130,8 +131,8 @@ function EnemySprite({ enemy, textures }: EnemySpriteProps) {
   const { camera } = useThree();
 
   const spriteScale =
-    enemy.type === "heavy" ? 2.8 : enemy.type === "sentinel" ? 2.2 : 1.8;
-  const hoverHeight = enemy.type === "heavy" ? 0.0 : 0.2;
+    enemy.type === "boss" ? 4.0 : enemy.type === "heavy" ? 2.8 : enemy.type === "sentinel" ? 2.2 : 1.8;
+  const hoverHeight = enemy.type === "heavy" || enemy.type === "boss" ? 0.0 : 0.2;
 
   const colors = ENEMY_COLORS[enemy.type];
 
@@ -275,19 +276,17 @@ interface EnemiesProps {
   playerPosition: THREE.Vector3;
 }
 
-function getTextureSet(
-  type: EnemyData["type"],
-  sets: { drone: SpriteTextures; sentinel: SpriteTextures; heavy: SpriteTextures }
-): SpriteTextures {
-  return sets[type];
-}
-
 export default function Enemies({ enemies, playerPosition }: EnemiesProps) {
   const droneTextures = useSpriteSet("imp");
   const sentinelTextures = useSpriteSet("impSentinel");
   const heavyTextures = useSpriteSet("impHeavy");
 
-  const sets = { drone: droneTextures, sentinel: sentinelTextures, heavy: heavyTextures };
+  const textureSets: Record<EnemyData["type"], SpriteTextures> = {
+    drone: droneTextures,
+    sentinel: sentinelTextures,
+    heavy: heavyTextures,
+    boss: sentinelTextures, // Boss uses the giant kicking imp (same as sentinel) at larger scale + red tint
+  };
 
   return (
     <group>
@@ -295,7 +294,7 @@ export default function Enemies({ enemies, playerPosition }: EnemiesProps) {
         <EnemySprite
           key={enemy.id}
           enemy={enemy}
-          textures={getTextureSet(enemy.type, sets)}
+          textures={textureSets[enemy.type]}
         />
       ))}
     </group>
