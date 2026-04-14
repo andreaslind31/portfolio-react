@@ -17,13 +17,12 @@ function getCtx(): AudioContext {
   return audioCtx;
 }
 
-/** Sci-fi energy weapon shot */
-export function playShootSound() {
+/** Sci-fi energy weapon shot — blaster "pew" */
+export function playBlasterSound() {
   try {
     const ctx = getCtx();
     const now = ctx.currentTime;
 
-    // Main tone — short high-pitched "pew"
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.type = "sawtooth";
@@ -35,7 +34,6 @@ export function playShootSound() {
     osc.start(now);
     osc.stop(now + 0.12);
 
-    // Noise burst for "sizzle"
     const bufferSize = ctx.sampleRate * 0.06;
     const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
     const data = noiseBuffer.getChannelData(0);
@@ -58,6 +56,150 @@ export function playShootSound() {
   } catch {
     // Audio not available
   }
+}
+
+/** Shotgun — punchy low-frequency boom with noise burst */
+export function playShotgunSound() {
+  try {
+    const ctx = getCtx();
+    const now = ctx.currentTime;
+
+    // Low punch — the "boom"
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sawtooth";
+    osc.frequency.setValueAtTime(150, now);
+    osc.frequency.exponentialRampToValueAtTime(40, now + 0.15);
+    gain.gain.setValueAtTime(0.35, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.2);
+
+    // Heavy noise burst — the "crack"
+    const bufferSize = ctx.sampleRate * 0.15;
+    const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * 0.8;
+    }
+    const noise = ctx.createBufferSource();
+    noise.buffer = noiseBuffer;
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.25, now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = "lowpass";
+    filter.frequency.setValueAtTime(4000, now);
+    filter.frequency.exponentialRampToValueAtTime(200, now + 0.15);
+
+    noise.connect(filter).connect(noiseGain).connect(ctx.destination);
+    noise.start(now);
+
+    // Secondary thump
+    const osc2 = ctx.createOscillator();
+    const gain2 = ctx.createGain();
+    osc2.type = "sine";
+    osc2.frequency.setValueAtTime(80, now);
+    osc2.frequency.exponentialRampToValueAtTime(30, now + 0.1);
+    gain2.gain.setValueAtTime(0.3, now);
+    gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+    osc2.connect(gain2).connect(ctx.destination);
+    osc2.start(now);
+    osc2.stop(now + 0.12);
+  } catch {}
+}
+
+/** Plasma cannon — rising whine then release */
+export function playPlasmaSound() {
+  try {
+    const ctx = getCtx();
+    const now = ctx.currentTime;
+
+    // Charging whine
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(400, now);
+    osc.frequency.exponentialRampToValueAtTime(2000, now + 0.05);
+    osc.frequency.exponentialRampToValueAtTime(300, now + 0.25);
+    gain.gain.setValueAtTime(0.001, now);
+    gain.gain.linearRampToValueAtTime(0.2, now + 0.05);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.25);
+
+    // Energy release buzz
+    const osc2 = ctx.createOscillator();
+    const gain2 = ctx.createGain();
+    osc2.type = "sawtooth";
+    osc2.frequency.setValueAtTime(600, now + 0.03);
+    osc2.frequency.exponentialRampToValueAtTime(150, now + 0.2);
+    gain2.gain.setValueAtTime(0.001, now);
+    gain2.gain.linearRampToValueAtTime(0.12, now + 0.05);
+    gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+    osc2.connect(gain2).connect(ctx.destination);
+    osc2.start(now + 0.03);
+    osc2.stop(now + 0.2);
+  } catch {}
+}
+
+/** Rocket launcher — deep thud with whoosh tail */
+export function playRocketSound() {
+  try {
+    const ctx = getCtx();
+    const now = ctx.currentTime;
+
+    // Deep launch thud
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sawtooth";
+    osc.frequency.setValueAtTime(100, now);
+    osc.frequency.exponentialRampToValueAtTime(25, now + 0.3);
+    gain.gain.setValueAtTime(0.3, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.35);
+
+    // Whoosh — filtered noise rising in pitch
+    const bufferSize = ctx.sampleRate * 0.4;
+    const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * 0.5;
+    }
+    const noise = ctx.createBufferSource();
+    noise.buffer = noiseBuffer;
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.12, now);
+    noiseGain.gain.linearRampToValueAtTime(0.2, now + 0.1);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = "bandpass";
+    filter.frequency.setValueAtTime(300, now);
+    filter.frequency.exponentialRampToValueAtTime(1500, now + 0.2);
+    filter.frequency.exponentialRampToValueAtTime(200, now + 0.4);
+    filter.Q.value = 1;
+
+    noise.connect(filter).connect(noiseGain).connect(ctx.destination);
+    noise.start(now);
+
+    // Metallic clank (tube launch)
+    const osc2 = ctx.createOscillator();
+    const gain2 = ctx.createGain();
+    osc2.type = "square";
+    osc2.frequency.setValueAtTime(200, now);
+    osc2.frequency.exponentialRampToValueAtTime(60, now + 0.06);
+    gain2.gain.setValueAtTime(0.15, now);
+    gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+    osc2.connect(gain2).connect(ctx.destination);
+    osc2.start(now);
+    osc2.stop(now + 0.06);
+  } catch {}
 }
 
 /** Enemy hit — metallic impact */

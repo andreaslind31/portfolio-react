@@ -19,7 +19,10 @@ import Particles, {
 import Pickups, { type PickupData, type PickupType } from "./Pickups";
 import PostProcessing from "./PostProcessing";
 import {
-  playShootSound,
+  playBlasterSound,
+  playShotgunSound,
+  playPlasmaSound,
+  playRocketSound,
   playHitSound,
   playExplosionSound,
   playDamageSound,
@@ -968,13 +971,25 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
       const ammo = weaponAmmo[currentWeapon];
       if (ammo === 0) return;
 
-      playShootSound();
+      // Per-weapon sound
+      switch (currentWeapon) {
+        case "blaster": playBlasterSound(); break;
+        case "shotgun": playShotgunSound(); break;
+        case "plasma": playPlasmaSound(); break;
+        case "rocket": playRocketSound(); break;
+      }
+
+      // Per-weapon screen shake on fire
+      const fireShake = currentWeapon === "rocket" ? 0.12
+        : currentWeapon === "shotgun" ? 0.08
+        : currentWeapon === "plasma" ? 0.05
+        : 0;
+      if (fireShake > 0) shakeIntensity.current = Math.max(shakeIntensity.current, fireShake);
 
       // Deduct ammo (skip if infinite = -1)
       if (ammo > 0) {
         setWeaponAmmo((prev) => {
           const newAmmo = { ...prev, [currentWeapon]: prev[currentWeapon] - 1 };
-          // Auto-switch to blaster when out of ammo
           if (newAmmo[currentWeapon] <= 0 && currentWeapon !== "blaster") {
             setTimeout(() => setCurrentWeapon("blaster"), 0);
           }
@@ -982,22 +997,28 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
         });
       }
 
-      // Create projectiles (multiple for shotgun)
+      // Create projectiles
       const newProjectiles: ProjectileData[] = [];
       for (let i = 0; i < config.pellets; i++) {
         const dir = direction.clone().normalize();
-        // Add spread
         if (config.spread > 0) {
-          dir.x += (Math.random() - 0.5) * config.spread * 2;
-          dir.y += (Math.random() - 0.5) * config.spread;
-          dir.z += (Math.random() - 0.5) * config.spread * 2;
+          // Cone-shaped spread: random angle within cone, random rotation around axis
+          const spreadAngle = config.spread * Math.sqrt(Math.random()); // sqrt for uniform disc
+          const rotAngle = Math.random() * Math.PI * 2;
+          // Create perpendicular axes
+          const up = new THREE.Vector3(0, 1, 0);
+          const right = new THREE.Vector3().crossVectors(dir, up).normalize();
+          const actualUp = new THREE.Vector3().crossVectors(right, dir).normalize();
+          // Offset direction within cone
+          dir.addScaledVector(right, Math.cos(rotAngle) * spreadAngle);
+          dir.addScaledVector(actualUp, Math.sin(rotAngle) * spreadAngle);
           dir.normalize();
         }
         newProjectiles.push({
           id: nextId++,
           position: origin.clone(),
           direction: dir,
-          speed: config.speed,
+          speed: config.speed + (config.pellets > 1 ? (Math.random() - 0.5) * 5 : 0), // slight speed variation for shotgun
           alive: true,
           friendly: true,
           life: config.projectileLife,
