@@ -184,23 +184,41 @@ function CeilingLight({
   position,
   color = EMISSIVE_CYAN,
   intensity = 6,
+  flicker = false,
 }: {
   position: [number, number, number];
   color?: string;
   intensity?: number;
+  flicker?: boolean;
 }) {
+  const lightRef = useRef<THREE.PointLight>(null);
+  const matRef = useRef<THREE.MeshStandardMaterial>(null);
+  const flickerOffset = useRef(Math.random() * 100);
+
+  useFrame((state) => {
+    if (!flicker || !lightRef.current || !matRef.current) return;
+    const t = state.clock.elapsedTime + flickerOffset.current;
+    // Irregular flicker using combined sine waves
+    const flick = Math.sin(t * 15) * Math.sin(t * 7.3) * Math.sin(t * 3.1);
+    const on = flick > -0.3; // mostly on, occasional dropout
+    const mult = on ? (0.7 + Math.random() * 0.3) : 0.05;
+    lightRef.current.intensity = intensity * mult;
+    matRef.current.emissiveIntensity = on ? 3 * mult : 0.2;
+  });
+
   return (
     <group position={position}>
       <mesh>
         <boxGeometry args={[1.5, 0.1, 0.3]} />
         <meshStandardMaterial
+          ref={matRef}
           color={color}
           emissive={color}
           emissiveIntensity={3}
           toneMapped={false}
         />
       </mesh>
-      <pointLight position={[0, -0.5, 0]} color={color} intensity={intensity} distance={18} decay={2} />
+      <pointLight ref={lightRef} position={[0, -0.5, 0]} color={color} intensity={intensity} distance={18} decay={2} />
     </group>
   );
 }
@@ -491,10 +509,7 @@ export default function Level() {
       <Wall position={[-8.5, WALL_H / 2, -18]} size={[7, WALL_H, 0.5]} texture={wallTex} />
       <Wall position={[8.5, WALL_H / 2, -18]} size={[7, WALL_H, 0.5]} texture={wallTex} />
 
-      {/* Weapon rack crates */}
-      <Crate position={[-10, 0.6, -24]} size={[2, 1.2, 1.2]} stripeColor={EMISSIVE_RED} texture={crateTex} />
-      <Crate position={[-10, 0.6, -21]} size={[2, 1.2, 1.2]} stripeColor={EMISSIVE_RED} texture={crateTex} />
-      <Crate position={[10, 0.6, -24]} size={[2, 1.2, 1.2]} stripeColor={EMISSIVE_RED} texture={crateTex} />
+      {/* Weapon rack crates — now rendered as destructible by DestructibleCrates */}
 
       {/* Spawn portal — north */}
       <SpawnPortal position={[0, 0, -ARENA_HALF_D + 1.5]} color={EMISSIVE_RED} />
@@ -571,13 +586,7 @@ export default function Level() {
       <Wall position={[-18, WALL_H / 2, -6.5]} size={[0.5, WALL_H, 3]} texture={wallTex} />
       <Wall position={[-18, WALL_H / 2, 6.5]} size={[0.5, WALL_H, 3]} texture={wallTex} />
 
-      {/* Cargo stacks */}
-      <Crate position={[-20, 0.6, -6]} stripeColor={EMISSIVE_ORANGE} texture={crateTex} />
-      <Crate position={[-20, 1.8, -6]} size={[1, 1, 1]} stripeColor={EMISSIVE_ORANGE} texture={crateTex} />
-      <Crate position={[-20, 0.6, -3]} size={[1.5, 1.2, 1.5]} stripeColor={EMISSIVE_ORANGE} texture={crateTex} />
-      <Crate position={[-20, 0.6, 3]} stripeColor={EMISSIVE_ORANGE} texture={crateTex} />
-      <Crate position={[-20, 0.6, 6]} size={[1.5, 1.2, 1.5]} stripeColor={EMISSIVE_ORANGE} texture={crateTex} />
-      <Crate position={[-20, 1.8, 6]} size={[1, 1, 1]} stripeColor={EMISSIVE_ORANGE} texture={crateTex} />
+      {/* Cargo stacks — now rendered as destructible by DestructibleCrates */}
 
       {/* Elevated catwalk in cargo bay */}
       <RigidBody type="fixed" colliders="cuboid">
@@ -645,22 +654,22 @@ export default function Level() {
       <CeilingLight position={[6, WALL_H - 0.1, 6]} color={EMISSIVE_PURPLE} />
 
       {/* North corridor lights */}
-      <CeilingLight position={[0, WALL_H - 0.1, -12]} color={EMISSIVE_RED} />
-      <CeilingLight position={[0, WALL_H - 0.1, -18]} color={EMISSIVE_RED} />
+      <CeilingLight position={[0, WALL_H - 0.1, -12]} color={EMISSIVE_RED} flicker />
+      <CeilingLight position={[0, WALL_H - 0.1, -18]} color={EMISSIVE_RED} flicker />
       <CeilingLight position={[0, WALL_H - 0.1, -24]} color={EMISSIVE_RED} />
 
       {/* South corridor lights */}
       <CeilingLight position={[0, WALL_H - 0.1, 12]} color={EMISSIVE_PURPLE} />
-      <CeilingLight position={[0, WALL_H - 0.1, 18]} color={EMISSIVE_PURPLE} />
+      <CeilingLight position={[0, WALL_H - 0.1, 18]} color={EMISSIVE_PURPLE} flicker />
       <CeilingLight position={[0, WALL_H - 0.1, 24]} color={EMISSIVE_PURPLE} />
 
       {/* East corridor lights */}
-      <CeilingLight position={[12, WALL_H - 0.1, 0]} color={EMISSIVE_CYAN} />
+      <CeilingLight position={[12, WALL_H - 0.1, 0]} color={EMISSIVE_CYAN} flicker />
       <CeilingLight position={[18, WALL_H - 0.1, 0]} color={EMISSIVE_CYAN} />
       <CeilingLight position={[22, WALL_H - 0.1, 0]} color={EMISSIVE_GREEN} />
 
       {/* West corridor lights */}
-      <CeilingLight position={[-12, WALL_H - 0.1, 0]} color={EMISSIVE_ORANGE} />
+      <CeilingLight position={[-12, WALL_H - 0.1, 0]} color={EMISSIVE_ORANGE} flicker />
       <CeilingLight position={[-18, WALL_H - 0.1, 0]} color={EMISSIVE_ORANGE} />
 
       {/* Global ambient — darker for Doom feel */}

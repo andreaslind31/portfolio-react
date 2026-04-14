@@ -420,6 +420,77 @@ export function playKillStreakSound(streak: number) {
   } catch {}
 }
 
+/** Random distant rumble — plays occasionally for atmosphere */
+export function playDistantRumble() {
+  try {
+    const ctx = getCtx();
+    const now = ctx.currentTime;
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(25 + Math.random() * 15, now);
+    osc.frequency.exponentialRampToValueAtTime(15, now + 1.5);
+    gain.gain.setValueAtTime(0.001, now);
+    gain.gain.linearRampToValueAtTime(0.04, now + 0.3);
+    gain.gain.linearRampToValueAtTime(0.06, now + 0.7);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 1.5);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 1.5);
+
+    // Low noise layer
+    const bufferSize = ctx.sampleRate * 1.2;
+    const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * 0.2;
+    }
+    const noise = ctx.createBufferSource();
+    noise.buffer = noiseBuffer;
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.001, now);
+    noiseGain.gain.linearRampToValueAtTime(0.02, now + 0.5);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = "lowpass";
+    filter.frequency.value = 150;
+
+    noise.connect(filter).connect(noiseGain).connect(ctx.destination);
+    noise.start(now);
+  } catch {}
+}
+
+/** Pipe hiss — short steam burst */
+export function playPipeHiss() {
+  try {
+    const ctx = getCtx();
+    const now = ctx.currentTime;
+
+    const bufferSize = ctx.sampleRate * 0.5;
+    const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * 0.4;
+    }
+    const noise = ctx.createBufferSource();
+    noise.buffer = noiseBuffer;
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.001, now);
+    noiseGain.gain.linearRampToValueAtTime(0.03, now + 0.02);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = "bandpass";
+    filter.frequency.setValueAtTime(4000 + Math.random() * 2000, now);
+    filter.Q.value = 3;
+
+    noise.connect(filter).connect(noiseGain).connect(ctx.destination);
+    noise.start(now);
+  } catch {}
+}
+
 /** Start ambient hum — returns a stop function */
 export function startAmbientHum(): () => void {
   try {

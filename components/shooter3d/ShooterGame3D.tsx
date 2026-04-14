@@ -17,6 +17,8 @@ import Particles, {
   createDeathExplosion,
 } from "./Particles";
 import Pickups, { type PickupData, type PickupType } from "./Pickups";
+import Doors from "./Doors";
+import DestructibleCrates, { type CrateData, createInitialCrates } from "./DestructibleCrates";
 import PostProcessing from "./PostProcessing";
 import {
   playBlasterSound,
@@ -30,6 +32,8 @@ import {
   playPickupSound,
   playFootstepSound,
   playKillStreakSound,
+  playDistantRumble,
+  playPipeHiss,
   startAmbientHum,
 } from "./SoundEngine";
 
@@ -414,6 +418,9 @@ function GameLoop({
   setKillStreak,
   setKillStreakText,
   setScorePopups,
+  crates,
+  setCrates,
+  ambientSoundTimer,
 }: {
   enemies: EnemyData[];
   setEnemies: React.Dispatch<React.SetStateAction<EnemyData[]>>;
@@ -452,6 +459,9 @@ function GameLoop({
   setKillStreak: React.Dispatch<React.SetStateAction<number>>;
   setKillStreakText: React.Dispatch<React.SetStateAction<string>>;
   setScorePopups: React.Dispatch<React.SetStateAction<{ id: number; text: string; x: number; y: number; time: number }[]>>;
+  crates: CrateData[];
+  setCrates: React.Dispatch<React.SetStateAction<CrateData[]>>;
+  ambientSoundTimer: React.MutableRefObject<number>;
 }) {
   const { camera } = useThree();
   const enemyShootTimers = useRef<Map<number, number>>(new Map());
@@ -833,6 +843,53 @@ function GameLoop({
             }
           }
 
+          // Friendly projectile hits destructible crate
+          if (p.friendly && p.alive) {
+            for (const c of crates) {
+              if (!c.alive) continue;
+              const crateCenter = c.position.clone();
+              crateCenter.y += c.size[1] / 2;
+              const dx = Math.abs(p.position.x - crateCenter.x);
+              const dy = Math.abs(p.position.y - crateCenter.y);
+              const dz = Math.abs(p.position.z - crateCenter.z);
+              if (dx < c.size[0] / 2 + 0.3 && dy < c.size[1] / 2 + 0.3 && dz < c.size[2] / 2 + 0.3) {
+                p.alive = false;
+                const weaponDmg = WEAPON_CONFIGS[currentWeapon].damage;
+                c.hp -= weaponDmg;
+                playHitSound();
+                setParticles((pp) => [
+                  ...pp,
+                  ...createImpactSparks(p.position.clone(), new THREE.Vector3(0, 1, 0), "#ff8800", 4),
+                ]);
+                if (c.hp <= 0) {
+                  c.alive = false;
+                  c.dying = true;
+                  c.deathTimer = 0;
+                  playExplosionSound();
+                  setParticles((pp) => [
+                    ...pp,
+                    ...createDeathExplosion(crateCenter, "#ff8800", 10),
+                  ]);
+                  // Small chance to spawn a pickup from destroyed crate
+                  if (Math.random() < 0.3) {
+                    const types: PickupType[] = ["health", "shotgun", "plasma", "rocket"];
+                    setPickups((pk) => [
+                      ...pk,
+                      {
+                        id: nextId++,
+                        position: c.position.clone(),
+                        type: types[Math.floor(Math.random() * types.length)],
+                        alive: true,
+                        spawnTime: state.clock.elapsedTime,
+                      },
+                    ]);
+                  }
+                }
+                break;
+              }
+            }
+          }
+
           // Enemy projectile hits player
           if (!p.friendly && p.alive) {
             if (
@@ -961,6 +1018,28 @@ function GameLoop({
     setScorePopups((prev) =>
       prev.filter((p) => state.clock.elapsedTime - p.time < 1)
     );
+
+    // ── Advance crate death timers ──
+    setCrates((prev) =>
+      prev.map((c) => {
+        if (c.dying) {
+          c.deathTimer += dt;
+          if (c.deathTimer >= 0.4) c.dying = false;
+        }
+        return c;
+      })
+    );
+
+    // ── Environmental ambient sounds (random intervals) ──
+    ambientSoundTimer.current += dt;
+    if (ambientSoundTimer.current > 5 + Math.random() * 10) {
+      ambientSoundTimer.current = 0;
+      if (Math.random() > 0.5) {
+        playDistantRumble();
+      } else {
+        playPipeHiss();
+      }
+    }
   });
 
   return null;
@@ -1105,6 +1184,7 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
   const [scorePopups, setScorePopups] = useState<
     { id: number; text: string; x: number; y: number; time: number }[]
   >([]);
+  const [crates, setCrates] = useState<CrateData[]>([]);
 
   const playerPos = useRef(new THREE.Vector3(0, 2, 5));
   const playerYaw = useRef(0);
@@ -1112,6 +1192,7 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
   const shakeIntensity = useRef(0);
   const lastPowerupSpawn = useRef(0);
   const lastKillTime = useRef(0);
+  const ambientSoundTimer = useRef(0);
   const footstepTimer = useRef(0);
   const stopAmbient = useRef<(() => void) | null>(null);
 
@@ -1175,6 +1256,8 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
     setKillStreak(0);
     setKillStreakText("");
     setScorePopups([]);
+    setCrates(createInitialCrates());
+    ambientSoundTimer.current = 0;
     setProjectiles([]);
     setParticles([]);
     setExplosions([]);
@@ -1340,6 +1423,8 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
             <Projectiles projectiles={projectiles} />
             <Particles particles={particles} explosions={explosions} />
             <Pickups pickups={pickups} />
+            <DestructibleCrates crates={crates} />
+            <Doors />
             <ScreenShake shakeIntensity={shakeIntensity} />
             <GameLoop
               enemies={enemies}
@@ -1379,6 +1464,9 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
               setKillStreak={setKillStreak}
               setKillStreakText={setKillStreakText}
               setScorePopups={setScorePopups}
+              crates={crates}
+              setCrates={setCrates}
+              ambientSoundTimer={ambientSoundTimer}
             />
             <PostProcessing />
           </Suspense>
