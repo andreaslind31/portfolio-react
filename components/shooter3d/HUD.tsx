@@ -25,7 +25,7 @@ interface HUDProps {
   currentWeapon: WeaponType;
   weaponAmmo: Record<WeaponType, number>;
   locked: boolean;
-  gameState: "menu" | "playing" | "gameover";
+  gameState: "menu" | "modeSelect" | "mapSelect" | "playing" | "gameover" | "victory";
   onStart: () => void;
   onRestart: () => void;
   onScoreSubmit?: (name: string, score: number) => Promise<string | null>;

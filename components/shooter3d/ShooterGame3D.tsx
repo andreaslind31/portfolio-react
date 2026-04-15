@@ -18,6 +18,7 @@ import Particles, {
 } from "./Particles";
 import Pickups, { type PickupData, type PickupType } from "./Pickups";
 import Doors from "./Doors";
+import { MAPS, getUnlockedMaps, unlockMap, getNextMapId, type MapConfig } from "./Maps";
 import DestructibleCrates, { type CrateData, createInitialCrates } from "./DestructibleCrates";
 import PostProcessing from "./PostProcessing";
 import {
@@ -447,7 +448,7 @@ function GameLoop({
   health: number;
   setHealth: React.Dispatch<React.SetStateAction<number>>;
   setScore: React.Dispatch<React.SetStateAction<number>>;
-  gameState: "menu" | "playing" | "gameover";
+  gameState: "menu" | "modeSelect" | "mapSelect" | "playing" | "gameover" | "victory";
   setDamageFlash: React.Dispatch<React.SetStateAction<boolean>>;
   setWave: React.Dispatch<React.SetStateAction<number>>;
   wave: number;
@@ -1205,9 +1206,12 @@ interface ShooterGame3DProps {
 }
 
 export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
-  const [gameState, setGameState] = useState<"menu" | "playing" | "gameover">(
+  const [gameState, setGameState] = useState<"menu" | "modeSelect" | "mapSelect" | "playing" | "gameover" | "victory">(
     "menu"
   );
+  const [gameMode, setGameMode] = useState<"waves" | "maps">("waves");
+  const [selectedMapId, setSelectedMapId] = useState<string>("map01");
+  const [unlockedMaps, setUnlockedMaps] = useState<string[]>(["map01"]);
   const [health, setHealth] = useState(MAX_HEALTH);
   const [score, setScore] = useState(0);
   const [wave, setWave] = useState(1);
@@ -1268,6 +1272,7 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
 
   useEffect(() => {
     setIsTouchDevice("ontouchstart" in window || navigator.maxTouchPoints > 0);
+    setUnlockedMaps(getUnlockedMaps());
   }, []);
 
   useEffect(() => {
