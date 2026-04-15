@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import type { WeaponType } from "./Weapon";
+import { MAPS, type MapConfig } from "./Maps";
 
 export interface RadarDot {
   x: number;
@@ -51,6 +52,14 @@ interface HUDProps {
   gameStartTime: number;
   gameEndTime: number;
   weaponKills: Record<WeaponType, number>;
+  // Map/mode selection
+  unlockedMaps: string[];
+  onSelectMode: (mode: "waves" | "maps") => void;
+  onSelectMap: (mapId: string) => void;
+  onBackToMenu: () => void;
+  onNextMap: () => void;
+  clearedMap?: MapConfig | null;
+  hasNextMap: boolean;
 }
 
 export default function HUD({
@@ -85,6 +94,13 @@ export default function HUD({
   gameStartTime,
   gameEndTime,
   weaponKills,
+  unlockedMaps,
+  onSelectMode,
+  onSelectMap,
+  onBackToMenu,
+  onNextMap,
+  clearedMap,
+  hasNextMap,
 }: HUDProps) {
   const [submitName, setSubmitName] = useState("");
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -708,6 +724,328 @@ export default function HUD({
           >
             Click to lock cursor • Desktop only
           </p>
+        </div>
+      )}
+
+      {/* ═══ MODE SELECT ═══ */}
+      {gameState === "modeSelect" && (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "rgba(0,0,0,0.75)",
+            backdropFilter: "blur(4px)",
+          }}
+        >
+          <h2
+            style={{
+              color: "#00d4ff",
+              fontSize: 32,
+              fontWeight: "bold",
+              letterSpacing: 6,
+              textShadow: "0 0 20px #00d4ff",
+              marginBottom: 10,
+            }}
+          >
+            SELECT MODE
+          </h2>
+          <p style={{ color: "#7b2ff7", fontSize: 12, letterSpacing: 3, marginBottom: 40 }}>
+            CHOOSE YOUR BATTLE
+          </p>
+
+          <div style={{ display: "flex", gap: 24 }}>
+            {/* Waves button */}
+            <button
+              onClick={() => onSelectMode("waves")}
+              style={{
+                background: "transparent",
+                border: "2px solid #00d4ff",
+                color: "#00d4ff",
+                padding: "24px 32px",
+                width: 240,
+                cursor: "pointer",
+                textShadow: "0 0 10px #00d4ff",
+                boxShadow: "0 0 20px #00d4ff44",
+                fontFamily: "'Courier New', monospace",
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = "#00d4ff22"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+            >
+              <div style={{ fontSize: 24, fontWeight: "bold", letterSpacing: 4, marginBottom: 8 }}>
+                WAVES
+              </div>
+              <div style={{ fontSize: 11, color: "#00d4ff99", lineHeight: 1.6 }}>
+                Endless waves of increasing difficulty. Survive as long as you can.
+              </div>
+            </button>
+
+            {/* Maps button */}
+            <button
+              onClick={() => onSelectMode("maps")}
+              style={{
+                background: "transparent",
+                border: "2px solid #ff8800",
+                color: "#ff8800",
+                padding: "24px 32px",
+                width: 240,
+                cursor: "pointer",
+                textShadow: "0 0 10px #ff8800",
+                boxShadow: "0 0 20px #ff880044",
+                fontFamily: "'Courier New', monospace",
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = "#ff880022"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+            >
+              <div style={{ fontSize: 24, fontWeight: "bold", letterSpacing: 4, marginBottom: 8 }}>
+                MAPS
+              </div>
+              <div style={{ fontSize: 11, color: "#ff880099", lineHeight: 1.6 }}>
+                Campaign mode. Clear each map to unlock the next.
+              </div>
+            </button>
+          </div>
+
+          <button
+            onClick={onBackToMenu}
+            style={{
+              marginTop: 32,
+              background: "transparent",
+              border: "1px solid #ffffff33",
+              color: "#ffffff88",
+              padding: "8px 24px",
+              fontSize: 11,
+              letterSpacing: 2,
+              cursor: "pointer",
+              fontFamily: "'Courier New', monospace",
+            }}
+          >
+            ← BACK
+          </button>
+        </div>
+      )}
+
+      {/* ═══ MAP SELECT ═══ */}
+      {gameState === "mapSelect" && (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "rgba(0,0,0,0.85)",
+            backdropFilter: "blur(4px)",
+            padding: 20,
+          }}
+        >
+          <h2
+            style={{
+              color: "#ff8800",
+              fontSize: 28,
+              fontWeight: "bold",
+              letterSpacing: 6,
+              textShadow: "0 0 20px #ff8800",
+              marginBottom: 6,
+            }}
+          >
+            SELECT MAP
+          </h2>
+          <p style={{ color: "#ffffff66", fontSize: 11, letterSpacing: 2, marginBottom: 24 }}>
+            {unlockedMaps.length} / {MAPS.length} UNLOCKED
+          </p>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(2, 1fr)",
+              gap: 16,
+              maxWidth: 700,
+            }}
+          >
+            {MAPS.map((map, idx) => {
+              const unlocked = unlockedMaps.includes(map.id);
+              return (
+                <button
+                  key={map.id}
+                  onClick={() => unlocked && onSelectMap(map.id)}
+                  disabled={!unlocked}
+                  style={{
+                    background: "rgba(0,0,0,0.6)",
+                    border: `2px solid ${unlocked ? map.ambientColor : "#33333366"}`,
+                    padding: 0,
+                    cursor: unlocked ? "pointer" : "not-allowed",
+                    opacity: unlocked ? 1 : 0.35,
+                    transition: "all 0.2s",
+                    boxShadow: unlocked ? `0 0 20px ${map.ambientColor}44` : "none",
+                    fontFamily: "'Courier New', monospace",
+                    textAlign: "left",
+                    overflow: "hidden",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (unlocked) e.currentTarget.style.boxShadow = `0 0 30px ${map.ambientColor}88`;
+                  }}
+                  onMouseLeave={(e) => {
+                    if (unlocked) e.currentTarget.style.boxShadow = `0 0 20px ${map.ambientColor}44`;
+                  }}
+                >
+                  {/* Procedural thumbnail */}
+                  <div style={{ height: 80, background: map.fogColor, position: "relative", overflow: "hidden" }}>
+                    <svg width="100%" height="80" viewBox="0 0 200 80" style={{ display: "block" }}>
+                      {/* Cross-shaped facility diagram */}
+                      <rect x="70" y="20" width="60" height="40" fill={map.ambientColor} opacity="0.3" />
+                      <rect x="90" y="0" width="20" height="20" fill={map.ambientColor} opacity="0.25" />
+                      <rect x="90" y="60" width="20" height="20" fill={map.ambientColor} opacity="0.25" />
+                      <rect x="50" y="30" width="20" height="20" fill={map.ambientColor} opacity="0.25" />
+                      <rect x="130" y="30" width="20" height="20" fill={map.ambientColor} opacity="0.25" />
+                      {/* Center dot */}
+                      <circle cx="100" cy="40" r="3" fill={map.ambientColor} />
+                      {/* Enemy icons (red dots scattered) */}
+                      {Array.from({ length: Math.min(idx + 3, 8) }).map((_, i) => {
+                        const a = (i / 8) * Math.PI * 2;
+                        return (
+                          <circle
+                            key={i}
+                            cx={100 + Math.cos(a) * (20 + i * 2)}
+                            cy={40 + Math.sin(a) * (15 + i * 1.5)}
+                            r={map.enemies.bosses > 0 && i === 0 ? 4 : 2}
+                            fill={map.enemies.bosses > 0 && i === 0 ? "#ff0000" : "#ff4444"}
+                            opacity={0.8}
+                          />
+                        );
+                      })}
+                      {/* Lock overlay */}
+                      {!unlocked && (
+                        <>
+                          <rect x="0" y="0" width="200" height="80" fill="rgba(0,0,0,0.7)" />
+                          <text x="100" y="50" textAnchor="middle" fill="#ffffff66" fontSize="22">🔒</text>
+                        </>
+                      )}
+                    </svg>
+                  </div>
+                  <div style={{ padding: 12 }}>
+                    <div style={{ color: unlocked ? map.ambientColor : "#666", fontSize: 10, letterSpacing: 2, marginBottom: 2 }}>
+                      {(idx + 1).toString().padStart(2, "0")} / {MAPS.length.toString().padStart(2, "0")}
+                    </div>
+                    <div style={{ color: unlocked ? "#fff" : "#666", fontSize: 14, fontWeight: "bold", letterSpacing: 3, marginBottom: 4 }}>
+                      {map.name}
+                    </div>
+                    <div style={{ color: unlocked ? "#ffffff88" : "#444", fontSize: 10, lineHeight: 1.4, marginBottom: 6 }}>
+                      {map.description}
+                    </div>
+                    <div style={{ color: unlocked ? "#ff8800" : "#444", fontSize: 10 }}>
+                      {map.enemies.drones + map.enemies.sentinels + map.enemies.heavies + map.enemies.bosses} ENEMIES
+                      {map.enemies.bosses > 0 && " • BOSS"}
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          <button
+            onClick={() => onSelectMode("waves")}
+            style={{
+              marginTop: 24,
+              background: "transparent",
+              border: "1px solid #ffffff33",
+              color: "#ffffff88",
+              padding: "8px 24px",
+              fontSize: 11,
+              letterSpacing: 2,
+              cursor: "pointer",
+              fontFamily: "'Courier New', monospace",
+            }}
+          >
+            ← BACK
+          </button>
+        </div>
+      )}
+
+      {/* ═══ VICTORY (map cleared) ═══ */}
+      {gameState === "victory" && clearedMap && (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "rgba(0,0,0,0.85)",
+            backdropFilter: "blur(4px)",
+          }}
+        >
+          <h2
+            style={{
+              color: clearedMap.ambientColor,
+              fontSize: 42,
+              fontWeight: "bold",
+              letterSpacing: 8,
+              textShadow: `0 0 30px ${clearedMap.ambientColor}`,
+              marginBottom: 8,
+            }}
+          >
+            VICTORY
+          </h2>
+          <p style={{ color: "#ffffffaa", fontSize: 13, letterSpacing: 3, marginBottom: 4 }}>
+            {clearedMap.name} CLEARED
+          </p>
+          <div style={{ color: "#00d4ff", fontSize: 36, fontWeight: "bold", textShadow: "0 0 15px #00d4ff", marginBottom: 4 }}>
+            {score.toLocaleString()}
+          </div>
+          <div style={{ color: "#ffffff66", fontSize: 11, letterSpacing: 2, marginBottom: 24 }}>
+            {kills} KILLS
+            {gameEndTime > 0 && ` • ${Math.floor((gameEndTime - gameStartTime) / 1000)}s`}
+            {shotsFired > 0 && ` • ${Math.round((shotsHit / shotsFired) * 100)}% ACCURACY`}
+          </div>
+
+          {hasNextMap ? (
+            <button
+              onClick={onNextMap}
+              style={{
+                background: "transparent",
+                border: `2px solid ${clearedMap.ambientColor}`,
+                color: clearedMap.ambientColor,
+                padding: "12px 40px",
+                fontSize: 16,
+                letterSpacing: 4,
+                cursor: "pointer",
+                textShadow: `0 0 10px ${clearedMap.ambientColor}`,
+                boxShadow: `0 0 20px ${clearedMap.ambientColor}44`,
+                fontFamily: "'Courier New', monospace",
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = `${clearedMap.ambientColor}22`; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+            >
+              NEXT MAP
+            </button>
+          ) : (
+            <div style={{ color: "#ffdd44", fontSize: 20, letterSpacing: 6, marginTop: 10, textShadow: "0 0 20px #ffdd44" }}>
+              CAMPAIGN COMPLETE
+            </div>
+          )}
+
+          <button
+            onClick={onBackToMenu}
+            style={{
+              marginTop: 20,
+              background: "transparent",
+              border: "1px solid #ffffff33",
+              color: "#ffffff88",
+              padding: "8px 24px",
+              fontSize: 11,
+              letterSpacing: 2,
+              cursor: "pointer",
+              fontFamily: "'Courier New', monospace",
+            }}
+          >
+            ← MAIN MENU
+          </button>
         </div>
       )}
 

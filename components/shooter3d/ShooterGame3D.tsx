@@ -159,6 +159,58 @@ function spawnEnemies(wave: number): EnemyData[] {
   return enemies;
 }
 
+// Spawn enemies for a specific map — fixed counts, no wave progression
+function spawnMapEnemies(map: MapConfig): EnemyData[] {
+  const enemies: EnemyData[] = [];
+
+  const spawn = (
+    type: EnemyData["type"],
+    count: number,
+    hp: number,
+    speed: number
+  ) => {
+    for (let i = 0; i < count; i++) {
+      const portal =
+        SPAWN_PORTALS[Math.floor(Math.random() * SPAWN_PORTALS.length)];
+      const offset = new THREE.Vector3(
+        (Math.random() - 0.5) * 4,
+        0,
+        (Math.random() - 0.5) * 4
+      );
+      enemies.push({
+        id: nextId++,
+        position: new THREE.Vector3(
+          portal[0] + offset.x,
+          0,
+          portal[2] + offset.z
+        ),
+        hp,
+        maxHp: hp,
+        type,
+        alive: true,
+        speed,
+        bobOffset: Math.random() * Math.PI * 2,
+        aiState: "engage",
+        strafeDir: Math.random() > 0.5 ? 1 : -1,
+        burstCount: type === "sentinel" ? 3 : 0,
+        chargeTimer: 0,
+        isShooting: false,
+        shootFrame: 0,
+        lastMoveDir: new THREE.Vector3(0, 0, 1),
+        dying: false,
+        deathTimer: 0,
+      });
+    }
+  };
+
+  spawn("drone", map.enemies.drones, 30 * map.hpMult, 4 * map.speedMult);
+  spawn("sentinel", map.enemies.sentinels, 50 * map.hpMult, 2.5 * map.speedMult);
+  spawn("heavy", map.enemies.heavies, 100 * map.hpMult, 1.5 * map.speedMult);
+  spawn("boss", map.enemies.bosses, 500 * map.hpMult, 2.0 * map.speedMult);
+
+  return enemies;
+}
+
 // ── Hit flash overlay ────────────────────────────────────
 function DamageFlash({ flash }: { flash: boolean }) {
   return (
@@ -1320,7 +1372,11 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [gameState, weaponAmmo]);
 
-  const handleStart = useCallback(() => {
+  // Internal game initializer — shared between waves and maps
+  const startGame = useCallback((mode: "waves" | "maps", mapId?: string) => {
+    setGameMode(mode);
+    if (mode === "maps" && mapId) setSelectedMapId(mapId);
+
     setGameState("playing");
     setHealth(MAX_HEALTH);
     setScore(0);
@@ -1350,11 +1406,18 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
     setPickups([]);
     setRadarDots([]);
     setHitMarker(false);
-    setWaveAnnounce(1);
+    setWaveAnnounce(mode === "waves" ? 1 : 0);
     setDamageDirection(null);
     nextId = 1;
     shakeIntensity.current = 0;
-    setEnemies(spawnEnemies(1));
+
+    // Spawn enemies — for maps, spawn the map's fixed enemy set; for waves, start wave 1
+    if (mode === "maps" && mapId) {
+      const map = MAPS.find((m) => m.id === mapId);
+      if (map) setEnemies(spawnMapEnemies(map));
+    } else {
+      setEnemies(spawnEnemies(1));
+    }
 
     stopAmbient.current?.();
     stopAmbient.current = startAmbientHum();
@@ -1364,6 +1427,32 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
 
     canvasContainerRef.current?.requestPointerLock?.();
   }, []);
+
+  // Entry from main menu — goes to mode select
+  const handleStart = useCallback(() => {
+    setGameState("modeSelect");
+  }, []);
+
+  const handleSelectMode = useCallback((mode: "waves" | "maps") => {
+    if (mode === "waves") {
+      startGame("waves");
+    } else {
+      setGameState("mapSelect");
+    }
+  }, [startGame]);
+
+  const handleSelectMap = useCallback((mapId: string) => {
+    startGame("maps", mapId);
+  }, [startGame]);
+
+  const handleBackToMenu = useCallback(() => {
+    setGameState("menu");
+  }, []);
+
+  const handleNextMap = useCallback(() => {
+    const next = getNextMapId(selectedMapId);
+    if (next) startGame("maps", next);
+  }, [selectedMapId, startGame]);
 
   const handleRestart = useCallback(() => {
     handleStart();
@@ -1606,6 +1695,13 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
         gameStartTime={gameStartTime}
         gameEndTime={gameEndTime}
         weaponKills={weaponKills}
+        unlockedMaps={unlockedMaps}
+        onSelectMode={handleSelectMode}
+        onSelectMap={handleSelectMap}
+        onBackToMenu={handleBackToMenu}
+        onNextMap={handleNextMap}
+        clearedMap={MAPS.find((m) => m.id === selectedMapId) ?? null}
+        hasNextMap={getNextMapId(selectedMapId) !== null}
       />
 
       <DamageFlash flash={damageFlash} />
