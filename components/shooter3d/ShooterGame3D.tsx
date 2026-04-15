@@ -1441,7 +1441,7 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
       <div
         style={{
           width: "100%",
-          maxWidth: 900,
+          maxWidth: 1400,
           aspectRatio: "16/9",
           background: "#0a0a15",
           borderRadius: 8,
@@ -1468,8 +1468,9 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
       style={{
         position: "relative",
         width: "100%",
-        maxWidth: 900,
+        maxWidth: 1400,
         aspectRatio: "16/9",
+        margin: "0 auto",
         borderRadius: 8,
         overflow: "hidden",
         border: "1px solid #00d4ff33",

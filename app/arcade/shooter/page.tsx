@@ -37,7 +37,7 @@ export default function ShooterPage() {
   };
 
   return (
-    <main className="relative z-10 max-w-6xl mx-auto px-4 py-8">
+    <main className="relative z-10 w-full max-w-[1500px] mx-auto px-4 py-8">
       <div className="mb-6">
         <a
           href="/arcade"
@@ -54,9 +54,9 @@ export default function ShooterPage() {
         </p>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-6 items-start">
+      <div className="flex flex-col gap-6 items-stretch">
         <ShooterGame3D onScoreSubmit={handleScoreSubmit} />
-        <div className="w-full lg:w-80 lg:flex-shrink-0">
+        <div className="w-full max-w-md mx-auto">
           <Leaderboard
             game="shooter"
             refreshTrigger={refreshKey}
