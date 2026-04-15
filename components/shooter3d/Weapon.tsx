@@ -83,16 +83,23 @@ interface WeaponProps {
 
 const BOB_SPEED = 8;
 const BOB_AMOUNT = 0.015;
-const RECOIL_RECOVERY = 8;
+const RECOIL_RECOVERY = 12;
+const CAM_KICK_RECOVERY = 8;
+const SWAY_DAMPING = 0.12;
 
 export default function Weapon({ locked, weaponType, ammo, onShoot }: WeaponProps) {
   const groupRef = useRef<THREE.Group>(null);
   const muzzleFlashRef = useRef<THREE.Mesh>(null);
+  const muzzleFlashGlowRef = useRef<THREE.Mesh>(null);
   const muzzleLightRef = useRef<THREE.PointLight>(null);
   const lastShot = useRef(0);
   const recoil = useRef(0);
+  const cameraKick = useRef(0); // upward camera kick from recoil
   const bobPhase = useRef(0);
+  const swayX = useRef(0);
+  const swayY = useRef(0);
   const keys = useRef<Set<string>>(new Set());
+  const flashTimer = useRef(0);
   const { camera } = useThree();
 
   const config = WEAPON_CONFIGS[weaponType];
@@ -100,34 +107,53 @@ export default function Weapon({ locked, weaponType, ammo, onShoot }: WeaponProp
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => keys.current.add(e.code);
     const onKeyUp = (e: KeyboardEvent) => keys.current.delete(e.code);
+    // Track mouse for sway
+    const onMouseMove = (e: MouseEvent) => {
+      swayX.current += e.movementX * 0.0008;
+      swayY.current += e.movementY * 0.0008;
+      // Clamp
+      swayX.current = THREE.MathUtils.clamp(swayX.current, -0.03, 0.03);
+      swayY.current = THREE.MathUtils.clamp(swayY.current, -0.02, 0.02);
+    };
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("keyup", onKeyUp);
+    window.addEventListener("mousemove", onMouseMove);
     return () => {
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
+      window.removeEventListener("mousemove", onMouseMove);
     };
   }, []);
 
   const handleClick = useCallback(() => {
     if (!locked) return;
-    if (ammo === 0) return; // out of ammo (but -1 = infinite)
+    if (ammo === 0) return;
     const now = performance.now() / 1000;
     if (now - lastShot.current < config.cooldown) return;
     lastShot.current = now;
-    recoil.current = config.recoil;
 
+    // Apply recoil pullback
+    recoil.current = config.recoil;
+    // Apply camera kick (weapon-specific)
+    const kickAmount = weaponType === "rocket" ? 0.04 : weaponType === "shotgun" ? 0.03 : weaponType === "plasma" ? 0.02 : 0.008;
+    cameraKick.current = Math.min(cameraKick.current + kickAmount, 0.08);
+
+    // Show muzzle flash (longer than before)
     if (muzzleFlashRef.current) {
       muzzleFlashRef.current.visible = true;
       muzzleFlashRef.current.scale.setScalar(
-        weaponType === "plasma" ? 1.5 : weaponType === "shotgun" ? 1.2 : 0.8 + Math.random() * 0.4
+        weaponType === "plasma" ? 1.8 : weaponType === "shotgun" ? 1.6 : weaponType === "rocket" ? 2.2 : 0.9 + Math.random() * 0.4
       );
       muzzleFlashRef.current.rotation.z = Math.random() * Math.PI * 2;
-      if (muzzleLightRef.current) muzzleLightRef.current.intensity = 15;
-      setTimeout(() => {
-        if (muzzleFlashRef.current) muzzleFlashRef.current.visible = false;
-        if (muzzleLightRef.current) muzzleLightRef.current.intensity = 0;
-      }, 50);
     }
+    if (muzzleFlashGlowRef.current) {
+      muzzleFlashGlowRef.current.visible = true;
+      muzzleFlashGlowRef.current.scale.setScalar(
+        weaponType === "rocket" ? 3 : weaponType === "shotgun" ? 2.2 : weaponType === "plasma" ? 2.5 : 1.4
+      );
+    }
+    if (muzzleLightRef.current) muzzleLightRef.current.intensity = 20;
+    flashTimer.current = weaponType === "rocket" ? 0.12 : weaponType === "shotgun" ? 0.1 : 0.06;
 
     const dir = new THREE.Vector3(0, 0, -1);
     dir.applyQuaternion(camera.quaternion);
@@ -149,6 +175,21 @@ export default function Weapon({ locked, weaponType, ammo, onShoot }: WeaponProp
   useFrame((state, delta) => {
     if (!groupRef.current) return;
 
+    // ── Muzzle flash timer ──
+    if (flashTimer.current > 0) {
+      flashTimer.current -= delta;
+      if (flashTimer.current <= 0) {
+        if (muzzleFlashRef.current) muzzleFlashRef.current.visible = false;
+        if (muzzleFlashGlowRef.current) muzzleFlashGlowRef.current.visible = false;
+        if (muzzleLightRef.current) muzzleLightRef.current.intensity = 0;
+      } else {
+        // Fade light during flash tail
+        if (muzzleLightRef.current) {
+          muzzleLightRef.current.intensity = 20 * (flashTimer.current / 0.1);
+        }
+      }
+    }
+
     const moving =
       keys.current.has("KeyW") || keys.current.has("KeyS") ||
       keys.current.has("KeyA") || keys.current.has("KeyD");
@@ -161,14 +202,44 @@ export default function Weapon({ locked, weaponType, ammo, onShoot }: WeaponProp
     const bobX = moving ? Math.sin(bobPhase.current) * BOB_AMOUNT : 0;
     const bobY = moving ? Math.abs(Math.cos(bobPhase.current)) * BOB_AMOUNT : 0;
 
+    // Recover recoil (faster pullback response)
     recoil.current = THREE.MathUtils.lerp(recoil.current, 0, delta * RECOIL_RECOVERY);
 
-    const weaponPos = new THREE.Vector3(0.3 + bobX, -0.28 + bobY, -0.5 + recoil.current);
+    // Recover camera kick — apply to camera pitch
+    if (cameraKick.current > 0.001) {
+      // Apply pitch up
+      const kickThisFrame = cameraKick.current * delta * 30;
+      camera.rotation.x += kickThisFrame;
+      cameraKick.current = THREE.MathUtils.lerp(cameraKick.current, 0, delta * CAM_KICK_RECOVERY);
+    } else {
+      cameraKick.current = 0;
+    }
+
+    // Damp sway toward 0
+    swayX.current = THREE.MathUtils.lerp(swayX.current, 0, SWAY_DAMPING);
+    swayY.current = THREE.MathUtils.lerp(swayY.current, 0, SWAY_DAMPING);
+
+    // Position weapon — combine sway, bob, recoil, and tilt
+    const weaponPos = new THREE.Vector3(
+      0.3 + bobX - swayX.current,
+      -0.28 + bobY - swayY.current,
+      -0.5 + recoil.current
+    );
     weaponPos.applyQuaternion(camera.quaternion);
     weaponPos.add(camera.position);
 
     groupRef.current.position.copy(weaponPos);
-    groupRef.current.quaternion.copy(camera.quaternion);
+
+    // Weapon rotation — copy camera but add slight tilt from sway + recoil
+    const tiltQuat = new THREE.Quaternion().setFromEuler(
+      new THREE.Euler(
+        recoil.current * 1.5, // nose up during recoil
+        -swayX.current * 3, // tilt with sway
+        swayX.current * 2,
+        "YXZ"
+      )
+    );
+    groupRef.current.quaternion.copy(camera.quaternion).multiply(tiltQuat);
   });
 
   return (
@@ -572,15 +643,29 @@ export default function Weapon({ locked, weaponType, ammo, onShoot }: WeaponProp
         </>
       )}
 
-      {/* Muzzle flash — color matches weapon */}
+      {/* Muzzle flash — main bright core */}
       <mesh ref={muzzleFlashRef} position={[0, weaponType === "shotgun" ? 0.02 : 0, weaponType === "shotgun" ? -0.48 : -0.38]} visible={false}>
         <planeGeometry args={[weaponType === "shotgun" ? 0.2 : weaponType === "rocket" ? 0.25 : 0.15, weaponType === "shotgun" ? 0.2 : weaponType === "rocket" ? 0.25 : 0.15]} />
         <meshBasicMaterial
           color={config.flashColor}
           transparent
-          opacity={0.9}
+          opacity={1}
           side={THREE.DoubleSide}
           depthWrite={false}
+          blending={THREE.AdditiveBlending}
+        />
+      </mesh>
+
+      {/* Outer glow halo — larger, translucent */}
+      <mesh ref={muzzleFlashGlowRef} position={[0, weaponType === "shotgun" ? 0.02 : 0, weaponType === "shotgun" ? -0.5 : -0.4]} visible={false}>
+        <planeGeometry args={[0.4, 0.4]} />
+        <meshBasicMaterial
+          color={config.color}
+          transparent
+          opacity={0.5}
+          side={THREE.DoubleSide}
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
         />
       </mesh>
 
@@ -589,7 +674,7 @@ export default function Weapon({ locked, weaponType, ammo, onShoot }: WeaponProp
         position={[0, 0, -0.4]}
         color={config.color}
         intensity={0}
-        distance={5}
+        distance={8}
         decay={2}
       />
     </group>

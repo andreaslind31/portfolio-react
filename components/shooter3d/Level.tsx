@@ -12,16 +12,16 @@ import {
   createCrateTexture,
 } from "./Textures";
 
-// ── Grittier Doom-inspired palette ──────────────────────
-const FLOOR_COLOR = "#2a2830";
-const WALL_COLOR = "#2e2c34";
-const TRIM_COLOR = "#2a2428";
-const CEILING_COLOR = "#1a1820";
+// ── Warmer, brighter Doom-inspired palette ──────────────
+const FLOOR_COLOR = "#4a3d30";
+const WALL_COLOR = "#5a4838";
+const TRIM_COLOR = "#5a4028";
+const CEILING_COLOR = "#3a3025";
 const EMISSIVE_CYAN = "#00d4ff";
-const EMISSIVE_PURPLE = "#7b2ff7";
-const EMISSIVE_RED = "#ff2255";
-const EMISSIVE_ORANGE = "#ff8800";
-const EMISSIVE_GREEN = "#00ff88";
+const EMISSIVE_PURPLE = "#cc66ff";
+const EMISSIVE_RED = "#ff4455";
+const EMISSIVE_ORANGE = "#ffa844";
+const EMISSIVE_GREEN = "#44ff88";
 
 // ── Arena dimensions (exported for game logic) ──────────
 export const ARENA_HALF_W = 25;
@@ -672,9 +672,9 @@ export default function Level() {
       <CeilingLight position={[-12, WALL_H - 0.1, 0]} color={EMISSIVE_ORANGE} flicker />
       <CeilingLight position={[-18, WALL_H - 0.1, 0]} color={EMISSIVE_ORANGE} />
 
-      {/* Global ambient — darker for Doom feel */}
-      <ambientLight intensity={0.35} color="#443344" />
-      <hemisphereLight color="#554466" groundColor="#1a1820" intensity={0.4} />
+      {/* Global ambient — brighter warm glow */}
+      <ambientLight intensity={0.7} color="#aa7766" />
+      <hemisphereLight color="#bb9977" groundColor="#3a2818" intensity={0.7} />
     </group>
   );
 }

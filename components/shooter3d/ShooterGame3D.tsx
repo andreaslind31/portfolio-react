@@ -1494,12 +1494,12 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
           gl={{
             antialias: true,
             toneMapping: THREE.ACESFilmicToneMapping,
-            toneMappingExposure: 1.3,
+            toneMappingExposure: 1.8,
           }}
           camera={{ fov: 75, near: 0.1, far: 100 }}
         >
           <Suspense fallback={null}>
-            <fog attach="fog" args={["#0a0812", 20, 50]} />
+            <fog attach="fog" args={["#2a1a12", 25, 60]} />
             <Physics gravity={[0, -15, 0]}>
               <Player locked={locked} sensitivity={mouseSensitivity} speedMultiplier={playerSpeedMult} />
               <Level />
