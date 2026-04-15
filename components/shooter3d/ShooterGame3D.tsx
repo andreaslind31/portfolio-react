@@ -544,6 +544,7 @@ function GameLoop({
   const sentinelBurstTimers = useRef<Map<number, number>>(new Map());
   const waveCleared = useRef(false);
   const radarUpdateTimer = useRef(0);
+  const musicUpdateTimer = useRef(0);
 
   useFrame((state, delta) => {
     if (gameState !== "playing") return;
@@ -1150,8 +1151,10 @@ function GameLoop({
       return 0;
     });
 
-    // ── Update combat music intensity ──
-    if (combatMusic.current) {
+    // ── Update combat music intensity (throttled to 4x/sec) ──
+    musicUpdateTimer.current += dt;
+    if (combatMusic.current && musicUpdateTimer.current > 0.25) {
+      musicUpdateTimer.current = 0;
       const aliveCount = enemies.filter((e) => e.alive).length;
       const nearestDist = enemies.reduce((min, e) => {
         if (!e.alive) return min;
@@ -1620,11 +1623,13 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
         }}
       >
         <Canvas
-          shadows
+          shadows={false}
+          dpr={[1, 1.5]}
           gl={{
             antialias: true,
             toneMapping: THREE.ACESFilmicToneMapping,
             toneMappingExposure: 1.8,
+            powerPreference: "high-performance",
           }}
           camera={{ fov: 75, near: 0.1, far: 100 }}
         >
