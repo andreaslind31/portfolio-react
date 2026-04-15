@@ -1485,8 +1485,13 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
   }, [selectedMapId]);
 
   const handleRestart = useCallback(() => {
-    handleStart();
-  }, [handleStart]);
+    // Retry in the current mode — replay current map in maps mode, restart waves otherwise
+    if (gameMode === "maps") {
+      startGame("maps", selectedMapId);
+    } else {
+      startGame("waves");
+    }
+  }, [gameMode, selectedMapId, startGame]);
 
   const handleShoot = useCallback(
     (origin: THREE.Vector3, direction: THREE.Vector3) => {
@@ -1727,6 +1732,7 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
         gameStartTime={gameStartTime}
         gameEndTime={gameEndTime}
         weaponKills={weaponKills}
+        gameMode={gameMode}
         unlockedMaps={unlockedMaps}
         onSelectMode={handleSelectMode}
         onSelectMap={handleSelectMap}

@@ -53,6 +53,7 @@ interface HUDProps {
   gameEndTime: number;
   weaponKills: Record<WeaponType, number>;
   // Map/mode selection
+  gameMode: "waves" | "maps";
   unlockedMaps: string[];
   onSelectMode: (mode: "waves" | "maps") => void;
   onSelectMap: (mapId: string) => void;
@@ -94,6 +95,7 @@ export default function HUD({
   gameStartTime,
   gameEndTime,
   weaponKills,
+  gameMode,
   unlockedMaps,
   onSelectMode,
   onSelectMap,
@@ -304,21 +306,42 @@ export default function HUD({
             )}
           </div>
 
-          {/* Wave — top left */}
+          {/* Wave / Map — top left */}
           <div style={{ position: "absolute", top: 30, left: 30 }}>
-            <div style={{ color: "#7b2ff7", fontSize: 12, letterSpacing: 2 }}>
-              WAVE
-            </div>
-            <div
-              style={{
-                color: "#fff",
-                fontSize: 28,
-                fontWeight: "bold",
-                textShadow: "0 0 10px #7b2ff7",
-              }}
-            >
-              {wave}
-            </div>
+            {gameMode === "maps" && clearedMap ? (
+              <>
+                <div style={{ color: clearedMap.ambientColor, fontSize: 12, letterSpacing: 2 }}>
+                  MAP
+                </div>
+                <div
+                  style={{
+                    color: "#fff",
+                    fontSize: 22,
+                    fontWeight: "bold",
+                    textShadow: `0 0 10px ${clearedMap.ambientColor}`,
+                    letterSpacing: 2,
+                  }}
+                >
+                  {clearedMap.name}
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{ color: "#7b2ff7", fontSize: 12, letterSpacing: 2 }}>
+                  WAVE
+                </div>
+                <div
+                  style={{
+                    color: "#fff",
+                    fontSize: 28,
+                    fontWeight: "bold",
+                    textShadow: "0 0 10px #7b2ff7",
+                  }}
+                >
+                  {wave}
+                </div>
+              </>
+            )}
           </div>
 
           {/* Kills — under wave */}
@@ -1214,8 +1237,26 @@ export default function HUD({
               e.currentTarget.style.background = "transparent";
             }}
           >
-            RETRY
+            {gameMode === "maps" ? "RETRY MAP" : "RETRY"}
           </button>
+          {gameMode === "maps" && (
+            <button
+              onClick={() => onSelectMode("maps")}
+              style={{
+                marginTop: 12,
+                background: "transparent",
+                border: "1px solid #ffffff33",
+                color: "#ffffff88",
+                padding: "8px 24px",
+                fontSize: 11,
+                letterSpacing: 2,
+                cursor: "pointer",
+                fontFamily: "'Courier New', monospace",
+              }}
+            >
+              ← BACK TO MAPS
+            </button>
+          )}
         </div>
       )}
     </div>
