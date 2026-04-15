@@ -484,6 +484,8 @@ function GameLoop({
   combatMusic,
   speedBoostEnd,
   setPlayerSpeedMult,
+  gameMode,
+  onMapCleared,
 }: {
   enemies: EnemyData[];
   setEnemies: React.Dispatch<React.SetStateAction<EnemyData[]>>;
@@ -534,6 +536,8 @@ function GameLoop({
   combatMusic: React.MutableRefObject<{ setIntensity: (v: number) => void; stop: () => void } | null>;
   speedBoostEnd: number;
   setPlayerSpeedMult: React.Dispatch<React.SetStateAction<number>>;
+  gameMode: "waves" | "maps";
+  onMapCleared: () => void;
 }) {
   const { camera } = useThree();
   const enemyShootTimers = useRef<Map<number, number>>(new Map());
@@ -773,18 +777,27 @@ function GameLoop({
     const allDead = enemies.length > 0 && enemies.every((e) => !e.alive && !e.dying);
     if (allDead && !waveCleared.current) {
       waveCleared.current = true;
-      setTimeout(() => {
-        setWave((w) => {
-          const next = w + 1;
-          setEnemies(spawnEnemies(next));
-          enemyShootTimers.current.clear();
-          sentinelBurstTimers.current.clear();
+      if (gameMode === "maps") {
+        // Map cleared — trigger victory after a short delay
+        setTimeout(() => {
+          onMapCleared();
           waveCleared.current = false;
-          setWaveAnnounce(next);
-          playWaveStartSound();
-          return next;
-        });
-      }, 1500);
+        }, 1500);
+      } else {
+        // Waves mode — spawn next wave
+        setTimeout(() => {
+          setWave((w) => {
+            const next = w + 1;
+            setEnemies(spawnEnemies(next));
+            enemyShootTimers.current.clear();
+            sentinelBurstTimers.current.clear();
+            waveCleared.current = false;
+            setWaveAnnounce(next);
+            playWaveStartSound();
+            return next;
+          });
+        }, 1500);
+      }
     }
 
     // ── Update projectiles ──
@@ -1454,6 +1467,23 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
     if (next) startGame("maps", next);
   }, [selectedMapId, startGame]);
 
+  const handleMapCleared = useCallback(() => {
+    // Unlock next map and go to victory screen
+    const next = getNextMapId(selectedMapId);
+    if (next) {
+      unlockMap(next);
+      setUnlockedMaps(getUnlockedMaps());
+    }
+    setGameEndTime(Date.now());
+    setGameState("victory");
+    document.exitPointerLock?.();
+    setLocked(false);
+    stopAmbient.current?.();
+    stopAmbient.current = null;
+    combatMusic.current?.stop();
+    combatMusic.current = null;
+  }, [selectedMapId]);
+
   const handleRestart = useCallback(() => {
     handleStart();
   }, [handleStart]);
@@ -1594,7 +1624,7 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
           camera={{ fov: 75, near: 0.1, far: 100 }}
         >
           <Suspense fallback={null}>
-            <fog attach="fog" args={["#2a1a12", 25, 60]} />
+            <fog attach="fog" args={[gameMode === "maps" ? (MAPS.find((m) => m.id === selectedMapId)?.fogColor ?? "#2a1a12") : "#2a1a12", 25, 60]} />
             <Physics gravity={[0, -15, 0]}>
               <Player locked={locked} sensitivity={mouseSensitivity} speedMultiplier={playerSpeedMult} />
               <Level />
@@ -1657,6 +1687,8 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
               combatMusic={combatMusic}
               speedBoostEnd={speedBoostEnd}
               setPlayerSpeedMult={setPlayerSpeedMult}
+              gameMode={gameMode}
+              onMapCleared={handleMapCleared}
             />
             <PostProcessing />
           </Suspense>
