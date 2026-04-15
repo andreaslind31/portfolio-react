@@ -545,6 +545,7 @@ function GameLoop({
   const waveCleared = useRef(false);
   const radarUpdateTimer = useRef(0);
   const musicUpdateTimer = useRef(0);
+  const particleCleanupTimer = useRef(0);
 
   useFrame((state, delta) => {
     if (gameState !== "playing") return;
@@ -571,19 +572,15 @@ function GameLoop({
     }
     if (!isPlayerMoving) footstepTimer.current = stepInterval * 0.8; // nearly ready for next step
 
-    // ── Advance death timers ──
-    setEnemies((prev) =>
-      prev.map((e) => {
-        if (e.dying) {
-          e.deathTimer += dt;
-          if (e.deathTimer >= 0.6) {
-            e.dying = false;
-            // Fully dead now
-          }
+    // ── Advance death timers (mutate in place, no setState) ──
+    for (const e of enemies) {
+      if (e.dying) {
+        e.deathTimer += dt;
+        if (e.deathTimer >= 0.6) {
+          e.dying = false;
         }
-        return e;
-      })
-    );
+      }
+    }
 
     // ── Update radar (throttled to ~10fps) ──
     radarUpdateTimer.current += dt;
@@ -599,10 +596,9 @@ function GameLoop({
       );
     }
 
-    // ── Update enemies ──
-    setEnemies((prev) =>
-      prev.map((e) => {
-        if (!e.alive) return e;
+    // ── Update enemies (mutate in place, no setState — avoids per-frame re-render) ──
+    for (const e of enemies) {
+      if (!e.alive) continue;
 
         const dir = new THREE.Vector3()
           .subVectors(playerPos.current, e.position)
@@ -765,9 +761,7 @@ function GameLoop({
           }
         }
 
-        return e;
-      })
-    );
+    }
 
     // ── Enemy separation ──
     applySeparation(enemies);
@@ -801,11 +795,9 @@ function GameLoop({
       }
     }
 
-    // ── Update projectiles ──
-    setProjectiles((prev) =>
-      prev
-        .map((p) => {
-          if (!p.alive) return p;
+    // ── Update projectiles (mutate in place) ──
+    for (const p of projectiles) {
+      if (!p.alive) continue;
 
           p.position.addScaledVector(p.direction, p.speed * dt);
           p.life -= dt;
@@ -1013,60 +1005,52 @@ function GameLoop({
             }
           }
 
-          return p;
-        })
-        .filter((p) => p.alive)
-    );
+    }
 
-    // ── Update pickups (collection) ──
-    setPickups((prev) =>
-      prev
-        .map((pk) => {
-          if (!pk.alive) return pk;
-          if (pk.position.distanceTo(playerPos.current) < PICKUP_RADIUS) {
-            pk.alive = false;
-            playPickupSound();
+    // ── Update pickups (mutate in place) ──
+    for (const pk of pickups) {
+      if (!pk.alive) continue;
+      if (pk.position.distanceTo(playerPos.current) < PICKUP_RADIUS) {
+        pk.alive = false;
+        playPickupSound();
 
-            switch (pk.type) {
-              case "health":
-                setHealth((h) => Math.min(MAX_HEALTH, h + HEALTH_PICKUP_AMOUNT));
-                break;
-              case "shotgun":
-                setWeaponAmmo((prev) => ({
-                  ...prev,
-                  shotgun: prev.shotgun + SHOTGUN_PICKUP_AMMO,
-                }));
-                setCurrentWeapon("shotgun");
-                break;
-              case "plasma":
-                setWeaponAmmo((prev) => ({
-                  ...prev,
-                  plasma: prev.plasma + PLASMA_PICKUP_AMMO,
-                }));
-                setCurrentWeapon("plasma");
-                break;
-              case "rocket":
-                setWeaponAmmo((prev) => ({
-                  ...prev,
-                  rocket: prev.rocket + ROCKET_PICKUP_AMMO,
-                }));
-                setCurrentWeapon("rocket");
-                break;
-              case "speed":
-                setSpeedBoostEnd(state.clock.elapsedTime + SPEED_BOOST_DURATION);
-                break;
-              case "damage":
-                setDamageBoostEnd(state.clock.elapsedTime + DAMAGE_BOOST_DURATION);
-                break;
-            }
-          }
-          if (state.clock.elapsedTime - pk.spawnTime > POWERUP_DESPAWN_TIME) {
-            pk.alive = false;
-          }
-          return pk;
-        })
-        .filter((pk) => pk.alive)
-    );
+        switch (pk.type) {
+          case "health":
+            setHealth((h) => Math.min(MAX_HEALTH, h + HEALTH_PICKUP_AMOUNT));
+            break;
+          case "shotgun":
+            setWeaponAmmo((prev) => ({
+              ...prev,
+              shotgun: prev.shotgun + SHOTGUN_PICKUP_AMMO,
+            }));
+            setCurrentWeapon("shotgun");
+            break;
+          case "plasma":
+            setWeaponAmmo((prev) => ({
+              ...prev,
+              plasma: prev.plasma + PLASMA_PICKUP_AMMO,
+            }));
+            setCurrentWeapon("plasma");
+            break;
+          case "rocket":
+            setWeaponAmmo((prev) => ({
+              ...prev,
+              rocket: prev.rocket + ROCKET_PICKUP_AMMO,
+            }));
+            setCurrentWeapon("rocket");
+            break;
+          case "speed":
+            setSpeedBoostEnd(state.clock.elapsedTime + SPEED_BOOST_DURATION);
+            break;
+          case "damage":
+            setDamageBoostEnd(state.clock.elapsedTime + DAMAGE_BOOST_DURATION);
+            break;
+        }
+      }
+      if (state.clock.elapsedTime - pk.spawnTime > POWERUP_DESPAWN_TIME) {
+        pk.alive = false;
+      }
+    }
 
     // ── Spawn powerups (max 1-2, only when none on map, with delay) ──
     const alivePickups = pickups.filter((p) => p.alive).length;
@@ -1101,28 +1085,30 @@ function GameLoop({
       }
     }
 
-    // ── Clean up ──
-    setParticles((prev) => prev.filter((p) => p.life > 0));
-    setExplosions((prev) =>
-      prev.filter(
-        (e) => state.clock.elapsedTime - e.startTime < e.duration + 0.1
-      )
-    );
-    // Clean up old score popups (1s lifetime)
-    setScorePopups((prev) =>
-      prev.filter((p) => state.clock.elapsedTime - p.time < 1)
-    );
+    // ── Throttled cleanup (once per second) ──
+    particleCleanupTimer.current += dt;
+    if (particleCleanupTimer.current > 1.0) {
+      particleCleanupTimer.current = 0;
+      setParticles((prev) => prev.filter((p) => p.life > 0));
+      setProjectiles((prev) => prev.filter((p) => p.alive));
+      setPickups((prev) => prev.filter((p) => p.alive));
+      setExplosions((prev) =>
+        prev.filter(
+          (e) => state.clock.elapsedTime - e.startTime < e.duration + 0.1
+        )
+      );
+      setScorePopups((prev) =>
+        prev.filter((p) => state.clock.elapsedTime - p.time < 1)
+      );
+    }
 
-    // ── Advance crate death timers ──
-    setCrates((prev) =>
-      prev.map((c) => {
-        if (c.dying) {
-          c.deathTimer += dt;
-          if (c.deathTimer >= 0.4) c.dying = false;
-        }
-        return c;
-      })
-    );
+    // ── Advance crate death timers (mutate in place) ──
+    for (const c of crates) {
+      if (c.dying) {
+        c.deathTimer += dt;
+        if (c.deathTimer >= 0.4) c.dying = false;
+      }
+    }
 
     // ── Environmental ambient sounds (random intervals) ──
     ambientSoundTimer.current += dt;

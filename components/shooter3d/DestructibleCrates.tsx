@@ -40,10 +40,9 @@ export function createInitialCrates(): CrateData[] {
   }));
 }
 
-function CrateMesh({ crate }: { crate: CrateData }) {
+function CrateMesh({ crate, texture }: { crate: CrateData; texture: THREE.CanvasTexture }) {
   const groupRef = useRef<THREE.Group>(null);
   const matRef = useRef<THREE.MeshStandardMaterial>(null);
-  const texture = useMemo(() => createCrateTexture(), []);
 
   useFrame((_, delta) => {
     if (!groupRef.current) return;
@@ -101,10 +100,13 @@ interface DestructibleCratesProps {
 }
 
 export default function DestructibleCrates({ crates }: DestructibleCratesProps) {
+  // Create texture once, shared across all crates
+  const texture = useMemo(() => createCrateTexture(), []);
+
   return (
     <group>
       {crates.map((c) => (
-        <CrateMesh key={c.id} crate={c} />
+        <CrateMesh key={c.id} crate={c} texture={texture} />
       ))}
     </group>
   );

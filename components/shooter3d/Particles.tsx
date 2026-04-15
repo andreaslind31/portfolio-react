@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 
@@ -22,8 +22,6 @@ export interface ExplosionData {
   duration: number;
   size: number;
 }
-
-// ── Particle factory helpers ──────────────────────────────
 
 let particleId = 0;
 
@@ -85,47 +83,68 @@ export function createDeathExplosion(
   return particles;
 }
 
-// ── Single particle mesh ──────────────────────────────────
+const MAX_PARTICLES = 300;
 
-function ParticleMesh({ particle }: { particle: ParticleData }) {
-  const meshRef = useRef<THREE.Mesh>(null);
+/**
+ * All particles share one InstancedMesh (single draw call).
+ * A single useFrame updates all instance matrices and colors.
+ */
+function ParticlesBatch({ particles }: { particles: ParticleData[] }) {
+  const instRef = useRef<THREE.InstancedMesh>(null);
+  const dummy = useMemo(() => new THREE.Object3D(), []);
+  const color = useMemo(() => new THREE.Color(), []);
 
   useFrame((_, delta) => {
-    if (!meshRef.current) return;
+    if (!instRef.current) return;
+    const mesh = instRef.current;
 
-    // Gravity
-    particle.velocity.y -= 9.8 * delta;
+    let count = 0;
+    for (let i = 0; i < particles.length && count < MAX_PARTICLES; i++) {
+      const p = particles[i];
+      if (p.life <= 0) continue;
 
-    // Move
-    particle.position.addScaledVector(particle.velocity, delta);
-    particle.life -= delta;
+      // Simulate (gravity + motion)
+      p.velocity.y -= 9.8 * delta;
+      p.position.addScaledVector(p.velocity, delta);
+      p.life -= delta;
 
-    // Update mesh
-    meshRef.current.position.copy(particle.position);
+      const alpha = Math.max(0, p.life / p.maxLife);
+      const scale = p.size * (0.5 + alpha * 1.5);
 
-    // Fade out
-    const alpha = Math.max(0, particle.life / particle.maxLife);
-    const scale = particle.size * (0.5 + alpha * 0.5);
-    meshRef.current.scale.setScalar(scale / particle.size);
+      dummy.position.copy(p.position);
+      dummy.scale.setScalar(scale);
+      dummy.updateMatrix();
+      mesh.setMatrixAt(count, dummy.matrix);
+      color.set(p.color).multiplyScalar(alpha);
+      mesh.setColorAt(count, color);
+      count++;
+    }
 
-    const mat = meshRef.current.material as THREE.MeshBasicMaterial;
-    mat.opacity = alpha;
+    // Hide unused instances by scaling to 0
+    dummy.scale.setScalar(0);
+    dummy.updateMatrix();
+    for (let i = count; i < MAX_PARTICLES; i++) {
+      mesh.setMatrixAt(i, dummy.matrix);
+    }
+
+    mesh.count = MAX_PARTICLES;
+    mesh.instanceMatrix.needsUpdate = true;
+    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
   });
 
   return (
-    <mesh ref={meshRef} position={particle.position.toArray()}>
-      <sphereGeometry args={[particle.size, 6, 4]} />
-      <meshBasicMaterial
-        color={particle.color}
-        transparent
-        opacity={1}
-        depthWrite={false}
-      />
-    </mesh>
+    <instancedMesh
+      ref={instRef}
+      args={[undefined, undefined, MAX_PARTICLES]}
+      frustumCulled={false}
+    >
+      <sphereGeometry args={[1, 6, 4]} />
+      <meshBasicMaterial vertexColors transparent depthWrite={false} />
+    </instancedMesh>
   );
 }
 
-// ── Explosion flash ring ──────────────────────────────────
+// ── Explosion flash (kept as individual meshes since there are few) ──
 
 function ExplosionFlash({ explosion }: { explosion: ExplosionData }) {
   const meshRef = useRef<THREE.Mesh>(null);
@@ -136,20 +155,16 @@ function ExplosionFlash({ explosion }: { explosion: ExplosionData }) {
     const elapsed = state.clock.elapsedTime - explosion.startTime;
     const progress = Math.min(1, elapsed / explosion.duration);
 
-    // Expand ring
     const scale = explosion.size * (0.5 + progress * 2);
     meshRef.current.scale.setScalar(scale);
 
-    // Fade out
     const mat = meshRef.current.material as THREE.MeshBasicMaterial;
     mat.opacity = (1 - progress) * 0.8;
 
-    // Light fade
     if (lightRef.current) {
       lightRef.current.intensity = (1 - progress) * 8;
     }
 
-    // Kill when done
     if (progress >= 1) {
       meshRef.current.visible = false;
       if (lightRef.current) lightRef.current.intensity = 0;
@@ -179,8 +194,6 @@ function ExplosionFlash({ explosion }: { explosion: ExplosionData }) {
   );
 }
 
-// ── Main Particles renderer ──────────────────────────────
-
 interface ParticlesProps {
   particles: ParticleData[];
   explosions: ExplosionData[];
@@ -189,11 +202,7 @@ interface ParticlesProps {
 export default function Particles({ particles, explosions }: ParticlesProps) {
   return (
     <group>
-      {particles
-        .filter((p) => p.life > 0)
-        .map((p) => (
-          <ParticleMesh key={p.id} particle={p} />
-        ))}
+      <ParticlesBatch particles={particles} />
       {explosions.map((e) => (
         <ExplosionFlash key={e.id} explosion={e} />
       ))}
