@@ -176,7 +176,6 @@ function Wall({
     <RigidBody type="fixed" position={position} rotation={rotation} colliders="cuboid">
       <mesh castShadow receiveShadow material={mat}>
         <boxGeometry args={size} />
-        <meshStandardMaterial color={color} metalness={0.1} roughness={0.85} emissive={color} emissiveIntensity={0.04} />
       </mesh>
     </RigidBody>
   );
