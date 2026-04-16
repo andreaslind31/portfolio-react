@@ -30,6 +30,7 @@ export const ENEMY_COLORS = {
   drone: { tint: "#ffffff", glow: "#8B0000", projectile: "#aa2200", name: "IMP" },
   sentinel: { tint: "#ffffff", glow: "#B22222", projectile: "#cc3300", name: "BARON" },
   heavy: { tint: "#ffffff", glow: "#660000", projectile: "#882200", name: "DEMON" },
+  boss: { tint: "#ffffff", glow: "#440000", projectile: "#ff4400", name: "CYBERDEMON" },
 } as const;
 
 // ── Sprite configuration ────────────────────────────────
