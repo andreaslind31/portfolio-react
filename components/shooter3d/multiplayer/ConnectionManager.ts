@@ -25,6 +25,8 @@ export interface ConnectionCallbacks {
   onPlayerRespawn: (playerId: string, position: [number, number, number]) => void;
   onGameStart: (mode: string, mapId?: string) => void;
   onChat: (playerId: string, name: string, text: string) => void;
+  onEnemySync: (enemies: import("./protocol").EnemySyncData[]) => void;
+  onEnemyDamage: (enemyId: number, hp: number, killerId?: string) => void;
   onError: (message: string) => void;
 }
 
@@ -122,6 +124,14 @@ export class ConnectionManager {
     this.send({ type: "chat", text });
   }
 
+  sendEnemySync(enemies: import("./protocol").EnemySyncData[]) {
+    this.send({ type: "enemySync", enemies });
+  }
+
+  sendEnemyDamage(enemyId: number, damage: number) {
+    this.send({ type: "enemyDamage", enemyId, damage });
+  }
+
   getState(): ConnectionState {
     return this.state;
   }
@@ -198,6 +208,12 @@ export class ConnectionManager {
         break;
       case "gameStart":
         this.callbacks.onGameStart(msg.mode, msg.mapId);
+        break;
+      case "enemySync":
+        this.callbacks.onEnemySync(msg.enemies);
+        break;
+      case "enemyDamage":
+        this.callbacks.onEnemyDamage(msg.enemyId, msg.hp, msg.killerId);
         break;
       case "chat":
         this.callbacks.onChat(msg.playerId, msg.name, msg.text);

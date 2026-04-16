@@ -1611,6 +1611,16 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
           // Start the game when host presses start
           startGame("waves");
         },
+        onEnemySync: (syncedEnemies) => {
+          // Non-host: update local enemies from host's authoritative state
+          // This is received at ~10Hz from the host via server relay
+          // For now, just log — full integration needs enemy state reconciliation
+          // TODO: reconcile local enemy positions with synced data
+        },
+        onEnemyDamage: (_enemyId, _hp, _killerId) => {
+          // Host receives this from non-host players when they hit an enemy
+          // TODO: apply damage to local enemy and re-sync
+        },
         onChat: () => { /* Phase M6 */ },
         onError: (msg) => { console.error("Multiplayer error:", msg); },
       });

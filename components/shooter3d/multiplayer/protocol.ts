@@ -27,7 +27,9 @@ export type ClientMessage =
   | { type: "playerState"; position: [number, number, number]; rotation: [number, number]; weapon: string }
   | { type: "shoot"; origin: [number, number, number]; direction: [number, number, number]; weapon: string }
   | { type: "startGame"; mode: "coop-waves" | "coop-maps" | "deathmatch"; mapId?: string }
-  | { type: "chat"; text: string };
+  | { type: "chat"; text: string }
+  | { type: "enemySync"; enemies: EnemySyncData[] }
+  | { type: "enemyDamage"; enemyId: number; damage: number };
 
 // ── Server → Client messages ─────────────────────────────
 

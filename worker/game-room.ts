@@ -192,6 +192,28 @@ export class GameRoom {
         });
         break;
 
+      case "enemySync":
+        // Host sends enemy state — relay to all non-host clients
+        if (playerId === this.hostId) {
+          this.broadcast(
+            { type: "enemySync", enemies: msg.enemies },
+            playerId
+          );
+        }
+        break;
+
+      case "enemyDamage":
+        // Any player can damage an enemy — forward to host for processing
+        if (playerId !== this.hostId) {
+          this.sendTo(this.hostId, {
+            type: "enemyDamage",
+            enemyId: msg.enemyId,
+            hp: 0,
+            killerId: playerId,
+          });
+        }
+        break;
+
       case "chat":
         this.broadcastAll({
           type: "chat",
