@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 
@@ -20,41 +20,57 @@ interface ProjectilesProps {
   projectiles: ProjectileData[];
 }
 
-function ProjectileMesh({ projectile }: { projectile: ProjectileData }) {
-  const meshRef = useRef<THREE.Mesh>(null);
-
-  useFrame(() => {
-    if (!meshRef.current || !projectile.alive) return;
-    meshRef.current.position.copy(projectile.position);
-    const lookTarget = projectile.position.clone().add(projectile.direction);
-    meshRef.current.lookAt(lookTarget);
-  });
-
-  const color = projectile.color ?? (projectile.friendly ? "#c8a848" : "#8B0000");
-  const radius = (projectile.size ?? 1) * 0.03;
-  const length = (projectile.size ?? 1) * 0.2;
-
-  return (
-    <group>
-      <mesh ref={meshRef} visible={projectile.alive}>
-        <capsuleGeometry args={[radius, length, 4, 8]} />
-        <meshStandardMaterial
-          color={color}
-          emissive={color}
-          emissiveIntensity={2}
-          toneMapped={false}
-        />
-      </mesh>
-    </group>
-  );
-}
+const MAX_PROJECTILES = 64;
 
 export default function Projectiles({ projectiles }: ProjectilesProps) {
+  const instRef = useRef<THREE.InstancedMesh>(null);
+  const dummy = useMemo(() => new THREE.Object3D(), []);
+  const color = useMemo(() => new THREE.Color(), []);
+
+  useFrame(() => {
+    if (!instRef.current) return;
+    const mesh = instRef.current;
+
+    let count = 0;
+    for (let i = 0; i < projectiles.length && count < MAX_PROJECTILES; i++) {
+      const p = projectiles[i];
+      if (!p.alive) continue;
+
+      const scale = (p.size ?? 1) * 0.15;
+
+      dummy.position.copy(p.position);
+      dummy.scale.set(scale * 0.4, scale * 0.4, scale);
+      // Orient along direction
+      const lookTarget = p.position.clone().add(p.direction);
+      dummy.lookAt(lookTarget);
+      dummy.updateMatrix();
+      mesh.setMatrixAt(count, dummy.matrix);
+
+      const c = p.color ?? (p.friendly ? "#c8a848" : "#8B0000");
+      color.set(c);
+      mesh.setColorAt(count, color);
+      count++;
+    }
+
+    // Hide unused instances
+    dummy.scale.setScalar(0);
+    dummy.updateMatrix();
+    for (let i = count; i < MAX_PROJECTILES; i++) {
+      mesh.setMatrixAt(i, dummy.matrix);
+    }
+
+    mesh.instanceMatrix.needsUpdate = true;
+    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+  });
+
   return (
-    <group>
-      {projectiles.map((p) => (
-        <ProjectileMesh key={p.id} projectile={p} />
-      ))}
-    </group>
+    <instancedMesh
+      ref={instRef}
+      args={[undefined, undefined, MAX_PROJECTILES]}
+      frustumCulled={false}
+    >
+      <sphereGeometry args={[1, 6, 4]} />
+      <meshBasicMaterial vertexColors toneMapped={false} />
+    </instancedMesh>
   );
 }

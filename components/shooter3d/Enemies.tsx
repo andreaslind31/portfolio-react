@@ -128,6 +128,7 @@ interface EnemySpriteProps {
 function EnemySprite({ enemy, textures }: EnemySpriteProps) {
   const groupRef = useRef<THREE.Group>(null);
   const spriteMatRef = useRef<THREE.MeshBasicMaterial>(null);
+  const prevMapRef = useRef<THREE.Texture | null>(null);
   const { camera } = useThree();
 
   const spriteScale =
@@ -202,6 +203,7 @@ function EnemySprite({ enemy, textures }: EnemySpriteProps) {
         camera.position
       );
 
+      let newMap: THREE.Texture;
       if (enemy.isShooting) {
         const attackDir = getAttackDirIndex(dirIdx);
         const frameIdx = Math.min(
@@ -209,11 +211,15 @@ function EnemySprite({ enemy, textures }: EnemySpriteProps) {
           ATTACK_FRAME_COUNT - 1
         );
         const texIdx = attackDir * ATTACK_FRAME_COUNT + frameIdx;
-        spriteMatRef.current.map = textures.attacks[texIdx];
+        newMap = textures.attacks[texIdx];
       } else {
-        spriteMatRef.current.map = textures.rotations[dirIdx];
+        newMap = textures.rotations[dirIdx];
       }
-      spriteMatRef.current.needsUpdate = true;
+      if (newMap !== prevMapRef.current) {
+        spriteMatRef.current.map = newMap;
+        spriteMatRef.current.needsUpdate = true;
+        prevMapRef.current = newMap;
+      }
     }
 
   });
@@ -257,14 +263,6 @@ function EnemySprite({ enemy, textures }: EnemySpriteProps) {
         </group>
       )}
 
-      {/* Glow light matching type color */}
-      <pointLight
-        position={[0, spriteScale / 2, 0]}
-        color={colors.glow}
-        intensity={enemy.aiState === "charge" ? 3 : 1.2}
-        distance={8}
-        decay={2}
-      />
     </group>
   );
 }
