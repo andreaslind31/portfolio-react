@@ -5,3 +5,6 @@ export { generateRoomCode } from "./protocol";
 export { default as LobbyUI } from "./LobbyUI";
 export { default as RemotePlayers } from "./RemotePlayers";
 export type { RemotePlayerData } from "./RemotePlayers";
+export { default as KillFeed, createKillFeedEntry } from "./KillFeed";
+export type { KillFeedEntry } from "./KillFeed";
+export { default as Scoreboard } from "./Scoreboard";

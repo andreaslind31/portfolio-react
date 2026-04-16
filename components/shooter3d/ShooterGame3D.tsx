@@ -21,8 +21,8 @@ import Doors from "./Doors";
 import { MAPS, getUnlockedMaps, unlockMap, getNextMapId, type MapConfig } from "./Maps";
 import DestructibleCrates, { type CrateData, createInitialCrates } from "./DestructibleCrates";
 import PostProcessing from "./PostProcessing";
-import { ConnectionManager, LobbyUI, RemotePlayers } from "./multiplayer";
-import type { ConnectionState, PlayerInfo, RemotePlayerData } from "./multiplayer";
+import { ConnectionManager, LobbyUI, RemotePlayers, KillFeed, createKillFeedEntry, Scoreboard } from "./multiplayer";
+import type { ConnectionState, PlayerInfo, RemotePlayerData, KillFeedEntry } from "./multiplayer";
 import {
   playBlasterSound,
   playShotgunSound,
@@ -1291,6 +1291,8 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
   const [mpLocalId, setMpLocalId] = useState("");
   const connectionManager = useRef<ConnectionManager | null>(null);
   const [remotePlayers, setRemotePlayers] = useState<RemotePlayerData[]>([]);
+  const [killFeedEntries, setKillFeedEntries] = useState<KillFeedEntry[]>([]);
+  const [showScoreboard, setShowScoreboard] = useState(false);
   const [health, setHealth] = useState(MAX_HEALTH);
   const [score, setScore] = useState(0);
   const [wave, setWave] = useState(1);
@@ -1398,6 +1400,25 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [gameState, weaponAmmo]);
+
+  // Tab key for scoreboard (multiplayer)
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.code === "Tab" && gameState === "playing") {
+        e.preventDefault();
+        setShowScoreboard(true);
+      }
+    };
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (e.code === "Tab") setShowScoreboard(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+    };
+  }, [gameState]);
 
   // Internal game initializer — shared between waves and maps
   const startGame = useCallback((mode: "waves" | "maps", mapId?: string) => {
@@ -1590,10 +1611,18 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
           shakeIntensity.current = 0.12;
         },
         onPlayerDeath: (playerId, killerId) => {
-          // Update remote player alive state
           setRemotePlayers((prev) =>
             prev.map((p) => p.id === playerId ? { ...p, alive: false } : p)
           );
+          // Add to kill feed
+          const killer = mpPlayers.find((p) => p.id === killerId);
+          const victim = mpPlayers.find((p) => p.id === playerId);
+          if (killer && victim) {
+            setKillFeedEntries((prev) => [
+              ...prev.slice(-20),
+              createKillFeedEntry(killer.name, victim.name, "weapon"),
+            ]);
+          }
         },
         onPlayerRespawn: (playerId, position) => {
           setRemotePlayers((prev) =>
@@ -1627,7 +1656,13 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
           // Host receives this from non-host players when they hit an enemy
           // TODO: apply damage to local enemy and re-sync
         },
-        onChat: () => { /* Phase M6 */ },
+        onChat: (_playerId, name, text) => {
+          // Show chat as a kill feed-style entry
+          setKillFeedEntries((prev) => [
+            ...prev.slice(-20),
+            { id: Date.now(), killerName: name, victimName: text, weapon: "chat", timestamp: Date.now() },
+          ]);
+        },
         onError: (msg) => { console.error("Multiplayer error:", msg); },
       });
     }
@@ -1918,6 +1953,16 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
       />
 
       <DamageFlash flash={damageFlash} />
+
+      {/* Multiplayer kill feed */}
+      <KillFeed entries={killFeedEntries} />
+
+      {/* Multiplayer scoreboard (Tab to show) */}
+      <Scoreboard
+        visible={showScoreboard && mpPlayers.length > 0}
+        players={mpPlayers}
+        localPlayerId={mpLocalId}
+      />
 
       {/* Multiplayer lobby overlay */}
       <LobbyUI
