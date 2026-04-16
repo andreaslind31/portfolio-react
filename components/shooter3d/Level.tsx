@@ -185,6 +185,7 @@ function CeilingLight({
   position,
   color = EMISSIVE_FIRE,
   intensity = 3,
+  flicker = false,
 }: {
   position: [number, number, number];
   color?: string;
@@ -315,6 +316,7 @@ function Crate({
 }: {
   position: [number, number, number];
   size?: [number, number, number];
+  color?: string;
   stripeColor?: string;
   texture?: THREE.CanvasTexture;
 }) {
