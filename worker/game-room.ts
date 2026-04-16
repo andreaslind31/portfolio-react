@@ -159,7 +159,11 @@ export class GameRoom {
           },
           playerId
         );
-        // TODO: server-side hit detection in Phase M3
+
+        // Server-side PvP hit detection (deathmatch mode)
+        if (this.gameMode === "deathmatch") {
+          this.checkPvPHit(playerId, msg.origin, msg.direction, msg.weapon);
+        }
         break;
 
       case "startGame":
@@ -247,6 +251,89 @@ export class GameRoom {
 
   private broadcastAll(msg: ServerMessage) {
     this.broadcast(msg);
+  }
+
+  // Weapon damage values (mirrored from client)
+  private static readonly WEAPON_DAMAGE: Record<string, number> = {
+    blaster: 25, shotgun: 15, plasma: 60, rocket: 80,
+  };
+
+  private checkPvPHit(
+    shooterId: string,
+    origin: [number, number, number],
+    direction: [number, number, number],
+    weapon: string
+  ) {
+    const HIT_RADIUS = 1.2; // slightly generous for network lag
+    const MAX_RANGE = 50;
+    const damage = GameRoom.WEAPON_DAMAGE[weapon] || 25;
+
+    const ox = origin[0], oy = origin[1], oz = origin[2];
+    const dx = direction[0], dy = direction[1], dz = direction[2];
+    const len = Math.sqrt(dx * dx + dy * dy + dz * dz);
+    const ndx = dx / len, ndy = dy / len, ndz = dz / len;
+
+    for (const [targetId, target] of this.players) {
+      if (targetId === shooterId) continue;
+      if (!target.info.alive) continue;
+
+      const px = target.info.position[0] - ox;
+      const py = target.info.position[1] - oy;
+      const pz = target.info.position[2] - oz;
+
+      // Project target position onto ray
+      const t = px * ndx + py * ndy + pz * ndz;
+      if (t < 0 || t > MAX_RANGE) continue;
+
+      // Distance from ray
+      const cx = ox + ndx * t - target.info.position[0];
+      const cy = oy + ndy * t - target.info.position[1];
+      const cz = oz + ndz * t - target.info.position[2];
+      const distSq = cx * cx + cy * cy + cz * cz;
+
+      if (distSq < HIT_RADIUS * HIT_RADIUS) {
+        target.info.health = Math.max(0, target.info.health - damage);
+        this.broadcastAll({
+          type: "playerDamage",
+          playerId: targetId,
+          health: target.info.health,
+          attackerId: shooterId,
+        });
+
+        if (target.info.health <= 0) {
+          target.info.alive = false;
+          target.info.deaths++;
+          const shooter = this.players.get(shooterId);
+          if (shooter) {
+            shooter.info.kills++;
+            shooter.info.score += 100;
+          }
+          this.broadcastAll({
+            type: "playerDeath",
+            playerId: targetId,
+            killerId: shooterId,
+          });
+
+          // Auto-respawn after 3 seconds
+          setTimeout(() => {
+            if (!this.players.has(targetId)) return;
+            const spawnPoints: [number, number, number][] = [
+              [0, 2, 5], [0, 2, -5], [5, 2, 0], [-5, 2, 0],
+            ];
+            const spawn = spawnPoints[Math.floor(Math.random() * spawnPoints.length)];
+            target.info.alive = true;
+            target.info.health = 100;
+            target.info.position = spawn;
+            this.broadcastAll({
+              type: "playerRespawn",
+              playerId: targetId,
+              position: spawn,
+            });
+          }, 3000);
+        }
+        break; // Only hit one player per shot (except shotgun would need per-pellet)
+      }
+    }
   }
 
   private getAllPlayerInfos(): PlayerInfo[] {

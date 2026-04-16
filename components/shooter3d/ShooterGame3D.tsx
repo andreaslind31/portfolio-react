@@ -1555,10 +1555,58 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
             return prev;
           });
         },
-        onPlayerShoot: () => { /* Phase M3 */ },
-        onPlayerDamage: () => { /* Phase M3 */ },
-        onPlayerDeath: () => { /* Phase M3 */ },
-        onPlayerRespawn: () => { /* Phase M3 */ },
+        onPlayerShoot: (playerId, origin, direction, weapon) => {
+          // Render remote player's projectile
+          const config = WEAPON_CONFIGS[weapon as WeaponType] || WEAPON_CONFIGS.blaster;
+          const newProjectiles: ProjectileData[] = [];
+          for (let i = 0; i < config.pellets; i++) {
+            const dir = new THREE.Vector3(...direction);
+            if (config.spread > 0) {
+              dir.x += (Math.random() - 0.5) * config.spread * 2;
+              dir.y += (Math.random() - 0.5) * config.spread;
+              dir.z += (Math.random() - 0.5) * config.spread * 2;
+              dir.normalize();
+            }
+            newProjectiles.push({
+              id: nextId++,
+              position: new THREE.Vector3(...origin),
+              direction: dir,
+              speed: config.speed,
+              alive: true,
+              friendly: true,
+              life: config.projectileLife,
+              color: config.color,
+              size: config.projectileSize,
+            });
+          }
+          setProjectiles((prev) => [...prev, ...newProjectiles]);
+        },
+        onPlayerDamage: (_playerId, health, _attackerId) => {
+          // If this is our player being damaged
+          setHealth(health);
+          setDamageFlash(true);
+          setTimeout(() => setDamageFlash(false), 150);
+          playDamageSound();
+          shakeIntensity.current = 0.12;
+        },
+        onPlayerDeath: (playerId, killerId) => {
+          // Update remote player alive state
+          setRemotePlayers((prev) =>
+            prev.map((p) => p.id === playerId ? { ...p, alive: false } : p)
+          );
+        },
+        onPlayerRespawn: (playerId, position) => {
+          setRemotePlayers((prev) =>
+            prev.map((p) => {
+              if (p.id === playerId) {
+                p.targetPosition.set(...position);
+                p.position.set(...position);
+                return { ...p, alive: true, health: 100 };
+              }
+              return p;
+            })
+          );
+        },
         onGameStart: (mode) => {
           // Start the game when host presses start
           startGame("waves");
@@ -1659,6 +1707,15 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
       }
 
       setProjectiles((prev) => [...prev, ...newProjectiles]);
+
+      // Broadcast shoot to multiplayer
+      if (connectionManager.current?.getState() === "connected") {
+        connectionManager.current.sendShoot(
+          [origin.x, origin.y, origin.z],
+          [direction.x, direction.y, direction.z],
+          currentWeapon
+        );
+      }
     },
     [gameState, currentWeapon, weaponAmmo]
   );
