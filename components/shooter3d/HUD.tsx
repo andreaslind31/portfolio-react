@@ -26,7 +26,7 @@ interface HUDProps {
   currentWeapon: WeaponType;
   weaponAmmo: Record<WeaponType, number>;
   locked: boolean;
-  gameState: "menu" | "modeSelect" | "mapSelect" | "playing" | "gameover" | "victory";
+  gameState: "menu" | "modeSelect" | "mapSelect" | "multiplayer" | "playing" | "gameover" | "victory";
   onStart: () => void;
   onRestart: () => void;
   onScoreSubmit?: (name: string, score: number) => Promise<string | null>;
@@ -61,6 +61,7 @@ interface HUDProps {
   onNextMap: () => void;
   clearedMap?: MapConfig | null;
   hasNextMap: boolean;
+  onMultiplayer: () => void;
 }
 
 export default function HUD({
@@ -103,6 +104,7 @@ export default function HUD({
   onNextMap,
   clearedMap,
   hasNextMap,
+  onMultiplayer,
 }: HUDProps) {
   const [submitName, setSubmitName] = useState("");
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -809,10 +811,32 @@ export default function HUD({
             </button>
           </div>
 
+          {/* Multiplayer button */}
+          <button
+            onClick={onMultiplayer}
+            style={{
+              marginTop: 16,
+              background: "transparent",
+              border: "2px solid #ff6622",
+              color: "#ff6622",
+              padding: "14px 40px",
+              fontSize: 14,
+              letterSpacing: 3,
+              cursor: "pointer",
+              textShadow: "0 0 10px #ff6622",
+              boxShadow: "0 0 15px #ff662233",
+              fontFamily: "'Courier New', monospace",
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "#ff662222"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+          >
+            MULTIPLAYER
+          </button>
+
           <button
             onClick={onBackToMenu}
             style={{
-              marginTop: 32,
+              marginTop: 20,
               background: "transparent",
               border: "1px solid #ffffff33",
               color: "#ffffff88",

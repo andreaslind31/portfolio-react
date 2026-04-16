@@ -21,6 +21,8 @@ import Doors from "./Doors";
 import { MAPS, getUnlockedMaps, unlockMap, getNextMapId, type MapConfig } from "./Maps";
 import DestructibleCrates, { type CrateData, createInitialCrates } from "./DestructibleCrates";
 import PostProcessing from "./PostProcessing";
+import { ConnectionManager, LobbyUI } from "./multiplayer";
+import type { ConnectionState, PlayerInfo } from "./multiplayer";
 import {
   playBlasterSound,
   playShotgunSound,
@@ -502,7 +504,7 @@ function GameLoop({
   health: number;
   setHealth: React.Dispatch<React.SetStateAction<number>>;
   setScore: React.Dispatch<React.SetStateAction<number>>;
-  gameState: "menu" | "modeSelect" | "mapSelect" | "playing" | "gameover" | "victory";
+  gameState: "menu" | "modeSelect" | "mapSelect" | "multiplayer" | "playing" | "gameover" | "victory";
   setDamageFlash: React.Dispatch<React.SetStateAction<boolean>>;
   setWave: React.Dispatch<React.SetStateAction<number>>;
   wave: number;
@@ -1259,12 +1261,19 @@ interface ShooterGame3DProps {
 }
 
 export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
-  const [gameState, setGameState] = useState<"menu" | "modeSelect" | "mapSelect" | "playing" | "gameover" | "victory">(
+  const [gameState, setGameState] = useState<"menu" | "modeSelect" | "mapSelect" | "multiplayer" | "playing" | "gameover" | "victory">(
     "menu"
   );
   const [gameMode, setGameMode] = useState<"waves" | "maps">("waves");
   const [selectedMapId, setSelectedMapId] = useState<string>("map01");
   const [unlockedMaps, setUnlockedMaps] = useState<string[]>(["map01"]);
+  // Multiplayer state
+  const [mpConnectionState, setMpConnectionState] = useState<ConnectionState>("disconnected");
+  const [mpRoomCode, setMpRoomCode] = useState("");
+  const [mpPlayers, setMpPlayers] = useState<PlayerInfo[]>([]);
+  const [mpHostId, setMpHostId] = useState("");
+  const [mpLocalId, setMpLocalId] = useState("");
+  const connectionManager = useRef<ConnectionManager | null>(null);
   const [health, setHealth] = useState(MAX_HEALTH);
   const [score, setScore] = useState(0);
   const [wave, setWave] = useState(1);
@@ -1480,6 +1489,61 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
       startGame("waves");
     }
   }, [gameMode, selectedMapId, startGame]);
+
+  // ── Multiplayer handlers ──
+  const handleMultiplayer = useCallback(() => {
+    setGameState("multiplayer");
+    if (!connectionManager.current) {
+      connectionManager.current = new ConnectionManager({
+        onStateChange: setMpConnectionState,
+        onRoomInfo: (info) => {
+          setMpRoomCode(info.roomCode);
+          setMpPlayers(info.players);
+          setMpHostId(info.hostId);
+          setMpLocalId(info.localPlayerId);
+        },
+        onPlayerJoined: (player) => {
+          setMpPlayers((prev) => [...prev, player]);
+        },
+        onPlayerLeft: (playerId) => {
+          setMpPlayers((prev) => prev.filter((p) => p.id !== playerId));
+        },
+        onPlayerUpdate: () => { /* Phase M2 */ },
+        onPlayerShoot: () => { /* Phase M3 */ },
+        onPlayerDamage: () => { /* Phase M3 */ },
+        onPlayerDeath: () => { /* Phase M3 */ },
+        onPlayerRespawn: () => { /* Phase M3 */ },
+        onGameStart: (mode) => {
+          // Start the game when host presses start
+          startGame("waves");
+        },
+        onChat: () => { /* Phase M6 */ },
+        onError: (msg) => { console.error("Multiplayer error:", msg); },
+      });
+    }
+  }, [startGame]);
+
+  const handleMpHost = useCallback((name: string) => {
+    connectionManager.current?.createRoom(name);
+  }, []);
+
+  const handleMpJoin = useCallback((roomCode: string, name: string) => {
+    // TODO: look up roomId from roomCode (needs server endpoint)
+    connectionManager.current?.joinRoom(roomCode, name);
+  }, []);
+
+  const handleMpStartGame = useCallback((mode: "coop-waves" | "coop-maps" | "deathmatch") => {
+    connectionManager.current?.sendStartGame(mode);
+  }, []);
+
+  const handleMpLeave = useCallback(() => {
+    connectionManager.current?.disconnect();
+    setMpPlayers([]);
+    setMpRoomCode("");
+    setMpHostId("");
+    setMpLocalId("");
+    setGameState("modeSelect");
+  }, []);
 
   const handleShoot = useCallback(
     (origin: THREE.Vector3, direction: THREE.Vector3) => {
@@ -1729,9 +1793,27 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
         onNextMap={handleNextMap}
         clearedMap={MAPS.find((m) => m.id === selectedMapId) ?? null}
         hasNextMap={getNextMapId(selectedMapId) !== null}
+        onMultiplayer={handleMultiplayer}
       />
 
       <DamageFlash flash={damageFlash} />
+
+      {/* Multiplayer lobby overlay */}
+      <LobbyUI
+        visible={gameState === "multiplayer"}
+        roomCode={mpRoomCode}
+        players={mpPlayers}
+        hostId={mpHostId}
+        localPlayerId={mpLocalId}
+        roomState="lobby"
+        connectionState={mpConnectionState}
+        isHost={mpLocalId === mpHostId}
+        onHost={handleMpHost}
+        onJoin={handleMpJoin}
+        onStartGame={handleMpStartGame}
+        onLeave={handleMpLeave}
+        onBack={() => setGameState("modeSelect")}
+      />
     </div>
   );
 }
