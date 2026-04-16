@@ -1607,9 +1607,15 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
             })
           );
         },
-        onGameStart: (mode) => {
-          // Start the game when host presses start
-          startGame("waves");
+        onGameStart: (mode, mapId) => {
+          // Start the game when host presses start — initialize based on mode
+          if (mode === "coop-waves" || mode === "deathmatch") {
+            startGame("waves");
+          } else if (mode === "coop-maps" && mapId) {
+            startGame("maps", mapId);
+          } else {
+            startGame("waves");
+          }
         },
         onEnemySync: (syncedEnemies) => {
           // Non-host: update local enemies from host's authoritative state

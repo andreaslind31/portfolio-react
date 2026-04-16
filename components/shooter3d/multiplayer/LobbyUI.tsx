@@ -266,6 +266,14 @@ export default function LobbyUI({
             CO-OP WAVES
           </button>
           <button
+            style={{ ...btnStyle, fontSize: 12, padding: "10px 20px", borderColor: "#556b2f", color: "#556b2f" }}
+            onClick={() => onStartGame("coop-maps")}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "#556b2f22"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+          >
+            CO-OP MAPS
+          </button>
+          <button
             style={{ ...btnStyle, fontSize: 12, padding: "10px 20px", borderColor: "#cc3300", color: "#cc3300" }}
             onClick={() => onStartGame("deathmatch")}
             onMouseEnter={(e) => { e.currentTarget.style.background = "#cc330022"; }}
