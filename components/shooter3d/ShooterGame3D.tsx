@@ -21,8 +21,8 @@ import Doors from "./Doors";
 import { MAPS, getUnlockedMaps, unlockMap, getNextMapId, type MapConfig } from "./Maps";
 import DestructibleCrates, { type CrateData, createInitialCrates } from "./DestructibleCrates";
 import PostProcessing from "./PostProcessing";
-import { ConnectionManager, LobbyUI } from "./multiplayer";
-import type { ConnectionState, PlayerInfo } from "./multiplayer";
+import { ConnectionManager, LobbyUI, RemotePlayers } from "./multiplayer";
+import type { ConnectionState, PlayerInfo, RemotePlayerData } from "./multiplayer";
 import {
   playBlasterSound,
   playShotgunSound,
@@ -488,6 +488,7 @@ function GameLoop({
   setPlayerSpeedMult,
   gameMode,
   onMapCleared,
+  connectionManager,
 }: {
   enemies: EnemyData[];
   setEnemies: React.Dispatch<React.SetStateAction<EnemyData[]>>;
@@ -540,6 +541,7 @@ function GameLoop({
   setPlayerSpeedMult: React.Dispatch<React.SetStateAction<number>>;
   gameMode: "waves" | "maps";
   onMapCleared: () => void;
+  connectionManager: React.MutableRefObject<ConnectionManager | null>;
 }) {
   const { camera } = useThree();
   const enemyShootTimers = useRef<Map<number, number>>(new Map());
@@ -564,6 +566,20 @@ function GameLoop({
 
     // ── Difficulty scaling ──
     const diff = getDifficultyMultiplier(wave);
+
+    // ── Send local player state to multiplayer server ──
+    if (connectionManager.current && connectionManager.current.getState() === "connected") {
+      const pos: [number, number, number] = [
+        playerPos.current.x,
+        playerPos.current.y,
+        playerPos.current.z,
+      ];
+      connectionManager.current.queuePlayerState(
+        pos,
+        [playerYaw.current, camera.rotation.x],
+        currentWeapon
+      );
+    }
 
     // ── Footstep sound ──
     footstepTimer.current += dt;
@@ -1274,6 +1290,7 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
   const [mpHostId, setMpHostId] = useState("");
   const [mpLocalId, setMpLocalId] = useState("");
   const connectionManager = useRef<ConnectionManager | null>(null);
+  const [remotePlayers, setRemotePlayers] = useState<RemotePlayerData[]>([]);
   const [health, setHealth] = useState(MAX_HEALTH);
   const [score, setScore] = useState(0);
   const [wave, setWave] = useState(1);
@@ -1504,11 +1521,40 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
         },
         onPlayerJoined: (player) => {
           setMpPlayers((prev) => [...prev, player]);
+          // Add to 3D remote players
+          setRemotePlayers((prev) => [
+            ...prev.filter((p) => p.id !== player.id),
+            {
+              id: player.id,
+              name: player.name,
+              position: new THREE.Vector3(...player.position),
+              targetPosition: new THREE.Vector3(...player.position),
+              rotation: player.rotation,
+              targetRotation: player.rotation,
+              weapon: player.weapon,
+              health: player.health,
+              alive: player.alive,
+              lastUpdate: Date.now(),
+            },
+          ]);
         },
         onPlayerLeft: (playerId) => {
           setMpPlayers((prev) => prev.filter((p) => p.id !== playerId));
+          setRemotePlayers((prev) => prev.filter((p) => p.id !== playerId));
         },
-        onPlayerUpdate: () => { /* Phase M2 */ },
+        onPlayerUpdate: (playerId, position, rotation, weapon) => {
+          setRemotePlayers((prev) => {
+            const existing = prev.find((p) => p.id === playerId);
+            if (existing) {
+              existing.targetPosition.set(...position);
+              existing.targetRotation = rotation;
+              existing.weapon = weapon;
+              existing.lastUpdate = Date.now();
+              return [...prev];
+            }
+            return prev;
+          });
+        },
         onPlayerShoot: () => { /* Phase M3 */ },
         onPlayerDamage: () => { /* Phase M3 */ },
         onPlayerDeath: () => { /* Phase M3 */ },
@@ -1694,6 +1740,7 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
             <Pickups pickups={pickups} />
             <DestructibleCrates crates={crates} />
             <Doors />
+            <RemotePlayers players={remotePlayers} />
             <ScreenShake shakeIntensity={shakeIntensity} />
             <GameLoop
               enemies={enemies}
@@ -1747,6 +1794,7 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
               setPlayerSpeedMult={setPlayerSpeedMult}
               gameMode={gameMode}
               onMapCleared={handleMapCleared}
+              connectionManager={connectionManager}
             />
             <PostProcessing />
           </Suspense>

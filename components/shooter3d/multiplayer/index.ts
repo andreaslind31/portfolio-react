@@ -3,3 +3,5 @@ export type { ConnectionState, RoomInfo, ConnectionCallbacks } from "./Connectio
 export type { ClientMessage, ServerMessage, PlayerInfo, RoomState, EnemySyncData } from "./protocol";
 export { generateRoomCode } from "./protocol";
 export { default as LobbyUI } from "./LobbyUI";
+export { default as RemotePlayers } from "./RemotePlayers";
+export type { RemotePlayerData } from "./RemotePlayers";
