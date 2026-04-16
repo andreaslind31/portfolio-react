@@ -32,8 +32,11 @@ export default function Player({ locked, sensitivity = DEFAULT_SENSITIVITY, spee
 
   // Keyboard handlers
   const onKeyDown = useCallback((e: KeyboardEvent) => {
+    if (locked && ["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.code)) {
+      e.preventDefault();
+    }
     keys.current.add(e.code);
-  }, []);
+  }, [locked]);
 
   const onKeyUp = useCallback((e: KeyboardEvent) => {
     keys.current.delete(e.code);
