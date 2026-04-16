@@ -12,16 +12,17 @@ import {
   createCrateTexture,
 } from "./Textures";
 
-// ── Warmer, brighter Doom-inspired palette ──────────────
-const FLOOR_COLOR = "#4a3d30";
-const WALL_COLOR = "#5a4838";
-const TRIM_COLOR = "#5a4028";
-const CEILING_COLOR = "#3a3025";
-const EMISSIVE_CYAN = "#00d4ff";
-const EMISSIVE_PURPLE = "#cc66ff";
-const EMISSIVE_RED = "#ff4455";
-const EMISSIVE_ORANGE = "#ffa844";
-const EMISSIVE_GREEN = "#44ff88";
+// ── Doom palette ────────────────────────────────────────
+const FLOOR_COLOR = "#4a3828";
+const FLOOR_DARK = "#3a2a1a";
+const WALL_COLOR = "#5c4a3a";
+const TRIM_COLOR = "#6b5540";
+const CEILING_COLOR = "#2a2018";
+const EMISSIVE_FIRE = "#ff6622";
+const EMISSIVE_LAVA = "#cc3300";
+const EMISSIVE_BLOOD = "#8B0000";
+const EMISSIVE_RUST = "#aa5522";
+const EMISSIVE_SICK = "#556b2f";
 
 // ── Arena dimensions (exported for game logic) ──────────
 export const ARENA_HALF_W = 25;
@@ -111,8 +112,8 @@ export const WALL_COLLIDERS: [number, number, number, number][] = [
 function GlowStrip({
   position,
   scale,
-  color = EMISSIVE_CYAN,
-  intensity = 2,
+  color = EMISSIVE_FIRE,
+  intensity = 0.8,
 }: {
   position: [number, number, number];
   scale: [number, number, number];
@@ -182,8 +183,8 @@ function Wall({
 
 function CeilingLight({
   position,
-  color = EMISSIVE_CYAN,
-  intensity = 10,
+  color = EMISSIVE_FIRE,
+  intensity = 3,
   flicker = false,
 }: {
   position: [number, number, number];
@@ -214,7 +215,7 @@ function CeilingLight({
           ref={matRef}
           color={color}
           emissive={color}
-          emissiveIntensity={3}
+          emissiveIntensity={1.2}
           toneMapped={false}
         />
       </mesh>
@@ -225,7 +226,7 @@ function CeilingLight({
 
 function EnergyPillar({
   position,
-  color = EMISSIVE_CYAN,
+  color = EMISSIVE_FIRE,
 }: {
   position: [number, number, number];
   color?: string;
@@ -234,7 +235,7 @@ function EnergyPillar({
   useFrame((state) => {
     if (meshRef.current) {
       const mat = meshRef.current.material as THREE.MeshStandardMaterial;
-      mat.emissiveIntensity = 1.5 + Math.sin(state.clock.elapsedTime * 2) * 0.5;
+      mat.emissiveIntensity = 0.8 + Math.sin(state.clock.elapsedTime * 2) * 0.3;
     }
   });
 
@@ -242,16 +243,17 @@ function EnergyPillar({
     <group position={position}>
       <mesh castShadow>
         <cylinderGeometry args={[0.3, 0.4, 0.3, 8]} />
-        <meshStandardMaterial color={TRIM_COLOR} metalness={0.3} roughness={0.5} emissive={TRIM_COLOR} emissiveIntensity={0.06} />
+        <meshStandardMaterial color={TRIM_COLOR} metalness={0.1} roughness={0.85} emissive={TRIM_COLOR} emissiveIntensity={0.03} />
       </mesh>
       <mesh ref={meshRef} position={[0, 1.5, 0]} castShadow>
         <cylinderGeometry args={[0.15, 0.15, 2.7, 8]} />
-        <meshStandardMaterial color={color} emissive={color} emissiveIntensity={2} toneMapped={false} transparent opacity={0.8} />
+        <meshStandardMaterial color={color} emissive={color} emissiveIntensity={1} toneMapped={false} transparent opacity={0.8} />
       </mesh>
       <mesh position={[0, 3, 0]} castShadow>
         <cylinderGeometry args={[0.4, 0.3, 0.3, 8]} />
-        <meshStandardMaterial color={TRIM_COLOR} metalness={0.3} roughness={0.5} emissive={TRIM_COLOR} emissiveIntensity={0.06} />
+        <meshStandardMaterial color={TRIM_COLOR} metalness={0.1} roughness={0.85} emissive={TRIM_COLOR} emissiveIntensity={0.03} />
       </mesh>
+      <pointLight position={[0, 1.5, 0]} color={color} intensity={1.5} distance={8} decay={2} />
     </group>
   );
 }
@@ -260,7 +262,7 @@ function EnergyPillar({
 function SpawnPortal({
   position,
   rotation,
-  color = EMISSIVE_RED,
+  color = EMISSIVE_BLOOD,
 }: {
   position: [number, number, number];
   rotation?: [number, number, number];
@@ -270,7 +272,7 @@ function SpawnPortal({
   useFrame((state) => {
     if (ringRef.current) {
       const mat = ringRef.current.material as THREE.MeshStandardMaterial;
-      mat.emissiveIntensity = 1.5 + Math.sin(state.clock.elapsedTime * 3) * 1;
+      mat.emissiveIntensity = 0.8 + Math.sin(state.clock.elapsedTime * 3) * 0.5;
       ringRef.current.rotation.z = state.clock.elapsedTime * 0.5;
     }
   });
@@ -280,27 +282,27 @@ function SpawnPortal({
       {/* Arch frame */}
       <mesh position={[-1.2, 1.5, 0]} castShadow>
         <boxGeometry args={[0.2, 3, 0.3]} />
-        <meshStandardMaterial color={TRIM_COLOR} metalness={0.3} roughness={0.5} emissive={TRIM_COLOR} emissiveIntensity={0.06} />
+        <meshStandardMaterial color={TRIM_COLOR} metalness={0.1} roughness={0.85} emissive={TRIM_COLOR} emissiveIntensity={0.03} />
       </mesh>
       <mesh position={[1.2, 1.5, 0]} castShadow>
         <boxGeometry args={[0.2, 3, 0.3]} />
-        <meshStandardMaterial color={TRIM_COLOR} metalness={0.3} roughness={0.5} emissive={TRIM_COLOR} emissiveIntensity={0.06} />
+        <meshStandardMaterial color={TRIM_COLOR} metalness={0.1} roughness={0.85} emissive={TRIM_COLOR} emissiveIntensity={0.03} />
       </mesh>
       <mesh position={[0, 3.1, 0]} castShadow>
         <boxGeometry args={[2.6, 0.2, 0.3]} />
-        <meshStandardMaterial color={TRIM_COLOR} metalness={0.3} roughness={0.5} emissive={TRIM_COLOR} emissiveIntensity={0.06} />
+        <meshStandardMaterial color={TRIM_COLOR} metalness={0.1} roughness={0.85} emissive={TRIM_COLOR} emissiveIntensity={0.03} />
       </mesh>
       {/* Spinning energy ring */}
       <mesh ref={ringRef} position={[0, 1.5, 0]}>
         <torusGeometry args={[1, 0.05, 8, 24]} />
-        <meshStandardMaterial color={color} emissive={color} emissiveIntensity={2} toneMapped={false} transparent opacity={0.7} />
+        <meshStandardMaterial color={color} emissive={color} emissiveIntensity={1} toneMapped={false} transparent opacity={0.7} />
       </mesh>
       {/* Inner glow plane */}
       <mesh position={[0, 1.5, 0]}>
         <planeGeometry args={[2, 3]} />
         <meshBasicMaterial color={color} transparent opacity={0.08} side={THREE.DoubleSide} depthWrite={false} />
       </mesh>
-      {/* Emissive ring provides glow without point light */}
+      <pointLight position={[0, 1.5, 0]} color={color} intensity={2} distance={8} decay={2} />
     </group>
   );
 }
@@ -309,11 +311,12 @@ function SpawnPortal({
 function Crate({
   position,
   size = [1.2, 1.2, 1.2] as [number, number, number],
-  stripeColor = EMISSIVE_ORANGE,
-  texture,
+  color = TRIM_COLOR,
+  stripeColor = EMISSIVE_RUST,
 }: {
   position: [number, number, number];
   size?: [number, number, number];
+  color?: string;
   stripeColor?: string;
   texture?: THREE.CanvasTexture;
 }) {
@@ -321,16 +324,12 @@ function Crate({
     <RigidBody type="fixed" position={position} colliders="cuboid">
       <mesh castShadow receiveShadow>
         <boxGeometry args={size} />
-        {texture ? (
-          <meshStandardMaterial map={texture} metalness={0.3} roughness={0.7} />
-        ) : (
-          <meshStandardMaterial color={TRIM_COLOR} metalness={0.3} roughness={0.7} />
-        )}
+        <meshStandardMaterial color={color} metalness={0.1} roughness={0.85} emissive={color} emissiveIntensity={0.03} />
       </mesh>
       {/* Hazard stripe */}
       <mesh position={[0, 0, size[2] / 2 + 0.001]}>
         <planeGeometry args={[size[0] * 0.8, size[1] * 0.15]} />
-        <meshStandardMaterial color={stripeColor} emissive={stripeColor} emissiveIntensity={1} toneMapped={false} />
+        <meshStandardMaterial color={stripeColor} emissive={stripeColor} emissiveIntensity={0.4} toneMapped={false} />
       </mesh>
     </RigidBody>
   );
@@ -340,7 +339,7 @@ function Crate({
 function Terminal({
   position,
   rotation,
-  screenColor = EMISSIVE_CYAN,
+  screenColor = EMISSIVE_SICK,
 }: {
   position: [number, number, number];
   rotation?: [number, number, number];
@@ -360,12 +359,12 @@ function Terminal({
       {/* Console base */}
       <mesh position={[0, 0.4, 0]} castShadow>
         <boxGeometry args={[0.8, 0.8, 0.5]} />
-        <meshStandardMaterial color="#2e2e48" metalness={0.3} roughness={0.5} emissive="#2e2e48" emissiveIntensity={0.06} />
+        <meshStandardMaterial color="#3a2a1a" metalness={0.1} roughness={0.85} emissive="#3a2a1a" emissiveIntensity={0.03} />
       </mesh>
       {/* Screen */}
       <mesh ref={screenRef} position={[0, 1, -0.05]} rotation={[-0.2, 0, 0]}>
         <planeGeometry args={[0.6, 0.4]} />
-        <meshStandardMaterial color={screenColor} emissive={screenColor} emissiveIntensity={2} toneMapped={false} />
+        <meshStandardMaterial color={screenColor} emissive={screenColor} emissiveIntensity={0.8} toneMapped={false} />
       </mesh>
     </group>
   );
@@ -387,7 +386,7 @@ function Ramp({
     <RigidBody type="fixed" position={position} rotation={rotation} colliders="cuboid">
       <mesh rotation={rampRotation} castShadow receiveShadow>
         <boxGeometry args={size} />
-        <meshStandardMaterial color={TRIM_COLOR} metalness={0.3} roughness={0.5} emissive={TRIM_COLOR} emissiveIntensity={0.06} />
+        <meshStandardMaterial color={TRIM_COLOR} metalness={0.1} roughness={0.85} emissive={TRIM_COLOR} emissiveIntensity={0.03} />
       </mesh>
     </RigidBody>
   );
@@ -435,7 +434,7 @@ export default function Level() {
           />
         </mesh>
       </RigidBody>
-      <gridHelper args={[W, 50, EMISSIVE_CYAN, "#0e0c14"]} position={[0, 0.01, 0]} />
+      <gridHelper args={[W, 50, "#5c4a3a", "#2a2018"]} position={[0, 0.01, 0]} />
 
       {/* Ceiling */}
       <RigidBody type="fixed" colliders="cuboid">
@@ -459,15 +458,15 @@ export default function Level() {
       <Wall position={[-ARENA_HALF_W, WALL_H / 2, 0]} rotation={[0, Math.PI / 2, 0]} size={[D, WALL_H, WALL_T]} texture={wallTex} />
 
       {/* Perimeter glow strips — floor level */}
-      <GlowStrip position={[0, 0.15, -ARENA_HALF_D + 0.3]} scale={[W - 1, 0.08, 0.08]} />
-      <GlowStrip position={[0, 0.15, ARENA_HALF_D - 0.3]} scale={[W - 1, 0.08, 0.08]} />
-      <GlowStrip position={[-ARENA_HALF_W + 0.3, 0.15, 0]} scale={[0.08, 0.08, D - 1]} />
-      <GlowStrip position={[ARENA_HALF_W - 0.3, 0.15, 0]} scale={[0.08, 0.08, D - 1]} />
+      <GlowStrip position={[0, 0.15, -ARENA_HALF_D + 0.3]} scale={[W - 1, 0.08, 0.08]} color={EMISSIVE_RUST} />
+      <GlowStrip position={[0, 0.15, ARENA_HALF_D - 0.3]} scale={[W - 1, 0.08, 0.08]} color={EMISSIVE_RUST} />
+      <GlowStrip position={[-ARENA_HALF_W + 0.3, 0.15, 0]} scale={[0.08, 0.08, D - 1]} color={EMISSIVE_RUST} />
+      <GlowStrip position={[ARENA_HALF_W - 0.3, 0.15, 0]} scale={[0.08, 0.08, D - 1]} color={EMISSIVE_RUST} />
       {/* Mid-height accent strips */}
-      <GlowStrip position={[0, 2.5, -ARENA_HALF_D + 0.3]} scale={[W - 1, 0.05, 0.05]} color={EMISSIVE_PURPLE} />
-      <GlowStrip position={[0, 2.5, ARENA_HALF_D - 0.3]} scale={[W - 1, 0.05, 0.05]} color={EMISSIVE_PURPLE} />
-      <GlowStrip position={[-ARENA_HALF_W + 0.3, 2.5, 0]} scale={[0.05, 0.05, D - 1]} color={EMISSIVE_PURPLE} />
-      <GlowStrip position={[ARENA_HALF_W - 0.3, 2.5, 0]} scale={[0.05, 0.05, D - 1]} color={EMISSIVE_PURPLE} />
+      <GlowStrip position={[0, 2.5, -ARENA_HALF_D + 0.3]} scale={[W - 1, 0.05, 0.05]} color={EMISSIVE_BLOOD} />
+      <GlowStrip position={[0, 2.5, ARENA_HALF_D - 0.3]} scale={[W - 1, 0.05, 0.05]} color={EMISSIVE_BLOOD} />
+      <GlowStrip position={[-ARENA_HALF_W + 0.3, 2.5, 0]} scale={[0.05, 0.05, D - 1]} color={EMISSIVE_BLOOD} />
+      <GlowStrip position={[ARENA_HALF_W - 0.3, 2.5, 0]} scale={[0.05, 0.05, D - 1]} color={EMISSIVE_BLOOD} />
 
       {/* ═══════════════════════════════════════════════════
           CENTRAL HUB — open area with raised platform
@@ -477,10 +476,10 @@ export default function Level() {
       <RigidBody type="fixed" colliders="cuboid">
         <mesh position={[0, 0.5, 0]} castShadow receiveShadow>
           <boxGeometry args={[8, 1, 8]} />
-          <meshStandardMaterial color={TRIM_COLOR} metalness={0.3} roughness={0.5} emissive={TRIM_COLOR} emissiveIntensity={0.06} />
+          <meshStandardMaterial color={TRIM_COLOR} metalness={0.1} roughness={0.85} emissive={TRIM_COLOR} emissiveIntensity={0.03} />
         </mesh>
       </RigidBody>
-      <GlowStrip position={[0, 1.02, 0]} scale={[7.5, 0.04, 7.5]} color={EMISSIVE_CYAN} intensity={1} />
+      <GlowStrip position={[0, 1.02, 0]} scale={[7.5, 0.04, 7.5]} color={EMISSIVE_FIRE} intensity={0.4} />
 
       {/* Ramps to central platform — 4 sides */}
       <Ramp position={[0, 0.4, -5.5]} rampRotation={[0.2, 0, 0]} size={[3, 0.2, 4]} />
@@ -496,10 +495,10 @@ export default function Level() {
       <Wall position={[-5, WALL_H / 2, -14]} size={[0.5, WALL_H, 14]} texture={wallTex} />
       <Wall position={[5, WALL_H / 2, -14]} size={[0.5, WALL_H, 14]} texture={wallTex} />
       {/* Corridor glow strips */}
-      <GlowStrip position={[-4.7, 0.15, -14]} scale={[0.08, 0.08, 14]} color={EMISSIVE_RED} />
-      <GlowStrip position={[4.7, 0.15, -14]} scale={[0.08, 0.08, 14]} color={EMISSIVE_RED} />
-      <GlowStrip position={[-4.7, 2.5, -14]} scale={[0.05, 0.05, 14]} color={EMISSIVE_RED} />
-      <GlowStrip position={[4.7, 2.5, -14]} scale={[0.05, 0.05, 14]} color={EMISSIVE_RED} />
+      <GlowStrip position={[-4.7, 0.15, -14]} scale={[0.08, 0.08, 14]} color={EMISSIVE_BLOOD} />
+      <GlowStrip position={[4.7, 0.15, -14]} scale={[0.08, 0.08, 14]} color={EMISSIVE_BLOOD} />
+      <GlowStrip position={[-4.7, 2.5, -14]} scale={[0.05, 0.05, 14]} color={EMISSIVE_BLOOD} />
+      <GlowStrip position={[4.7, 2.5, -14]} scale={[0.05, 0.05, 14]} color={EMISSIVE_BLOOD} />
 
       {/* North room — wider opening */}
       <Wall position={[-12, WALL_H / 2, -22]} size={[0.5, WALL_H, 8]} texture={wallTex} />
@@ -508,21 +507,24 @@ export default function Level() {
       <Wall position={[-8.5, WALL_H / 2, -18]} size={[7, WALL_H, 0.5]} texture={wallTex} />
       <Wall position={[8.5, WALL_H / 2, -18]} size={[7, WALL_H, 0.5]} texture={wallTex} />
 
-      {/* Weapon rack crates — now rendered as destructible by DestructibleCrates */}
+      {/* Weapon rack crates */}
+      <Crate position={[-10, 0.6, -24]} size={[2, 1.2, 1.2]} stripeColor={EMISSIVE_BLOOD} />
+      <Crate position={[-10, 0.6, -21]} size={[2, 1.2, 1.2]} stripeColor={EMISSIVE_BLOOD} />
+      <Crate position={[10, 0.6, -24]} size={[2, 1.2, 1.2]} stripeColor={EMISSIVE_BLOOD} />
 
       {/* Spawn portal — north */}
-      <SpawnPortal position={[0, 0, -ARENA_HALF_D + 1.5]} color={EMISSIVE_RED} />
+      <SpawnPortal position={[0, 0, -ARENA_HALF_D + 1.5]} color={EMISSIVE_BLOOD} />
 
       {/* ═══════════════════════════════════════════════════
           SOUTH CORRIDOR — Reactor Room
           ═══════════════════════════════════════════════════ */}
 
-      <Wall position={[-5, WALL_H / 2, 14]} size={[0.5, WALL_H, 14]} texture={wallTex} />
-      <Wall position={[5, WALL_H / 2, 14]} size={[0.5, WALL_H, 14]} texture={wallTex} />
-      <GlowStrip position={[-4.7, 0.15, 14]} scale={[0.08, 0.08, 14]} color={EMISSIVE_PURPLE} />
-      <GlowStrip position={[4.7, 0.15, 14]} scale={[0.08, 0.08, 14]} color={EMISSIVE_PURPLE} />
-      <GlowStrip position={[-4.7, 2.5, 14]} scale={[0.05, 0.05, 14]} color={EMISSIVE_PURPLE} />
-      <GlowStrip position={[4.7, 2.5, 14]} scale={[0.05, 0.05, 14]} color={EMISSIVE_PURPLE} />
+      <Wall position={[-5, WALL_H / 2, 14]} size={[0.5, WALL_H, 14]} />
+      <Wall position={[5, WALL_H / 2, 14]} size={[0.5, WALL_H, 14]} />
+      <GlowStrip position={[-4.7, 0.15, 14]} scale={[0.08, 0.08, 14]} color={EMISSIVE_LAVA} />
+      <GlowStrip position={[4.7, 0.15, 14]} scale={[0.08, 0.08, 14]} color={EMISSIVE_LAVA} />
+      <GlowStrip position={[-4.7, 2.5, 14]} scale={[0.05, 0.05, 14]} color={EMISSIVE_LAVA} />
+      <GlowStrip position={[4.7, 2.5, 14]} scale={[0.05, 0.05, 14]} color={EMISSIVE_LAVA} />
 
       {/* South room */}
       <Wall position={[-12, WALL_H / 2, 22]} size={[0.5, WALL_H, 8]} texture={wallTex} />
@@ -534,25 +536,25 @@ export default function Level() {
       <RigidBody type="fixed" colliders="cuboid">
         <mesh position={[0, 1, 23]} castShadow>
           <cylinderGeometry args={[2, 2, 2, 12]} />
-          <meshStandardMaterial color={TRIM_COLOR} metalness={0.3} roughness={0.5} emissive={TRIM_COLOR} emissiveIntensity={0.06} />
+          <meshStandardMaterial color={TRIM_COLOR} metalness={0.1} roughness={0.85} emissive={TRIM_COLOR} emissiveIntensity={0.03} />
         </mesh>
       </RigidBody>
-      <GlowStrip position={[0, 2.1, 23]} scale={[3.5, 0.06, 3.5]} color={EMISSIVE_PURPLE} intensity={3} />
-      <EnergyPillar position={[-3, 0, 21]} color={EMISSIVE_PURPLE} />
-      <EnergyPillar position={[3, 0, 21]} color={EMISSIVE_PURPLE} />
-      <EnergyPillar position={[-3, 0, 25]} color={EMISSIVE_PURPLE} />
-      <EnergyPillar position={[3, 0, 25]} color={EMISSIVE_PURPLE} />
+      <GlowStrip position={[0, 2.1, 23]} scale={[3.5, 0.06, 3.5]} color={EMISSIVE_LAVA} intensity={1.2} />
+      <EnergyPillar position={[-3, 0, 21]} color={EMISSIVE_LAVA} />
+      <EnergyPillar position={[3, 0, 21]} color={EMISSIVE_LAVA} />
+      <EnergyPillar position={[-3, 0, 25]} color={EMISSIVE_LAVA} />
+      <EnergyPillar position={[3, 0, 25]} color={EMISSIVE_LAVA} />
 
-      <SpawnPortal position={[0, 0, ARENA_HALF_D - 1.5]} rotation={[0, Math.PI, 0]} color={EMISSIVE_PURPLE} />
+      <SpawnPortal position={[0, 0, ARENA_HALF_D - 1.5]} rotation={[0, Math.PI, 0]} color={EMISSIVE_LAVA} />
 
       {/* ═══════════════════════════════════════════════════
           EAST CORRIDOR — Server Room
           ═══════════════════════════════════════════════════ */}
 
-      <Wall position={[14, WALL_H / 2, -5]} rotation={[0, Math.PI / 2, 0]} size={[0.5, WALL_H, 14]} texture={wallTex} />
-      <Wall position={[14, WALL_H / 2, 5]} rotation={[0, Math.PI / 2, 0]} size={[0.5, WALL_H, 14]} texture={wallTex} />
-      <GlowStrip position={[14, 0.15, -4.7]} scale={[14, 0.08, 0.08]} color={EMISSIVE_CYAN} />
-      <GlowStrip position={[14, 0.15, 4.7]} scale={[14, 0.08, 0.08]} color={EMISSIVE_CYAN} />
+      <Wall position={[14, WALL_H / 2, -5]} rotation={[0, Math.PI / 2, 0]} size={[0.5, WALL_H, 14]} />
+      <Wall position={[14, WALL_H / 2, 5]} rotation={[0, Math.PI / 2, 0]} size={[0.5, WALL_H, 14]} />
+      <GlowStrip position={[14, 0.15, -4.7]} scale={[14, 0.08, 0.08]} color={EMISSIVE_SICK} />
+      <GlowStrip position={[14, 0.15, 4.7]} scale={[14, 0.08, 0.08]} color={EMISSIVE_SICK} />
 
       {/* East room */}
       <Wall position={[22, WALL_H / 2, -8]} rotation={[0, Math.PI / 2, 0]} size={[0.5, WALL_H, 8]} texture={wallTex} />
@@ -561,23 +563,23 @@ export default function Level() {
       <Wall position={[18, WALL_H / 2, 6.5]} size={[0.5, WALL_H, 3]} texture={wallTex} />
 
       {/* Server racks */}
-      <Terminal position={[20, 0, -6.5]} screenColor={EMISSIVE_CYAN} />
-      <Terminal position={[20, 0, -4.5]} screenColor={EMISSIVE_CYAN} />
-      <Terminal position={[20, 0, -2.5]} screenColor={EMISSIVE_GREEN} />
-      <Terminal position={[20, 0, 2.5]} screenColor={EMISSIVE_CYAN} />
-      <Terminal position={[20, 0, 4.5]} screenColor={EMISSIVE_CYAN} />
-      <Terminal position={[20, 0, 6.5]} screenColor={EMISSIVE_GREEN} />
+      <Terminal position={[20, 0, -6.5]} screenColor={EMISSIVE_SICK} />
+      <Terminal position={[20, 0, -4.5]} screenColor={EMISSIVE_SICK} />
+      <Terminal position={[20, 0, -2.5]} screenColor={EMISSIVE_FIRE} />
+      <Terminal position={[20, 0, 2.5]} screenColor={EMISSIVE_SICK} />
+      <Terminal position={[20, 0, 4.5]} screenColor={EMISSIVE_SICK} />
+      <Terminal position={[20, 0, 6.5]} screenColor={EMISSIVE_FIRE} />
 
-      <SpawnPortal position={[ARENA_HALF_W - 1.5, 0, 0]} rotation={[0, -Math.PI / 2, 0]} color={EMISSIVE_CYAN} />
+      <SpawnPortal position={[ARENA_HALF_W - 1.5, 0, 0]} rotation={[0, -Math.PI / 2, 0]} color={EMISSIVE_SICK} />
 
       {/* ═══════════════════════════════════════════════════
           WEST CORRIDOR — Cargo Bay
           ═══════════════════════════════════════════════════ */}
 
-      <Wall position={[-14, WALL_H / 2, -5]} rotation={[0, Math.PI / 2, 0]} size={[0.5, WALL_H, 14]} texture={wallTex} />
-      <Wall position={[-14, WALL_H / 2, 5]} rotation={[0, Math.PI / 2, 0]} size={[0.5, WALL_H, 14]} texture={wallTex} />
-      <GlowStrip position={[-14, 0.15, -4.7]} scale={[14, 0.08, 0.08]} color={EMISSIVE_ORANGE} />
-      <GlowStrip position={[-14, 0.15, 4.7]} scale={[14, 0.08, 0.08]} color={EMISSIVE_ORANGE} />
+      <Wall position={[-14, WALL_H / 2, -5]} rotation={[0, Math.PI / 2, 0]} size={[0.5, WALL_H, 14]} />
+      <Wall position={[-14, WALL_H / 2, 5]} rotation={[0, Math.PI / 2, 0]} size={[0.5, WALL_H, 14]} />
+      <GlowStrip position={[-14, 0.15, -4.7]} scale={[14, 0.08, 0.08]} color={EMISSIVE_RUST} />
+      <GlowStrip position={[-14, 0.15, 4.7]} scale={[14, 0.08, 0.08]} color={EMISSIVE_RUST} />
 
       {/* West room */}
       <Wall position={[-22, WALL_H / 2, -8]} rotation={[0, Math.PI / 2, 0]} size={[0.5, WALL_H, 8]} texture={wallTex} />
@@ -585,20 +587,26 @@ export default function Level() {
       <Wall position={[-18, WALL_H / 2, -6.5]} size={[0.5, WALL_H, 3]} texture={wallTex} />
       <Wall position={[-18, WALL_H / 2, 6.5]} size={[0.5, WALL_H, 3]} texture={wallTex} />
 
-      {/* Cargo stacks — now rendered as destructible by DestructibleCrates */}
+      {/* Cargo stacks */}
+      <Crate position={[-20, 0.6, -6]} stripeColor={EMISSIVE_RUST} />
+      <Crate position={[-20, 1.8, -6]} size={[1, 1, 1]} stripeColor={EMISSIVE_RUST} />
+      <Crate position={[-20, 0.6, -3]} size={[1.5, 1.2, 1.5]} stripeColor={EMISSIVE_RUST} />
+      <Crate position={[-20, 0.6, 3]} stripeColor={EMISSIVE_RUST} />
+      <Crate position={[-20, 0.6, 6]} size={[1.5, 1.2, 1.5]} stripeColor={EMISSIVE_RUST} />
+      <Crate position={[-20, 1.8, 6]} size={[1, 1, 1]} stripeColor={EMISSIVE_RUST} />
 
       {/* Elevated catwalk in cargo bay */}
       <RigidBody type="fixed" colliders="cuboid">
         <mesh position={[-17, 2, 0]} castShadow receiveShadow>
           <boxGeometry args={[2, 0.15, 10]} />
-          <meshStandardMaterial color={TRIM_COLOR} metalness={0.3} roughness={0.5} emissive={TRIM_COLOR} emissiveIntensity={0.06} />
+          <meshStandardMaterial color={TRIM_COLOR} metalness={0.1} roughness={0.85} emissive={TRIM_COLOR} emissiveIntensity={0.03} />
         </mesh>
       </RigidBody>
-      <GlowStrip position={[-17, 2.08, 0]} scale={[1.8, 0.03, 9.5]} color={EMISSIVE_ORANGE} intensity={1} />
+      <GlowStrip position={[-17, 2.08, 0]} scale={[1.8, 0.03, 9.5]} color={EMISSIVE_RUST} intensity={0.4} />
       {/* Ramp up to catwalk */}
       <Ramp position={[-16.5, 1, 6.5]} rotation={[0, Math.PI / 2, 0]} rampRotation={[0.22, 0, 0]} size={[2.5, 0.15, 5]} />
 
-      <SpawnPortal position={[-ARENA_HALF_W + 1.5, 0, 0]} rotation={[0, Math.PI / 2, 0]} color={EMISSIVE_ORANGE} />
+      <SpawnPortal position={[-ARENA_HALF_W + 1.5, 0, 0]} rotation={[0, Math.PI / 2, 0]} color={EMISSIVE_RUST} />
 
       {/* ═══════════════════════════════════════════════════
           CENTRAL HUB — Cover and details
@@ -615,8 +623,7 @@ export default function Level() {
           key={`hub-cover-${i}`}
           position={[x, 0.7, z]}
           size={[2.5, 1.4, 2.5]}
-          stripeColor={i < 2 ? EMISSIVE_CYAN : EMISSIVE_PURPLE}
-          texture={crateTex}
+          stripeColor={i < 2 ? EMISSIVE_FIRE : EMISSIVE_LAVA}
         />
       ))}
 
@@ -636,28 +643,44 @@ export default function Level() {
       ))}
 
       {/* Hub energy pillars */}
-      <EnergyPillar position={[10, 0, 0]} color={EMISSIVE_CYAN} />
-      <EnergyPillar position={[-10, 0, 0]} color={EMISSIVE_ORANGE} />
-      <EnergyPillar position={[0, 0, -9]} color={EMISSIVE_RED} />
-      <EnergyPillar position={[0, 0, 9]} color={EMISSIVE_PURPLE} />
+      <EnergyPillar position={[10, 0, 0]} color={EMISSIVE_FIRE} />
+      <EnergyPillar position={[-10, 0, 0]} color={EMISSIVE_RUST} />
+      <EnergyPillar position={[0, 0, -9]} color={EMISSIVE_BLOOD} />
+      <EnergyPillar position={[0, 0, 9]} color={EMISSIVE_LAVA} />
 
       {/* ═══════════════════════════════════════════════════
           LIGHTING
           ═══════════════════════════════════════════════════ */}
 
       {/* Central hub lights */}
-      {/* Hub — 1 central light only */}
-      <CeilingLight position={[0, WALL_H - 0.1, 0]} color={EMISSIVE_CYAN} intensity={10} />
+      <CeilingLight position={[0, WALL_H - 0.1, 0]} color={EMISSIVE_FIRE} intensity={4} />
+      <CeilingLight position={[-6, WALL_H - 0.1, -6]} />
+      <CeilingLight position={[6, WALL_H - 0.1, -6]} />
+      <CeilingLight position={[-6, WALL_H - 0.1, 6]} color={EMISSIVE_LAVA} />
+      <CeilingLight position={[6, WALL_H - 0.1, 6]} color={EMISSIVE_LAVA} />
 
-      {/* Corridors — 1 light per corridor (down from 3 each) */}
-      <CeilingLight position={[0, WALL_H - 0.1, -16]} color={EMISSIVE_RED} flicker />
-      <CeilingLight position={[0, WALL_H - 0.1, 16]} color={EMISSIVE_PURPLE} flicker />
-      <CeilingLight position={[16, WALL_H - 0.1, 0]} color={EMISSIVE_CYAN} />
-      <CeilingLight position={[-16, WALL_H - 0.1, 0]} color={EMISSIVE_ORANGE} flicker />
+      {/* North corridor lights */}
+      <CeilingLight position={[0, WALL_H - 0.1, -12]} color={EMISSIVE_BLOOD} />
+      <CeilingLight position={[0, WALL_H - 0.1, -18]} color={EMISSIVE_BLOOD} />
+      <CeilingLight position={[0, WALL_H - 0.1, -24]} color={EMISSIVE_BLOOD} />
 
-      {/* Strong ambient to compensate for fewer point lights */}
-      <ambientLight intensity={1.0} color="#aa8870" />
-      <hemisphereLight color="#cc9977" groundColor="#4a3020" intensity={0.8} />
+      {/* South corridor lights */}
+      <CeilingLight position={[0, WALL_H - 0.1, 12]} color={EMISSIVE_LAVA} />
+      <CeilingLight position={[0, WALL_H - 0.1, 18]} color={EMISSIVE_LAVA} />
+      <CeilingLight position={[0, WALL_H - 0.1, 24]} color={EMISSIVE_LAVA} />
+
+      {/* East corridor lights */}
+      <CeilingLight position={[12, WALL_H - 0.1, 0]} color={EMISSIVE_SICK} />
+      <CeilingLight position={[18, WALL_H - 0.1, 0]} color={EMISSIVE_SICK} />
+      <CeilingLight position={[22, WALL_H - 0.1, 0]} color={EMISSIVE_FIRE} />
+
+      {/* West corridor lights */}
+      <CeilingLight position={[-12, WALL_H - 0.1, 0]} color={EMISSIVE_RUST} />
+      <CeilingLight position={[-18, WALL_H - 0.1, 0]} color={EMISSIVE_RUST} />
+
+      {/* Global ambient */}
+      <ambientLight intensity={0.25} color="#3a2a1a" />
+      <hemisphereLight color="#5c4a3a" groundColor="#2a2018" intensity={0.3} />
     </group>
   );
 }

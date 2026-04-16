@@ -219,7 +219,7 @@ function DamageFlash({ flash }: { flash: boolean }) {
         position: "absolute",
         inset: 0,
         background:
-          "radial-gradient(ellipse at center, transparent 40%, #ff225544 100%)",
+          "radial-gradient(ellipse at center, transparent 40%, #8B000066 100%)",
         pointerEvents: "none",
         opacity: flash ? 1 : 0,
         transition: "opacity 0.15s",
@@ -816,7 +816,7 @@ function GameLoop({
                 ...createImpactSparks(
                   p.position.clone(),
                   normal,
-                  "#00d4ff",
+                  "#cc8844",
                   5
                 ),
               ]);
@@ -827,7 +827,7 @@ function GameLoop({
           // Friendly projectile hits enemy
           if (p.friendly && p.alive) {
             // Check if this projectile is explosive (rocket)
-            const isExplosive = p.size && p.size >= 3 && p.color === "#ff4444";
+            const isExplosive = p.size && p.size >= 3 && p.color === "#cc4400";
             const explosionRadius = isExplosive ? 5 : 0;
 
             let directHit = false;
@@ -854,7 +854,7 @@ function GameLoop({
                     .normalize();
                   setParticles((pp) => [
                     ...pp,
-                    ...createImpactSparks(p.position.clone(), hitNormal, "#00d4ff", 6),
+                    ...createImpactSparks(p.position.clone(), hitNormal, "#cc8844", 6),
                   ]);
                   playHitSound();
                   setShotsHit((h) => h + 1);
@@ -876,8 +876,7 @@ function GameLoop({
                     const points = Math.round(basePoints * newCombo);
                     setScore((s) => s + points);
                     setKills((k) => k + 1);
-                    setWeaponKills((prev) => ({ ...prev, [currentWeapon]: prev[currentWeapon] + 1 }));
-                    const deathColor = e.type === "drone" ? "#ff2255" : e.type === "sentinel" ? "#ff8800" : "#ff0044";
+                    const deathColor = e.type === "drone" ? "#8B0000" : e.type === "sentinel" ? "#B22222" : "#660000";
                     setParticles((pp) => [
                       ...pp,
                       ...createDeathExplosion(enemyWorldPos.clone(), deathColor, 15),
@@ -1174,11 +1173,11 @@ function rocketExplode(
   // Big explosion visual
   setParticles((pp) => [
     ...pp,
-    ...createDeathExplosion(pos, "#ff4444", 25),
+    ...createDeathExplosion(pos, "#cc4400", 25),
   ]);
   setExplosions((ex) => [
     ...ex,
-    { id: nextId++, position: pos.clone(), color: "#ff4444", startTime: state.clock.elapsedTime, duration: 0.6, size: 2.5 },
+    { id: nextId++, position: pos.clone(), color: "#cc4400", startTime: state.clock.elapsedTime, duration: 0.6, size: 2.5 },
   ]);
   playExplosionSound();
   shakeIntensity.current = 0.25;
@@ -1207,7 +1206,7 @@ function rocketExplode(
         const points = e.type === "drone" ? 100 : e.type === "sentinel" ? 200 : e.type === "boss" ? 2000 : 500;
         setScore((s) => s + points);
         setKills((k) => k + 1);
-        const deathColor = e.type === "drone" ? "#ff2255" : e.type === "sentinel" ? "#ff8800" : "#ff0044";
+        const deathColor = e.type === "drone" ? "#8B0000" : e.type === "sentinel" ? "#B22222" : "#660000";
         setParticles((pp) => [
           ...pp,
           ...createDeathExplosion(enemyWorldPos.clone(), deathColor, 12),
@@ -1561,17 +1560,17 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
           width: "100%",
           maxWidth: 1400,
           aspectRatio: "16/9",
-          background: "#0a0a15",
+          background: "#0d0905",
           borderRadius: 8,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          color: "#00d4ff",
+          color: "#7a8a3a",
           fontFamily: "'Courier New', monospace",
           fontSize: 14,
           textAlign: "center",
           padding: 20,
-          border: "1px solid #00d4ff33",
+          border: "1px solid #8B451333",
         }}
       >
         This game requires a keyboard and mouse.
@@ -1591,8 +1590,8 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
         margin: "0 auto",
         borderRadius: 8,
         overflow: "hidden",
-        border: "1px solid #00d4ff33",
-        background: "#0a0a15",
+        border: "1px solid #8B451333",
+        background: "#0d0905",
       }}
     >
       <div
@@ -1613,14 +1612,13 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
           dpr={[1, 1.5]}
           gl={{
             antialias: true,
-            toneMapping: THREE.ACESFilmicToneMapping,
-            toneMappingExposure: 1.8,
-            powerPreference: "high-performance",
+            toneMapping: THREE.ReinhardToneMapping,
+            toneMappingExposure: 1.0,
           }}
           camera={{ fov: 75, near: 0.1, far: 100 }}
         >
           <Suspense fallback={null}>
-            <fog attach="fog" args={[gameMode === "maps" ? (MAPS.find((m) => m.id === selectedMapId)?.fogColor ?? "#2a1a12") : "#2a1a12", 25, 60]} />
+            <fog attach="fog" args={["#1a1008", 20, 50]} />
             <Physics gravity={[0, -15, 0]}>
               <Player locked={locked} sensitivity={mouseSensitivity} speedMultiplier={playerSpeedMult} />
               <Level />

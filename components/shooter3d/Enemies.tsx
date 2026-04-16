@@ -27,10 +27,10 @@ export interface EnemyData {
 
 // ── Type-specific visual config ─────────────────────────
 export const ENEMY_COLORS = {
-  drone: { tint: "#ffffff", glow: "#ff2255", projectile: "#ff2255", name: "DRONE" },
-  sentinel: { tint: "#ffffff", glow: "#ff8800", projectile: "#ffaa00", name: "SENTINEL" },
-  heavy: { tint: "#ffffff", glow: "#9933ff", projectile: "#cc44ff", name: "HEAVY" },
-  boss: { tint: "#ff8888", glow: "#ff0000", projectile: "#ff0000", name: "BOSS" },
+  drone: { tint: "#ffffff", glow: "#8B0000", projectile: "#aa2200", name: "IMP" },
+  sentinel: { tint: "#ffffff", glow: "#B22222", projectile: "#cc3300", name: "BARON" },
+  heavy: { tint: "#ffffff", glow: "#660000", projectile: "#882200", name: "DEMON" },
+  boss: { tint: "#ffffff", glow: "#440000", projectile: "#ff4400", name: "CYBERDEMON" },
 } as const;
 
 // ── Sprite configuration ────────────────────────────────
@@ -128,6 +128,7 @@ interface EnemySpriteProps {
 function EnemySprite({ enemy, textures }: EnemySpriteProps) {
   const groupRef = useRef<THREE.Group>(null);
   const spriteMatRef = useRef<THREE.MeshBasicMaterial>(null);
+  const prevMapRef = useRef<THREE.Texture | null>(null);
   const { camera } = useThree();
 
   const spriteScale =
@@ -202,6 +203,7 @@ function EnemySprite({ enemy, textures }: EnemySpriteProps) {
         camera.position
       );
 
+      let newMap: THREE.Texture;
       if (enemy.isShooting) {
         const attackDir = getAttackDirIndex(dirIdx);
         const frameIdx = Math.min(
@@ -209,11 +211,15 @@ function EnemySprite({ enemy, textures }: EnemySpriteProps) {
           ATTACK_FRAME_COUNT - 1
         );
         const texIdx = attackDir * ATTACK_FRAME_COUNT + frameIdx;
-        spriteMatRef.current.map = textures.attacks[texIdx];
+        newMap = textures.attacks[texIdx];
       } else {
-        spriteMatRef.current.map = textures.rotations[dirIdx];
+        newMap = textures.rotations[dirIdx];
       }
-      spriteMatRef.current.needsUpdate = true;
+      if (newMap !== prevMapRef.current) {
+        spriteMatRef.current.map = newMap;
+        spriteMatRef.current.needsUpdate = true;
+        prevMapRef.current = newMap;
+      }
     }
 
   });
@@ -257,7 +263,6 @@ function EnemySprite({ enemy, textures }: EnemySpriteProps) {
         </group>
       )}
 
-      {/* No point light — emissive materials provide the glow without GPU cost */}
     </group>
   );
 }

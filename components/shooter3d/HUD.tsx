@@ -12,10 +12,10 @@ export interface RadarDot {
 }
 
 const WEAPON_DISPLAY: Record<WeaponType, { name: string; color: string }> = {
-  blaster: { name: "BLASTER", color: "#00d4ff" },
-  shotgun: { name: "SHOTGUN", color: "#ff8800" },
-  plasma: { name: "PLASMA", color: "#44ff44" },
-  rocket: { name: "ROCKET", color: "#ff4444" },
+  blaster: { name: "PISTOL", color: "#c8a848" },
+  shotgun: { name: "SHOTGUN", color: "#cc8844" },
+  plasma: { name: "PLASMA", color: "#33aa33" },
+  rocket: { name: "ROCKET", color: "#cc4400" },
 };
 
 interface HUDProps {
@@ -115,7 +115,7 @@ export default function HUD({
 
   const healthPct = Math.max(0, (health / maxHealth) * 100);
   const healthColor =
-    healthPct > 60 ? "#00d4ff" : healthPct > 30 ? "#ffaa00" : "#ff2255";
+    healthPct > 60 ? "#8a7a3a" : healthPct > 30 ? "#8a7a3a" : "#8B0000";
 
   const handleSubmit = async () => {
     if (!submitName.trim() || !onScoreSubmit) return;
@@ -187,25 +187,25 @@ export default function HUD({
                 cy="14"
                 r={hitMarker ? 11 : 9}
                 fill="none"
-                stroke={hitMarker ? "#ff2255" : "#00d4ff"}
+                stroke={hitMarker ? "#8B0000" : "#7a8a3a"}
                 strokeWidth={hitMarker ? 2 : 1}
                 opacity={hitMarker ? 1 : 0.5}
                 style={{ transition: "all 0.08s ease-out" }}
               />
               {/* Crosshair lines */}
-              <line x1="14" y1="2" x2="14" y2="9" stroke={hitMarker ? "#ff2255" : "#00d4ff"} strokeWidth="1.5" opacity="0.8" />
-              <line x1="14" y1="19" x2="14" y2="26" stroke={hitMarker ? "#ff2255" : "#00d4ff"} strokeWidth="1.5" opacity="0.8" />
-              <line x1="2" y1="14" x2="9" y2="14" stroke={hitMarker ? "#ff2255" : "#00d4ff"} strokeWidth="1.5" opacity="0.8" />
-              <line x1="19" y1="14" x2="26" y2="14" stroke={hitMarker ? "#ff2255" : "#00d4ff"} strokeWidth="1.5" opacity="0.8" />
+              <line x1="14" y1="2" x2="14" y2="9" stroke={hitMarker ? "#8B0000" : "#7a8a3a"} strokeWidth="1.5" opacity="0.8" />
+              <line x1="14" y1="19" x2="14" y2="26" stroke={hitMarker ? "#8B0000" : "#7a8a3a"} strokeWidth="1.5" opacity="0.8" />
+              <line x1="2" y1="14" x2="9" y2="14" stroke={hitMarker ? "#8B0000" : "#7a8a3a"} strokeWidth="1.5" opacity="0.8" />
+              <line x1="19" y1="14" x2="26" y2="14" stroke={hitMarker ? "#8B0000" : "#7a8a3a"} strokeWidth="1.5" opacity="0.8" />
               {/* Center dot */}
-              <circle cx="14" cy="14" r={hitMarker ? 2.5 : 1.5} fill={hitMarker ? "#ff2255" : "#00d4ff"} opacity="0.9" />
+              <circle cx="14" cy="14" r={hitMarker ? 2.5 : 1.5} fill={hitMarker ? "#8B0000" : "#7a8a3a"} opacity="0.9" />
               {/* Hit X marks */}
               {hitMarker && (
                 <>
-                  <line x1="8" y1="8" x2="11" y2="11" stroke="#ff2255" strokeWidth="2" opacity="0.9" />
-                  <line x1="20" y1="8" x2="17" y2="11" stroke="#ff2255" strokeWidth="2" opacity="0.9" />
-                  <line x1="8" y1="20" x2="11" y2="17" stroke="#ff2255" strokeWidth="2" opacity="0.9" />
-                  <line x1="20" y1="20" x2="17" y2="17" stroke="#ff2255" strokeWidth="2" opacity="0.9" />
+                  <line x1="8" y1="8" x2="11" y2="11" stroke="#8B0000" strokeWidth="2" opacity="0.9" />
+                  <line x1="20" y1="8" x2="17" y2="11" stroke="#8B0000" strokeWidth="2" opacity="0.9" />
+                  <line x1="8" y1="20" x2="11" y2="17" stroke="#8B0000" strokeWidth="2" opacity="0.9" />
+                  <line x1="20" y1="20" x2="17" y2="17" stroke="#8B0000" strokeWidth="2" opacity="0.9" />
                 </>
               )}
             </svg>
@@ -232,10 +232,10 @@ export default function HUD({
                   transform: "translateX(-50%)",
                   width: 30,
                   height: 6,
-                  background: "#ff2255",
+                  background: "#8B0000",
                   borderRadius: 3,
                   opacity: 0.7,
-                  boxShadow: "0 0 10px #ff2255",
+                  boxShadow: "0 0 10px #8B0000",
                 }}
               />
             </div>
@@ -286,7 +286,7 @@ export default function HUD({
               textAlign: "right",
             }}
           >
-            <div style={{ color: "#00d4ff", fontSize: 12, letterSpacing: 2 }}>
+            <div style={{ color: "#7a8a3a", fontSize: 12, letterSpacing: 2 }}>
               SCORE
             </div>
             <div
@@ -294,7 +294,7 @@ export default function HUD({
                 color: "#fff",
                 fontSize: 28,
                 fontWeight: "bold",
-                textShadow: "0 0 10px #00d4ff",
+                textShadow: "0 0 6px #7a8a3a",
               }}
             >
               {score.toLocaleString()}
@@ -308,50 +308,29 @@ export default function HUD({
 
           {/* Wave / Map — top left */}
           <div style={{ position: "absolute", top: 30, left: 30 }}>
-            {gameMode === "maps" && clearedMap ? (
-              <>
-                <div style={{ color: clearedMap.ambientColor, fontSize: 12, letterSpacing: 2 }}>
-                  MAP
-                </div>
-                <div
-                  style={{
-                    color: "#fff",
-                    fontSize: 22,
-                    fontWeight: "bold",
-                    textShadow: `0 0 10px ${clearedMap.ambientColor}`,
-                    letterSpacing: 2,
-                  }}
-                >
-                  {clearedMap.name}
-                </div>
-              </>
-            ) : (
-              <>
-                <div style={{ color: "#7b2ff7", fontSize: 12, letterSpacing: 2 }}>
-                  WAVE
-                </div>
-                <div
-                  style={{
-                    color: "#fff",
-                    fontSize: 28,
-                    fontWeight: "bold",
-                    textShadow: "0 0 10px #7b2ff7",
-                  }}
-                >
-                  {wave}
-                </div>
-              </>
-            )}
+            <div style={{ color: "#8B4513", fontSize: 12, letterSpacing: 2 }}>
+              WAVE
+            </div>
+            <div
+              style={{
+                color: "#fff",
+                fontSize: 28,
+                fontWeight: "bold",
+                textShadow: "0 0 6px #8B4513",
+              }}
+            >
+              {wave}
+            </div>
           </div>
 
           {/* Kills — under wave */}
           <div style={{ position: "absolute", top: 72, left: 30 }}>
-            <div style={{ color: "#ff225588", fontSize: 11, letterSpacing: 2 }}>
+            <div style={{ color: "#8B000088", fontSize: 11, letterSpacing: 2 }}>
               KILLS
             </div>
             <div
               style={{
-                color: "#ff2255",
+                color: "#8B0000",
                 fontSize: 18,
                 fontWeight: "bold",
               }}
@@ -474,15 +453,15 @@ export default function HUD({
               style={{ overflow: "visible" }}
             >
               {/* Background circle */}
-              <circle cx="0" cy="0" r="48" fill="rgba(0,0,0,0.5)" stroke="#00d4ff33" strokeWidth="1" />
+              <circle cx="0" cy="0" r="48" fill="rgba(0,0,0,0.5)" stroke="#7a8a3a33" strokeWidth="1" />
               {/* Range rings */}
-              <circle cx="0" cy="0" r="24" fill="none" stroke="#00d4ff15" strokeWidth="0.5" />
-              <circle cx="0" cy="0" r="48" fill="none" stroke="#00d4ff22" strokeWidth="0.5" />
+              <circle cx="0" cy="0" r="24" fill="none" stroke="#7a8a3a15" strokeWidth="0.5" />
+              <circle cx="0" cy="0" r="48" fill="none" stroke="#7a8a3a22" strokeWidth="0.5" />
               {/* Cross lines */}
-              <line x1="0" y1="-48" x2="0" y2="48" stroke="#00d4ff15" strokeWidth="0.5" />
-              <line x1="-48" y1="0" x2="48" y2="0" stroke="#00d4ff15" strokeWidth="0.5" />
+              <line x1="0" y1="-48" x2="0" y2="48" stroke="#7a8a3a15" strokeWidth="0.5" />
+              <line x1="-48" y1="0" x2="48" y2="0" stroke="#7a8a3a15" strokeWidth="0.5" />
               {/* Forward direction indicator */}
-              <polygon points="0,-46 -3,-40 3,-40" fill="#00d4ff66" />
+              <polygon points="0,-46 -3,-40 3,-40" fill="#7a8a3a66" />
               {/* Enemy dots — rotated to match camera facing */}
               <g transform={`rotate(${(-playerYaw * 180) / Math.PI})`}>
                 {radarDots
@@ -498,13 +477,11 @@ export default function HUD({
                     const cx = rx * scale;
                     const cy = rz * scale;
                     const dotColor =
-                      dot.type === "boss"
-                        ? "#ff0000"
-                        : dot.type === "drone"
-                          ? "#ff2255"
-                          : dot.type === "sentinel"
-                            ? "#ff8800"
-                            : "#ff0044";
+                      dot.type === "drone"
+                        ? "#8B0000"
+                        : dot.type === "sentinel"
+                          ? "#B22222"
+                          : "#660000";
                     return (
                       <circle
                         key={i}
@@ -518,12 +495,12 @@ export default function HUD({
                   })}
               </g>
               {/* Player dot */}
-              <circle cx="0" cy="0" r="2" fill="#00d4ff" />
+              <circle cx="0" cy="0" r="2" fill="#7a8a3a" />
             </svg>
             <div
               style={{
                 textAlign: "center",
-                color: "#00d4ff44",
+                color: "#7a8a3a44",
                 fontSize: 9,
                 letterSpacing: 2,
                 marginTop: 2,
@@ -562,11 +539,11 @@ export default function HUD({
             >
               <div
                 style={{
-                  color: "#7b2ff7",
+                  color: "#8B4513",
                   fontSize: 16,
                   letterSpacing: 6,
                   marginBottom: 4,
-                  textShadow: "0 0 15px #7b2ff7",
+                  textShadow: "0 0 8px #8B4513",
                 }}
               >
                 INCOMING
@@ -576,7 +553,7 @@ export default function HUD({
                   color: "#fff",
                   fontSize: 52,
                   fontWeight: "bold",
-                  textShadow: "0 0 30px #00d4ff, 0 0 60px #00d4ff44",
+                  textShadow: "0 0 15px #8B0000, 0 0 30px #8B000044",
                   letterSpacing: 8,
                 }}
               >
@@ -643,25 +620,25 @@ export default function HUD({
         >
           <h1
             style={{
-              color: "#00d4ff",
+              color: "#8B0000",
               fontSize: 48,
               fontWeight: "bold",
-              textShadow: "0 0 30px #00d4ff, 0 0 60px #00d4ff44",
+              textShadow: "0 0 15px #8B0000, 0 0 30px #8B000044",
               marginBottom: 8,
               letterSpacing: 6,
             }}
           >
-            SECTOR BREACH
+            DOOM STRIKER
           </h1>
           <p
             style={{
-              color: "#7b2ff7",
+              color: "#8B4513",
               fontSize: 14,
               letterSpacing: 4,
               marginBottom: 40,
             }}
           >
-            BREACH THE SECTOR. KILL THE HORDE.
+            HELLFIRE ARENA
           </p>
 
           <div
@@ -674,19 +651,19 @@ export default function HUD({
             }}
           >
             <div>
-              <span style={{ color: "#00d4ff" }}>WASD</span> — Move
+              <span style={{ color: "#7a8a3a" }}>WASD</span> — Move
             </div>
             <div>
-              <span style={{ color: "#00d4ff" }}>MOUSE</span> — Aim
+              <span style={{ color: "#7a8a3a" }}>MOUSE</span> — Aim
             </div>
             <div>
-              <span style={{ color: "#00d4ff" }}>CLICK</span> — Shoot
+              <span style={{ color: "#7a8a3a" }}>CLICK</span> — Shoot
             </div>
             <div>
-              <span style={{ color: "#00d4ff" }}>SPACE</span> — Jump
+              <span style={{ color: "#7a8a3a" }}>SPACE</span> — Jump
             </div>
             <div>
-              <span style={{ color: "#00d4ff" }}>1/2/3</span> — Switch weapon
+              <span style={{ color: "#7a8a3a" }}>1/2/3</span> — Switch weapon
             </div>
           </div>
 
@@ -713,25 +690,25 @@ export default function HUD({
             onClick={onStart}
             style={{
               background: "transparent",
-              border: "2px solid #00d4ff",
-              color: "#00d4ff",
+              border: "2px solid #7a8a3a",
+              color: "#7a8a3a",
               padding: "14px 48px",
               fontSize: 18,
               letterSpacing: 4,
               cursor: "pointer",
               transition: "all 0.2s",
-              textShadow: "0 0 10px #00d4ff",
-              boxShadow: "0 0 20px #00d4ff44, inset 0 0 20px #00d4ff11",
+              textShadow: "0 0 6px #7a8a3a",
+              boxShadow: "0 0 10px #7a8a3a44, inset 0 0 10px #7a8a3a11",
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = "#00d4ff22";
+              e.currentTarget.style.background = "#7a8a3a22";
               e.currentTarget.style.boxShadow =
-                "0 0 30px #00d4ff88, inset 0 0 30px #00d4ff22";
+                "0 0 15px #7a8a3a88, inset 0 0 15px #7a8a3a22";
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.background = "transparent";
               e.currentTarget.style.boxShadow =
-                "0 0 20px #00d4ff44, inset 0 0 20px #00d4ff11";
+                "0 0 10px #7a8a3a44, inset 0 0 10px #7a8a3a11";
             }}
           >
             START GAME
@@ -1088,15 +1065,15 @@ export default function HUD({
         >
           <h2
             style={{
-              color: "#ff2255",
+              color: "#8B0000",
               fontSize: 42,
               fontWeight: "bold",
-              textShadow: "0 0 30px #ff2255",
+              textShadow: "0 0 15px #8B0000",
               letterSpacing: 6,
               marginBottom: 8,
             }}
           >
-            TERMINATED
+            YOU DIED
           </h2>
           <div
             style={{
@@ -1110,10 +1087,10 @@ export default function HUD({
           </div>
           <div
             style={{
-              color: "#00d4ff",
+              color: "#7a8a3a",
               fontSize: 48,
               fontWeight: "bold",
-              textShadow: "0 0 20px #00d4ff",
+              textShadow: "0 0 10px #7a8a3a",
               marginBottom: 10,
             }}
           >
@@ -1168,7 +1145,7 @@ export default function HUD({
                 maxLength={16}
                 style={{
                   background: "rgba(255,255,255,0.1)",
-                  border: "1px solid #00d4ff44",
+                  border: "1px solid #7a8a3a44",
                   color: "#fff",
                   padding: "8px 12px",
                   fontSize: 14,
@@ -1184,9 +1161,9 @@ export default function HUD({
                 onClick={handleSubmit}
                 disabled={submitting || !submitName.trim()}
                 style={{
-                  background: "#00d4ff22",
-                  border: "1px solid #00d4ff",
-                  color: "#00d4ff",
+                  background: "#7a8a3a22",
+                  border: "1px solid #7a8a3a",
+                  color: "#7a8a3a",
                   padding: "8px 16px",
                   fontSize: 13,
                   cursor: "pointer",
@@ -1200,14 +1177,14 @@ export default function HUD({
             </div>
           )}
           {submitError && (
-            <div style={{ color: "#ff2255", fontSize: 12, marginBottom: 10 }}>
+            <div style={{ color: "#8B0000", fontSize: 12, marginBottom: 10 }}>
               {submitError}
             </div>
           )}
           {submitted && (
             <div
               style={{
-                color: "#00d4ff",
+                color: "#7a8a3a",
                 fontSize: 13,
                 marginBottom: 20,
                 letterSpacing: 1,
@@ -1221,17 +1198,17 @@ export default function HUD({
             onClick={onRestart}
             style={{
               background: "transparent",
-              border: "2px solid #00d4ff",
-              color: "#00d4ff",
+              border: "2px solid #7a8a3a",
+              color: "#7a8a3a",
               padding: "12px 40px",
               fontSize: 16,
               letterSpacing: 4,
               cursor: "pointer",
-              textShadow: "0 0 10px #00d4ff",
-              boxShadow: "0 0 20px #00d4ff44",
+              textShadow: "0 0 6px #7a8a3a",
+              boxShadow: "0 0 10px #7a8a3a44",
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = "#00d4ff22";
+              e.currentTarget.style.background = "#7a8a3a22";
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.background = "transparent";
