@@ -134,8 +134,7 @@ function PickupMesh({ pickup }: PickupMeshProps) {
         </mesh>
       )}
 
-      {/* Glow light */}
-      <pointLight color={cfg.color} intensity={3} distance={6} decay={2} />
+      {/* Emissive materials provide glow without point light cost */}
     </group>
   );
 }

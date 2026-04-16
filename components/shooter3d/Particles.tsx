@@ -148,7 +148,6 @@ function ParticlesBatch({ particles }: { particles: ParticleData[] }) {
 
 function ExplosionFlash({ explosion }: { explosion: ExplosionData }) {
   const meshRef = useRef<THREE.Mesh>(null);
-  const lightRef = useRef<THREE.PointLight>(null);
 
   useFrame((state) => {
     if (!meshRef.current) return;
@@ -161,36 +160,22 @@ function ExplosionFlash({ explosion }: { explosion: ExplosionData }) {
     const mat = meshRef.current.material as THREE.MeshBasicMaterial;
     mat.opacity = (1 - progress) * 0.8;
 
-    if (lightRef.current) {
-      lightRef.current.intensity = (1 - progress) * 8;
-    }
-
     if (progress >= 1) {
       meshRef.current.visible = false;
-      if (lightRef.current) lightRef.current.intensity = 0;
     }
   });
 
   return (
-    <group position={explosion.position.toArray()}>
-      <mesh ref={meshRef}>
-        <sphereGeometry args={[0.3, 12, 8]} />
-        <meshBasicMaterial
-          color={explosion.color}
-          transparent
-          opacity={0.8}
-          depthWrite={false}
-          side={THREE.DoubleSide}
-        />
-      </mesh>
-      <pointLight
-        ref={lightRef}
+    <mesh ref={meshRef} position={explosion.position.toArray()}>
+      <sphereGeometry args={[0.3, 8, 6]} />
+      <meshBasicMaterial
         color={explosion.color}
-        intensity={8}
-        distance={10}
-        decay={2}
+        transparent
+        opacity={0.8}
+        depthWrite={false}
+        side={THREE.DoubleSide}
       />
-    </group>
+    </mesh>
   );
 }
 

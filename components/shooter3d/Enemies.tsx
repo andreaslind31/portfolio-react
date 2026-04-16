@@ -257,14 +257,7 @@ function EnemySprite({ enemy, textures }: EnemySpriteProps) {
         </group>
       )}
 
-      {/* Glow light matching type color */}
-      <pointLight
-        position={[0, spriteScale / 2, 0]}
-        color={colors.glow}
-        intensity={enemy.aiState === "charge" ? 5 : 2}
-        distance={8}
-        decay={2}
-      />
+      {/* No point light — emissive materials provide the glow without GPU cost */}
     </group>
   );
 }

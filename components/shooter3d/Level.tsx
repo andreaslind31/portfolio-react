@@ -183,7 +183,7 @@ function Wall({
 function CeilingLight({
   position,
   color = EMISSIVE_CYAN,
-  intensity = 6,
+  intensity = 10,
   flicker = false,
 }: {
   position: [number, number, number];
@@ -252,7 +252,6 @@ function EnergyPillar({
         <cylinderGeometry args={[0.4, 0.3, 0.3, 8]} />
         <meshStandardMaterial color={TRIM_COLOR} metalness={0.3} roughness={0.5} emissive={TRIM_COLOR} emissiveIntensity={0.06} />
       </mesh>
-      <pointLight position={[0, 1.5, 0]} color={color} intensity={3} distance={8} decay={2} />
     </group>
   );
 }
@@ -301,7 +300,7 @@ function SpawnPortal({
         <planeGeometry args={[2, 3]} />
         <meshBasicMaterial color={color} transparent opacity={0.08} side={THREE.DoubleSide} depthWrite={false} />
       </mesh>
-      <pointLight position={[0, 1.5, 0]} color={color} intensity={4} distance={8} decay={2} />
+      {/* Emissive ring provides glow without point light */}
     </group>
   );
 }
@@ -647,34 +646,18 @@ export default function Level() {
           ═══════════════════════════════════════════════════ */}
 
       {/* Central hub lights */}
-      <CeilingLight position={[0, WALL_H - 0.1, 0]} color={EMISSIVE_CYAN} intensity={8} />
-      <CeilingLight position={[-6, WALL_H - 0.1, -6]} />
-      <CeilingLight position={[6, WALL_H - 0.1, -6]} />
-      <CeilingLight position={[-6, WALL_H - 0.1, 6]} color={EMISSIVE_PURPLE} />
-      <CeilingLight position={[6, WALL_H - 0.1, 6]} color={EMISSIVE_PURPLE} />
+      {/* Hub — 1 central light only */}
+      <CeilingLight position={[0, WALL_H - 0.1, 0]} color={EMISSIVE_CYAN} intensity={10} />
 
-      {/* North corridor lights */}
-      <CeilingLight position={[0, WALL_H - 0.1, -12]} color={EMISSIVE_RED} flicker />
-      <CeilingLight position={[0, WALL_H - 0.1, -18]} color={EMISSIVE_RED} flicker />
-      <CeilingLight position={[0, WALL_H - 0.1, -24]} color={EMISSIVE_RED} />
+      {/* Corridors — 1 light per corridor (down from 3 each) */}
+      <CeilingLight position={[0, WALL_H - 0.1, -16]} color={EMISSIVE_RED} flicker />
+      <CeilingLight position={[0, WALL_H - 0.1, 16]} color={EMISSIVE_PURPLE} flicker />
+      <CeilingLight position={[16, WALL_H - 0.1, 0]} color={EMISSIVE_CYAN} />
+      <CeilingLight position={[-16, WALL_H - 0.1, 0]} color={EMISSIVE_ORANGE} flicker />
 
-      {/* South corridor lights */}
-      <CeilingLight position={[0, WALL_H - 0.1, 12]} color={EMISSIVE_PURPLE} />
-      <CeilingLight position={[0, WALL_H - 0.1, 18]} color={EMISSIVE_PURPLE} flicker />
-      <CeilingLight position={[0, WALL_H - 0.1, 24]} color={EMISSIVE_PURPLE} />
-
-      {/* East corridor lights */}
-      <CeilingLight position={[12, WALL_H - 0.1, 0]} color={EMISSIVE_CYAN} flicker />
-      <CeilingLight position={[18, WALL_H - 0.1, 0]} color={EMISSIVE_CYAN} />
-      <CeilingLight position={[22, WALL_H - 0.1, 0]} color={EMISSIVE_GREEN} />
-
-      {/* West corridor lights */}
-      <CeilingLight position={[-12, WALL_H - 0.1, 0]} color={EMISSIVE_ORANGE} flicker />
-      <CeilingLight position={[-18, WALL_H - 0.1, 0]} color={EMISSIVE_ORANGE} />
-
-      {/* Global ambient — brighter warm glow */}
-      <ambientLight intensity={0.7} color="#aa7766" />
-      <hemisphereLight color="#bb9977" groundColor="#3a2818" intensity={0.7} />
+      {/* Strong ambient to compensate for fewer point lights */}
+      <ambientLight intensity={1.0} color="#aa8870" />
+      <hemisphereLight color="#cc9977" groundColor="#4a3020" intensity={0.8} />
     </group>
   );
 }
