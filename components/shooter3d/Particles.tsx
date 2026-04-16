@@ -28,7 +28,7 @@ let particleId = 0;
 export function createImpactSparks(
   position: THREE.Vector3,
   normal: THREE.Vector3,
-  color: string = "#00d4ff",
+  color: string = "#cc8844",
   count: number = 8
 ): ParticleData[] {
   const particles: ParticleData[] = [];
@@ -57,7 +57,7 @@ export function createImpactSparks(
 
 export function createDeathExplosion(
   position: THREE.Vector3,
-  color: string = "#ff2255",
+  color: string = "#8B0000",
   count: number = 20
 ): ParticleData[] {
   const particles: ParticleData[] = [];
@@ -74,7 +74,7 @@ export function createDeathExplosion(
       id: particleId++,
       position: position.clone(),
       velocity: dir,
-      color: Math.random() > 0.5 ? color : "#ffaa00",
+      color: Math.random() > 0.5 ? color : "#8B4513",
       life: 0.4 + Math.random() * 0.6,
       maxLife: 0.4 + Math.random() * 0.6,
       size: 0.04 + Math.random() * 0.08,

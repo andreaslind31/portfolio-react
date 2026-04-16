@@ -27,10 +27,9 @@ export interface EnemyData {
 
 // ── Type-specific visual config ─────────────────────────
 export const ENEMY_COLORS = {
-  drone: { tint: "#ffffff", glow: "#ff2255", projectile: "#ff2255", name: "DRONE" },
-  sentinel: { tint: "#ffffff", glow: "#ff8800", projectile: "#ffaa00", name: "SENTINEL" },
-  heavy: { tint: "#ffffff", glow: "#9933ff", projectile: "#cc44ff", name: "HEAVY" },
-  boss: { tint: "#ff8888", glow: "#ff0000", projectile: "#ff0000", name: "BOSS" },
+  drone: { tint: "#ffffff", glow: "#8B0000", projectile: "#aa2200", name: "IMP" },
+  sentinel: { tint: "#ffffff", glow: "#B22222", projectile: "#cc3300", name: "BARON" },
+  heavy: { tint: "#ffffff", glow: "#660000", projectile: "#882200", name: "DEMON" },
 } as const;
 
 // ── Sprite configuration ────────────────────────────────
@@ -257,7 +256,14 @@ function EnemySprite({ enemy, textures }: EnemySpriteProps) {
         </group>
       )}
 
-      {/* No point light — emissive materials provide the glow without GPU cost */}
+      {/* Glow light matching type color */}
+      <pointLight
+        position={[0, spriteScale / 2, 0]}
+        color={colors.glow}
+        intensity={enemy.aiState === "charge" ? 3 : 1.2}
+        distance={8}
+        decay={2}
+      />
     </group>
   );
 }

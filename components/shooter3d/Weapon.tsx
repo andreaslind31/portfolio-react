@@ -25,8 +25,8 @@ export const WEAPON_CONFIGS: Record<WeaponType, WeaponConfig> = {
   blaster: {
     cooldown: 0.15,
     recoil: 0.08,
-    color: "#00d4ff",
-    flashColor: "#00ffff",
+    color: "#c8a848",
+    flashColor: "#ffcc66",
     damage: 25,
     speed: 40,
     spread: 0,
@@ -35,22 +35,22 @@ export const WEAPON_CONFIGS: Record<WeaponType, WeaponConfig> = {
     projectileLife: 3,
   },
   shotgun: {
-    cooldown: 0.7,
-    recoil: 0.25,
-    color: "#ff8800",
-    flashColor: "#ffaa44",
-    damage: 15,
-    speed: 30,
-    spread: 0.12,
-    pellets: 8,
-    projectileSize: 0.6,
-    projectileLife: 1.0,
+    cooldown: 0.6,
+    recoil: 0.18,
+    color: "#cc8844",
+    flashColor: "#ddaa66",
+    damage: 18,
+    speed: 35,
+    spread: 0.08,
+    pellets: 5,
+    projectileSize: 0.7,
+    projectileLife: 1.5,
   },
   plasma: {
     cooldown: 0.8,
     recoil: 0.15,
-    color: "#44ff44",
-    flashColor: "#88ff88",
+    color: "#33aa33",
+    flashColor: "#55bb55",
     damage: 60,
     speed: 25,
     spread: 0,
@@ -61,8 +61,8 @@ export const WEAPON_CONFIGS: Record<WeaponType, WeaponConfig> = {
   rocket: {
     cooldown: 1.2,
     recoil: 0.25,
-    color: "#ff4444",
-    flashColor: "#ff8866",
+    color: "#cc4400",
+    flashColor: "#dd6633",
     damage: 80,
     speed: 20,
     spread: 0,
@@ -339,6 +339,22 @@ export default function Weapon({ locked, weaponType, ammo, onShoot }: WeaponProp
             <boxGeometry args={[0.035, 0.05, 0.04]} />
             <meshStandardMaterial color="#1a1a2e" metalness={0.7} roughness={0.3} />
           </mesh>
+          <mesh position={[0, 0, -0.22]}>
+            <torusGeometry args={[0.045, 0.01, 8, 12]} />
+            <meshStandardMaterial color="#c8a848" emissive="#c8a848" emissiveIntensity={1} toneMapped={false} />
+          </mesh>
+          <mesh position={[0, 0, -0.30]}>
+            <torusGeometry args={[0.04, 0.008, 8, 12]} />
+            <meshStandardMaterial color="#c8a848" emissive="#c8a848" emissiveIntensity={1} toneMapped={false} />
+          </mesh>
+          <mesh position={[0.04, 0, -0.1]}>
+            <boxGeometry args={[0.008, 0.02, 0.3]} />
+            <meshStandardMaterial color="#c8a848" emissive="#c8a848" emissiveIntensity={1.5} toneMapped={false} />
+          </mesh>
+          <mesh position={[-0.04, 0, -0.1]}>
+            <boxGeometry args={[0.008, 0.02, 0.3]} />
+            <meshStandardMaterial color="#c8a848" emissive="#c8a848" emissiveIntensity={1.5} toneMapped={false} />
+          </mesh>
         </>
       )}
 
@@ -367,10 +383,79 @@ export default function Weapon({ locked, weaponType, ammo, onShoot }: WeaponProp
             <cylinderGeometry args={[0.018, 0.018, 0.01, 10]} />
             <meshStandardMaterial color="#0a0a0a" metalness={0.5} roughness={0.5} />
           </mesh>
-          {/* Front sight bead */}
-          <mesh position={[0, 0.04, -0.42]}>
-            <sphereGeometry args={[0.006, 6, 6]} />
-            <meshStandardMaterial color="#ff8800" emissive="#ff8800" emissiveIntensity={2} toneMapped={false} />
+          {/* Pump */}
+          <mesh position={[0, -0.02, -0.08]} castShadow>
+            <boxGeometry args={[0.06, 0.05, 0.12]} />
+            <meshStandardMaterial color="#cc8844" emissive="#cc8844" emissiveIntensity={0.25} toneMapped={false} />
+          </mesh>
+          {/* Orange glow strips */}
+          <mesh position={[0.04, 0, -0.05]}>
+            <boxGeometry args={[0.006, 0.015, 0.2]} />
+            <meshStandardMaterial color="#cc8844" emissive="#cc8844" emissiveIntensity={1} toneMapped={false} />
+          </mesh>
+          <mesh position={[-0.04, 0, -0.05]}>
+            <boxGeometry args={[0.006, 0.015, 0.2]} />
+            <meshStandardMaterial color="#cc8844" emissive="#cc8844" emissiveIntensity={1} toneMapped={false} />
+          </mesh>
+        </>
+      )}
+
+      {/* ── PLASMA CANNON ── */}
+      {weaponType === "plasma" && (
+        <>
+          {/* Wide barrel */}
+          <mesh position={[0, 0, -0.15]} castShadow>
+            <cylinderGeometry args={[0.05, 0.04, 0.4, 8]} />
+            <meshStandardMaterial color="#2a3a2e" metalness={0.8} roughness={0.2} />
+          </mesh>
+          {/* Receiver */}
+          <mesh position={[0, -0.02, 0.05]} castShadow>
+            <boxGeometry args={[0.1, 0.1, 0.2]} />
+            <meshStandardMaterial color="#1a2a1e" metalness={0.8} roughness={0.2} />
+          </mesh>
+          {/* Grip */}
+          <mesh position={[0, -0.1, 0.08]} rotation={[0.3, 0, 0]} castShadow>
+            <boxGeometry args={[0.05, 0.12, 0.06]} />
+            <meshStandardMaterial color="#1a2a1e" metalness={0.7} roughness={0.3} />
+          </mesh>
+          {/* Energy chamber */}
+          <mesh position={[0, 0.03, -0.05]}>
+            <sphereGeometry args={[0.04, 8, 8]} />
+            <meshStandardMaterial color="#33aa33" emissive="#33aa33" emissiveIntensity={2} toneMapped={false} />
+          </mesh>
+          {/* Green coils */}
+          <mesh position={[0, 0, -0.2]}>
+            <torusGeometry args={[0.055, 0.012, 8, 12]} />
+            <meshStandardMaterial color="#33aa33" emissive="#33aa33" emissiveIntensity={1} toneMapped={false} />
+          </mesh>
+          <mesh position={[0, 0, -0.3]}>
+            <torusGeometry args={[0.05, 0.01, 8, 12]} />
+            <meshStandardMaterial color="#33aa33" emissive="#33aa33" emissiveIntensity={1} toneMapped={false} />
+          </mesh>
+          {/* Side glow strips */}
+          <mesh position={[0.05, 0, -0.1]}>
+            <boxGeometry args={[0.008, 0.02, 0.3]} />
+            <meshStandardMaterial color="#33aa33" emissive="#33aa33" emissiveIntensity={1.5} toneMapped={false} />
+          </mesh>
+          <mesh position={[-0.05, 0, -0.1]}>
+            <boxGeometry args={[0.008, 0.02, 0.3]} />
+            <meshStandardMaterial color="#33aa33" emissive="#33aa33" emissiveIntensity={1.5} toneMapped={false} />
+          </mesh>
+        </>
+      )}
+
+      {/* ── ROCKET LAUNCHER ── */}
+      {weaponType === "rocket" && (
+        <>
+          {/* Wide tube barrel */}
+          <mesh position={[0, 0, -0.12]} castShadow>
+            <cylinderGeometry args={[0.045, 0.045, 0.5, 10]} />
+            <meshStandardMaterial color="#4a3030" metalness={0.8} roughness={0.2} />
+          </mesh>
+          {/* Inner bore (darker) */}
+          <mesh position={[0, 0, -0.38]}>
+            <cylinderGeometry args={[0.035, 0.035, 0.02, 10]} />
+            <meshStandardMaterial color="#1a0a0a" metalness={0.5} roughness={0.5} />
           </mesh>
           {/* Receiver body */}
           <mesh position={[0, 0.005, 0.02]} castShadow>
@@ -533,10 +618,28 @@ export default function Weapon({ locked, weaponType, ammo, onShoot }: WeaponProp
             <boxGeometry args={[0.06, 0.06, 0.06]} />
             <meshStandardMaterial color="#1e2e22" metalness={0.6} roughness={0.4} />
           </mesh>
-          {/* Top scope rail */}
-          <mesh position={[0, 0.05, -0.02]}>
-            <boxGeometry args={[0.018, 0.006, 0.12]} />
-            <meshStandardMaterial color="#2a3a2e" metalness={0.9} roughness={0.1} />
+          {/* Red warning stripes */}
+          <mesh position={[0, 0.05, -0.05]}>
+            <boxGeometry args={[0.1, 0.008, 0.15]} />
+            <meshStandardMaterial color="#cc4400" emissive="#cc4400" emissiveIntensity={0.75} toneMapped={false} />
+          </mesh>
+          <mesh position={[0, -0.05, -0.05]}>
+            <boxGeometry args={[0.1, 0.008, 0.15]} />
+            <meshStandardMaterial color="#cc4400" emissive="#cc4400" emissiveIntensity={0.75} toneMapped={false} />
+          </mesh>
+          {/* Side glow strips */}
+          <mesh position={[0.05, 0, -0.1]}>
+            <boxGeometry args={[0.006, 0.015, 0.3]} />
+            <meshStandardMaterial color="#cc4400" emissive="#cc4400" emissiveIntensity={1} toneMapped={false} />
+          </mesh>
+          <mesh position={[-0.05, 0, -0.1]}>
+            <boxGeometry args={[0.006, 0.015, 0.3]} />
+            <meshStandardMaterial color="#cc4400" emissive="#cc4400" emissiveIntensity={1} toneMapped={false} />
+          </mesh>
+          {/* Sight on top */}
+          <mesh position={[0, 0.06, -0.15]}>
+            <boxGeometry args={[0.02, 0.03, 0.08]} />
+            <meshStandardMaterial color="#4a3030" metalness={0.9} roughness={0.1} />
           </mesh>
         </>
       )}

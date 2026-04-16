@@ -30,7 +30,7 @@ function ProjectileMesh({ projectile }: { projectile: ProjectileData }) {
     meshRef.current.lookAt(lookTarget);
   });
 
-  const color = projectile.color ?? (projectile.friendly ? "#00d4ff" : "#ff2255");
+  const color = projectile.color ?? (projectile.friendly ? "#c8a848" : "#8B0000");
   const radius = (projectile.size ?? 1) * 0.03;
   const length = (projectile.size ?? 1) * 0.2;
 
@@ -41,7 +41,7 @@ function ProjectileMesh({ projectile }: { projectile: ProjectileData }) {
         <meshStandardMaterial
           color={color}
           emissive={color}
-          emissiveIntensity={5}
+          emissiveIntensity={2}
           toneMapped={false}
         />
       </mesh>

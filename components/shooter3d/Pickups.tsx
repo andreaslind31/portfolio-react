@@ -24,12 +24,12 @@ const PICKUP_CONFIG: Record<
   PickupType,
   { color: string; label: string }
 > = {
-  health: { color: "#00ff88", label: "HP" },
-  shotgun: { color: "#ff8800", label: "SG" },
-  plasma: { color: "#44ff44", label: "PL" },
-  rocket: { color: "#ff4444", label: "RL" },
-  speed: { color: "#00ddff", label: "SP" },
-  damage: { color: "#ff4444", label: "DM" },
+  health: { color: "#3a8a3a", label: "HP" },
+  shotgun: { color: "#8a7a3a", label: "SG" },
+  plasma: { color: "#33aa33", label: "PL" },
+  rocket: { color: "#8B4513", label: "RL" },
+  speed: { color: "#7a8a3a", label: "SP" },
+  damage: { color: "#8B0000", label: "DM" },
 };
 
 interface PickupMeshProps {
@@ -56,7 +56,7 @@ function PickupMesh({ pickup }: PickupMeshProps) {
         <meshStandardMaterial
           color={cfg.color}
           emissive={cfg.color}
-          emissiveIntensity={2}
+          emissiveIntensity={1}
           toneMapped={false}
           transparent
           opacity={0.7}
@@ -68,11 +68,11 @@ function PickupMesh({ pickup }: PickupMeshProps) {
         <group>
           <mesh>
             <boxGeometry args={[0.25, 0.08, 0.08]} />
-            <meshStandardMaterial color={cfg.color} emissive={cfg.color} emissiveIntensity={3} toneMapped={false} />
+            <meshStandardMaterial color={cfg.color} emissive={cfg.color} emissiveIntensity={1.5} toneMapped={false} />
           </mesh>
           <mesh>
             <boxGeometry args={[0.08, 0.25, 0.08]} />
-            <meshStandardMaterial color={cfg.color} emissive={cfg.color} emissiveIntensity={3} toneMapped={false} />
+            <meshStandardMaterial color={cfg.color} emissive={cfg.color} emissiveIntensity={1.5} toneMapped={false} />
           </mesh>
         </group>
       )}
@@ -82,11 +82,11 @@ function PickupMesh({ pickup }: PickupMeshProps) {
           {/* Barrel shape */}
           <mesh rotation={[0, 0, Math.PI / 4]}>
             <boxGeometry args={[0.06, 0.35, 0.06]} />
-            <meshStandardMaterial color={cfg.color} emissive={cfg.color} emissiveIntensity={3} toneMapped={false} />
+            <meshStandardMaterial color={cfg.color} emissive={cfg.color} emissiveIntensity={1.5} toneMapped={false} />
           </mesh>
           <mesh rotation={[0, 0, Math.PI / 4]} position={[0.05, 0.05, 0]}>
             <boxGeometry args={[0.06, 0.35, 0.06]} />
-            <meshStandardMaterial color={cfg.color} emissive={cfg.color} emissiveIntensity={3} toneMapped={false} />
+            <meshStandardMaterial color={cfg.color} emissive={cfg.color} emissiveIntensity={1.5} toneMapped={false} />
           </mesh>
         </group>
       )}
@@ -94,7 +94,7 @@ function PickupMesh({ pickup }: PickupMeshProps) {
       {pickup.type === "plasma" && (
         <mesh>
           <sphereGeometry args={[0.15, 8, 8]} />
-          <meshStandardMaterial color={cfg.color} emissive={cfg.color} emissiveIntensity={4} toneMapped={false} transparent opacity={0.9} />
+          <meshStandardMaterial color={cfg.color} emissive={cfg.color} emissiveIntensity={1} toneMapped={false} transparent opacity={0.9} />
         </mesh>
       )}
 
@@ -103,12 +103,12 @@ function PickupMesh({ pickup }: PickupMeshProps) {
           {/* Rocket body */}
           <mesh rotation={[0, 0, Math.PI / 6]}>
             <cylinderGeometry args={[0.05, 0.07, 0.3, 8]} />
-            <meshStandardMaterial color={cfg.color} emissive={cfg.color} emissiveIntensity={2} toneMapped={false} />
+            <meshStandardMaterial color={cfg.color} emissive={cfg.color} emissiveIntensity={1} toneMapped={false} />
           </mesh>
           {/* Nose cone */}
           <mesh position={[0.08, 0.13, 0]} rotation={[0, 0, Math.PI / 6]}>
             <coneGeometry args={[0.05, 0.1, 8]} />
-            <meshStandardMaterial color="#ffaa44" emissive="#ffaa44" emissiveIntensity={2} toneMapped={false} />
+            <meshStandardMaterial color="#8B4513" emissive="#8B4513" emissiveIntensity={1} toneMapped={false} />
           </mesh>
         </group>
       )}
@@ -118,11 +118,11 @@ function PickupMesh({ pickup }: PickupMeshProps) {
           {/* Lightning bolt */}
           <mesh position={[0, 0.06, 0]} rotation={[0, 0, 0.2]}>
             <boxGeometry args={[0.06, 0.15, 0.06]} />
-            <meshStandardMaterial color={cfg.color} emissive={cfg.color} emissiveIntensity={3} toneMapped={false} />
+            <meshStandardMaterial color={cfg.color} emissive={cfg.color} emissiveIntensity={1.5} toneMapped={false} />
           </mesh>
           <mesh position={[0, -0.06, 0]} rotation={[0, 0, -0.2]}>
             <boxGeometry args={[0.06, 0.15, 0.06]} />
-            <meshStandardMaterial color={cfg.color} emissive={cfg.color} emissiveIntensity={3} toneMapped={false} />
+            <meshStandardMaterial color={cfg.color} emissive={cfg.color} emissiveIntensity={1.5} toneMapped={false} />
           </mesh>
         </group>
       )}
@@ -130,11 +130,12 @@ function PickupMesh({ pickup }: PickupMeshProps) {
       {pickup.type === "damage" && (
         <mesh rotation={[0, 0, Math.PI / 4]}>
           <boxGeometry args={[0.2, 0.2, 0.08]} />
-          <meshStandardMaterial color={cfg.color} emissive={cfg.color} emissiveIntensity={3} toneMapped={false} />
+          <meshStandardMaterial color={cfg.color} emissive={cfg.color} emissiveIntensity={1.5} toneMapped={false} />
         </mesh>
       )}
 
-      {/* Emissive materials provide glow without point light cost */}
+      {/* Glow light */}
+      <pointLight color={cfg.color} intensity={1.5} distance={6} decay={2} />
     </group>
   );
 }

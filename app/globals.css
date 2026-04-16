@@ -881,8 +881,8 @@ html {
 }
 
 .dark .shooter-board {
-  border-color: #0ff;
-  box-shadow: 0 0 15px rgba(0, 255, 255, 0.2), 0 0 40px rgba(0, 255, 255, 0.05);
+  border-color: #8B4513;
+  box-shadow: 0 0 10px rgba(139, 69, 19, 0.2), 0 0 30px rgba(139, 69, 19, 0.05);
 }
 
 .shooter-canvas {
@@ -892,7 +892,7 @@ html {
 }
 
 .shooter-glow {
-  text-shadow: 0 0 10px currentColor, 0 0 30px currentColor, 0 0 60px currentColor;
+  text-shadow: 0 0 6px currentColor, 0 0 15px currentColor;
 }
 
 .shooter-controls-hint {
