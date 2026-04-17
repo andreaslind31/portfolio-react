@@ -55,7 +55,7 @@ export default function ContactSection({ user }: { user: GitHubUser }) {
       <h2 className="text-base font-semibold text-gray-900 dark:text-white mb-4">
         Get in Touch
       </h2>
-      <div className="flex flex-wrap gap-4">
+      <div className="flex flex-wrap gap-3">
         {links.map((link) => (
           <a
             key={link.label}
@@ -63,17 +63,19 @@ export default function ContactSection({ user }: { user: GitHubUser }) {
             {...(link.external
               ? { target: "_blank", rel: "noopener noreferrer" }
               : {})}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-50 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+            className="contact-pill"
           >
-            {link.icon}
+            <span className="contact-pill-icon">{link.icon}</span>
             <span className="text-sm font-medium">{link.label}</span>
           </a>
         ))}
         {user.location && (
-          <span className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-50 dark:bg-gray-700/50 text-gray-500 dark:text-gray-400">
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 0 1 0-5 2.5 2.5 0 0 1 0 5z" />
-            </svg>
+          <span className="contact-pill contact-pill-static">
+            <span className="contact-pill-icon">
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 0 1 0-5 2.5 2.5 0 0 1 0 5z" />
+              </svg>
+            </span>
             <span className="text-sm">{user.location}</span>
           </span>
         )}

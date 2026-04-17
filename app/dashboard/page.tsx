@@ -12,11 +12,15 @@ interface AnalyticsData {
 
 function StatCard({ label, value }: { label: string; value: number }) {
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
-      <p className="text-sm text-gray-500 dark:text-gray-400">{label}</p>
-      <p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">
-        {value.toLocaleString()}
-      </p>
+    <div className="dash-card dash-card-stat group">
+      <div className="dash-card-inner">
+        <p className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+          {label}
+        </p>
+        <p className="text-4xl font-bold bg-gradient-to-br from-gray-900 to-gray-600 dark:from-white dark:to-gray-400 bg-clip-text text-transparent mt-2 tabular-nums">
+          {value.toLocaleString()}
+        </p>
+      </div>
     </div>
   );
 }
@@ -29,34 +33,37 @@ function DailyChart({
   const max = Math.max(...daily.map((d) => d.views), 1);
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
-      <h2 className="text-base font-semibold text-gray-900 dark:text-white mb-4">
-        Daily Page Views
-      </h2>
-      <div className="flex items-end gap-[2px] h-48">
-        {daily.map((d) => (
-          <div
-            key={d.date}
-            className="flex-1 group relative"
-            style={{ height: "100%" }}
-          >
+    <div className="dash-card">
+      <div className="dash-card-inner">
+        <h2 className="text-base font-semibold text-gray-900 dark:text-white mb-4">
+          Daily Page Views
+        </h2>
+        <div className="flex items-end gap-[2px] h-48">
+          {daily.map((d, i) => (
             <div
-              className="absolute bottom-0 w-full bg-blue-500 dark:bg-blue-400 rounded-t transition-all hover:bg-blue-600 dark:hover:bg-blue-300"
-              style={{
-                height: `${Math.max((d.views / max) * 100, 2)}%`,
-              }}
-            />
-            <div className="absolute -top-8 left-1/2 -translate-x-1/2 hidden group-hover:block bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-xs px-2 py-1 rounded whitespace-nowrap z-10">
-              {d.views} views
-              <br />
-              {d.date}
+              key={d.date}
+              className="flex-1 group relative"
+              style={{ height: "100%" }}
+            >
+              <div
+                className="dash-bar"
+                style={{
+                  height: `${Math.max((d.views / max) * 100, 2)}%`,
+                  animationDelay: `${i * 15}ms`,
+                }}
+              />
+              <div className="absolute -top-10 left-1/2 -translate-x-1/2 hidden group-hover:block bg-gray-900/95 dark:bg-gray-100/95 backdrop-blur text-white dark:text-gray-900 text-xs px-2.5 py-1.5 rounded-md shadow-lg whitespace-nowrap z-10">
+                <span className="font-semibold">{d.views}</span> views
+                <br />
+                <span className="opacity-70">{d.date}</span>
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
-      <div className="flex justify-between mt-2 text-xs text-gray-400 dark:text-gray-500">
-        <span>{daily[0]?.date ?? ""}</span>
-        <span>{daily[daily.length - 1]?.date ?? ""}</span>
+          ))}
+        </div>
+        <div className="flex justify-between mt-2 text-xs text-gray-400 dark:text-gray-500">
+          <span>{daily[0]?.date ?? ""}</span>
+          <span>{daily[daily.length - 1]?.date ?? ""}</span>
+        </div>
       </div>
     </div>
   );
@@ -71,32 +78,41 @@ function ListCard({
   items: Array<{ views: number; [key: string]: string | number }>;
   labelKey: string;
 }) {
+  const max = Math.max(...items.map((i) => Number(i.views)), 1);
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
-      <h2 className="text-base font-semibold text-gray-900 dark:text-white mb-4">
-        {title}
-      </h2>
-      {items.length === 0 ? (
-        <p className="text-sm text-gray-400 dark:text-gray-500">
-          No data yet.
-        </p>
-      ) : (
-        <ul className="space-y-2">
-          {items.map((item, i) => (
-            <li
-              key={i}
-              className="flex items-center justify-between text-sm"
-            >
-              <span className="text-gray-700 dark:text-gray-300 truncate mr-4">
-                {String(item[labelKey]) || "(direct)"}
-              </span>
-              <span className="text-gray-500 dark:text-gray-400 tabular-nums flex-shrink-0">
-                {Number(item.views).toLocaleString()}
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
+    <div className="dash-card">
+      <div className="dash-card-inner">
+        <h2 className="text-base font-semibold text-gray-900 dark:text-white mb-4">
+          {title}
+        </h2>
+        {items.length === 0 ? (
+          <p className="text-sm text-gray-400 dark:text-gray-500">
+            No data yet.
+          </p>
+        ) : (
+          <ul className="space-y-2.5">
+            {items.map((item, i) => {
+              const pct = (Number(item.views) / max) * 100;
+              return (
+                <li key={i} className="relative">
+                  <div className="flex items-center justify-between text-sm relative z-10 px-2 py-1">
+                    <span className="text-gray-700 dark:text-gray-300 truncate mr-4 font-medium">
+                      {String(item[labelKey]) || "(direct)"}
+                    </span>
+                    <span className="text-gray-600 dark:text-gray-300 tabular-nums flex-shrink-0 text-xs font-semibold">
+                      {Number(item.views).toLocaleString()}
+                    </span>
+                  </div>
+                  <div
+                    className="absolute inset-y-0 left-0 rounded-md bg-gradient-to-r from-blue-500/15 to-blue-500/5 dark:from-blue-400/20 dark:to-blue-400/5"
+                    style={{ width: `${pct}%` }}
+                  />
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
     </div>
   );
 }
@@ -122,11 +138,11 @@ export default function DashboardPage() {
       <div className="mb-8">
         <a
           href="/"
-          className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+          className="inline-flex items-center gap-1 text-sm text-blue-600 dark:text-blue-400 hover:gap-2 transition-all"
         >
-          &larr; Back to portfolio
+          <span aria-hidden>&larr;</span> Back to portfolio
         </a>
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
+        <h1 className="text-4xl font-bold bg-gradient-to-br from-gray-900 via-gray-700 to-blue-600 dark:from-white dark:via-gray-200 dark:to-blue-400 bg-clip-text text-transparent mt-2">
           Analytics Dashboard
         </h1>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
