@@ -5,7 +5,7 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Physics } from "@react-three/rapier";
 import * as THREE from "three";
 import Player from "./Player";
-import Level, { ARENA_HALF_W, ARENA_HALF_D, SPAWN_PORTALS, WALL_COLLIDERS } from "./Level";
+import LevelSelector, { getMapLayout, type MapLayout } from "./levels";
 import Weapon, { type WeaponType, WEAPON_CONFIGS } from "./Weapon";
 import HUD, { type RadarDot, type ScorePopup } from "./HUD";
 import Enemies, { type EnemyData, ENEMY_COLORS } from "./Enemies";
@@ -103,7 +103,7 @@ function getWaveConfig(wave: number) {
 
 let nextId = 1;
 
-function spawnEnemies(wave: number): EnemyData[] {
+function spawnEnemies(wave: number, portals: [number, number, number][] = [[0,0,10],[0,0,-10],[10,0,0],[-10,0,0]]): EnemyData[] {
   const config = getWaveConfig(wave);
   const enemies: EnemyData[] = [];
 
@@ -116,7 +116,7 @@ function spawnEnemies(wave: number): EnemyData[] {
     for (let i = 0; i < count; i++) {
       // Spawn near a random portal
       const portal =
-        SPAWN_PORTALS[Math.floor(Math.random() * SPAWN_PORTALS.length)];
+        portals[Math.floor(Math.random() * portals.length)];
       const offset = new THREE.Vector3(
         (Math.random() - 0.5) * 4,
         0,
@@ -161,7 +161,7 @@ function spawnEnemies(wave: number): EnemyData[] {
 }
 
 // Spawn enemies for a specific map — fixed counts, no wave progression
-function spawnMapEnemies(map: MapConfig): EnemyData[] {
+function spawnMapEnemies(map: MapConfig, portals: [number, number, number][] = [[0,0,10],[0,0,-10],[10,0,0],[-10,0,0]]): EnemyData[] {
   const enemies: EnemyData[] = [];
 
   const spawn = (
@@ -172,7 +172,7 @@ function spawnMapEnemies(map: MapConfig): EnemyData[] {
   ) => {
     for (let i = 0; i < count; i++) {
       const portal =
-        SPAWN_PORTALS[Math.floor(Math.random() * SPAWN_PORTALS.length)];
+        portals[Math.floor(Math.random() * portals.length)];
       const offset = new THREE.Vector3(
         (Math.random() - 0.5) * 4,
         0,
@@ -410,8 +410,8 @@ function applySeparation(enemies: EnemyData[]) {
 // ── Wall collision for enemies ───────────────────────────
 const ENEMY_RADIUS = 0.6;
 
-function resolveWallCollisions(pos: THREE.Vector3) {
-  for (const [cx, cz, hw, hd] of WALL_COLLIDERS) {
+function resolveWallCollisions(pos: THREE.Vector3, colliders: [number, number, number, number][]) {
+  for (const [cx, cz, hw, hd] of colliders) {
     const padW = hw + ENEMY_RADIUS;
     const padD = hd + ENEMY_RADIUS;
 
@@ -435,7 +435,8 @@ function resolveWallCollisions(pos: THREE.Vector3) {
 // Returns true if no wall blocks the line from A to B in the XZ plane
 function hasLineOfSight(
   ax: number, az: number,
-  bx: number, bz: number
+  bx: number, bz: number,
+  colliders: [number, number, number, number][]
 ): boolean {
   const dx = bx - ax;
   const dz = bz - az;
@@ -447,7 +448,7 @@ function hasLineOfSight(
   const invDx = ndx !== 0 ? 1 / ndx : 1e10;
   const invDz = ndz !== 0 ? 1 / ndz : 1e10;
 
-  for (const [cx, cz, hw, hd] of WALL_COLLIDERS) {
+  for (const [cx, cz, hw, hd] of colliders) {
     const minX = cx - hw;
     const maxX = cx + hw;
     const minZ = cz - hd;
@@ -529,6 +530,7 @@ function GameLoop({
   gameMode,
   onMapCleared,
   connectionManager,
+  activeLayout,
 }: {
   enemies: EnemyData[];
   setEnemies: React.Dispatch<React.SetStateAction<EnemyData[]>>;
@@ -582,6 +584,7 @@ function GameLoop({
   gameMode: "waves" | "maps";
   onMapCleared: () => void;
   connectionManager: React.MutableRefObject<ConnectionManager | null>;
+  activeLayout: React.MutableRefObject<MapLayout>;
 }) {
   const { camera } = useThree();
   const enemyShootTimers = useRef<Map<number, number>>(new Map());
@@ -670,7 +673,7 @@ function GameLoop({
         const dir = scratchDir.current;
 
         // If no line of sight, force strafe movement to navigate around walls
-        const los = hasLineOfSight(e.position.x, e.position.z, playerPos.current.x, playerPos.current.z);
+        const los = hasLineOfSight(e.position.x, e.position.z, playerPos.current.x, playerPos.current.z, activeLayout.current.WALL_COLLIDERS);
         if (!los) {
           e.position.x += (-dir.z) * e.strafeDir * e.speed * 0.7 * dt;
           e.position.z += dir.x * e.strafeDir * e.speed * 0.7 * dt;
@@ -702,13 +705,13 @@ function GameLoop({
         const margin = 1.5;
         e.position.x = THREE.MathUtils.clamp(
           e.position.x,
-          -ARENA_HALF_W + margin,
-          ARENA_HALF_W - margin
+          -activeLayout.current.ARENA_HALF_W + margin,
+          activeLayout.current.ARENA_HALF_W - margin
         );
         e.position.z = THREE.MathUtils.clamp(
           e.position.z,
-          -ARENA_HALF_D + margin,
-          ARENA_HALF_D - margin
+          -activeLayout.current.ARENA_HALF_D + margin,
+          activeLayout.current.ARENA_HALF_D - margin
         );
 
         // ── Shooting logic per type ──
@@ -842,7 +845,7 @@ function GameLoop({
     // Re-resolve wall collisions after separation (separation can push into walls)
     for (const e of enemies) {
       if (!e.alive) continue;
-      resolveWallCollisions(e.position);
+      resolveWallCollisions(e.position, activeLayout.current.WALL_COLLIDERS);
     }
 
     // ── Wave cleared? ──
@@ -862,7 +865,7 @@ function GameLoop({
         setTimeout(() => {
           setWave((w) => {
             const next = w + 1;
-            setEnemies(spawnEnemies(next));
+            setEnemies(spawnEnemies(next, activeLayout.current.SPAWN_PORTALS));
             enemyShootTimers.current.clear();
             sentinelBurstTimers.current.clear();
             waveCleared.current = false;
@@ -883,8 +886,8 @@ function GameLoop({
 
           if (
             p.life <= 0 ||
-            Math.abs(p.position.x) > ARENA_HALF_W ||
-            Math.abs(p.position.z) > ARENA_HALF_D ||
+            Math.abs(p.position.x) > activeLayout.current.ARENA_HALF_W ||
+            Math.abs(p.position.z) > activeLayout.current.ARENA_HALF_D ||
             p.position.y < -1 ||
             p.position.y > 6
           ) {
@@ -1153,8 +1156,8 @@ function GameLoop({
           // Random position in the arena (avoid center platform)
           let px: number, pz: number;
           do {
-            px = (Math.random() - 0.5) * (ARENA_HALF_W * 2 - 6);
-            pz = (Math.random() - 0.5) * (ARENA_HALF_D * 2 - 6);
+            px = (Math.random() - 0.5) * (activeLayout.current.ARENA_HALF_W * 2 - 6);
+            pz = (Math.random() - 0.5) * (activeLayout.current.ARENA_HALF_D * 2 - 6);
           } while (Math.abs(px) < 5 && Math.abs(pz) < 5); // avoid center
           newPickups.push({
             id: nextId++,
@@ -1417,6 +1420,7 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
   const footstepTimer = useRef(0);
   const stopAmbient = useRef<(() => void) | null>(null);
   const combatMusic = useRef<{ setIntensity: (v: number) => void; stop: () => void } | null>(null);
+  const activeLayout = useRef<MapLayout>(getMapLayout("map01"));
 
   useEffect(() => {
     setIsTouchDevice("ontouchstart" in window || navigator.maxTouchPoints > 0);
@@ -1490,7 +1494,9 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
   // Internal game initializer — shared between waves and maps
   const startGame = useCallback((mode: "waves" | "maps", mapId?: string) => {
     setGameMode(mode);
+    const effectiveMapId = (mode === "maps" && mapId) ? mapId : "map01";
     if (mode === "maps" && mapId) setSelectedMapId(mapId);
+    activeLayout.current = getMapLayout(effectiveMapId);
 
     setGameState("playing");
     setHealth(MAX_HEALTH);
@@ -1529,9 +1535,9 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
     // Spawn enemies — for maps, spawn the map's fixed enemy set; for waves, start wave 1
     if (mode === "maps" && mapId) {
       const map = MAPS.find((m) => m.id === mapId);
-      if (map) setEnemies(spawnMapEnemies(map));
+      if (map) setEnemies(spawnMapEnemies(map, activeLayout.current.SPAWN_PORTALS));
     } else {
-      setEnemies(spawnEnemies(1));
+      setEnemies(spawnEnemies(1, activeLayout.current.SPAWN_PORTALS));
     }
 
     stopAmbient.current?.();
@@ -1906,7 +1912,7 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
             <fog attach="fog" args={["#1a1008", 20, 50]} />
             <Physics gravity={[0, -15, 0]}>
               <Player locked={locked} sensitivity={mouseSensitivity} speedMultiplier={playerSpeedMult} />
-              <Level />
+              <LevelSelector mapId={gameMode === "maps" ? selectedMapId : "map01"} />
             </Physics>
             <Weapon locked={locked} weaponType={currentWeapon} ammo={weaponAmmo[currentWeapon]} onShoot={handleShoot} />
             <Enemies enemies={enemies} playerPosition={playerPos.current} />
@@ -1970,6 +1976,7 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
               gameMode={gameMode}
               onMapCleared={handleMapCleared}
               connectionManager={connectionManager}
+              activeLayout={activeLayout}
             />
           </Suspense>
         </Canvas>
