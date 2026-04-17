@@ -255,6 +255,9 @@ function ScreenShake({
 }
 
 // ── Enemy AI helpers ─────────────────────────────────────
+// Module-level scratch vector reused across AI calls (serial, not parallel)
+const aiStrafe = new THREE.Vector3();
+
 function updateDroneAI(
   e: EnemyData,
   dir: THREE.Vector3,
@@ -262,9 +265,7 @@ function updateDroneAI(
   dt: number
 ) {
   // Fast, erratic movement — strafe while approaching
-  const strafe = new THREE.Vector3(-dir.z, 0, dir.x).multiplyScalar(
-    e.strafeDir
-  );
+  const strafe = aiStrafe.set(-dir.z, 0, dir.x).multiplyScalar(e.strafeDir);
 
   if (dist > 8) {
     // Rush in, zigzagging
@@ -291,9 +292,7 @@ function updateSentinelAI(
   dist: number,
   dt: number
 ) {
-  const strafe = new THREE.Vector3(-dir.z, 0, dir.x).multiplyScalar(
-    e.strafeDir
-  );
+  const strafe = aiStrafe.set(-dir.z, 0, dir.x).multiplyScalar(e.strafeDir);
 
   // Sentinels prefer medium range — stay 8-14 units away
   if (dist > 14) {
@@ -334,7 +333,7 @@ function updateHeavyAI(
   } else {
     // In melee range — stay close, slight strafe
     e.aiState = "charge";
-    const strafe = new THREE.Vector3(-dir.z, 0, dir.x).multiplyScalar(e.strafeDir);
+    const strafe = aiStrafe.set(-dir.z, 0, dir.x).multiplyScalar(e.strafeDir);
     e.position.addScaledVector(strafe, e.speed * 0.3 * dt);
     e.position.addScaledVector(dir, e.speed * 0.2 * dt);
     if (Math.random() < 0.02) e.strafeDir *= -1;
@@ -361,7 +360,7 @@ function updateBossAI(
     // Approach + strafe while shooting
     e.aiState = "engage";
     e.position.addScaledVector(dir, e.speed * dt);
-    const strafe = new THREE.Vector3(-dir.z, 0, dir.x).multiplyScalar(e.strafeDir);
+    const strafe = aiStrafe.set(-dir.z, 0, dir.x).multiplyScalar(e.strafeDir);
     e.position.addScaledVector(strafe, e.speed * 0.4 * dt);
     if (Math.random() < 0.01) e.strafeDir *= -1;
   } else if (dist > BOSS_MELEE_RANGE) {
@@ -371,7 +370,7 @@ function updateBossAI(
   } else {
     // Melee range — strafe aggressively
     e.aiState = "charge";
-    const strafe = new THREE.Vector3(-dir.z, 0, dir.x).multiplyScalar(e.strafeDir);
+    const strafe = aiStrafe.set(-dir.z, 0, dir.x).multiplyScalar(e.strafeDir);
     e.position.addScaledVector(strafe, e.speed * 0.6 * dt);
     e.position.addScaledVector(dir, e.speed * 0.2 * dt);
     if (Math.random() < 0.03) e.strafeDir *= -1;
@@ -548,6 +547,11 @@ function GameLoop({
   const sentinelBurstTimers = useRef<Map<number, number>>(new Map());
   const waveCleared = useRef(false);
   const radarUpdateTimer = useRef(0);
+  // Pre-allocated scratch vectors to avoid per-frame GC pressure
+  const scratchDir = useRef(new THREE.Vector3());
+  const scratchStrafe = useRef(new THREE.Vector3());
+  const scratchEuler = useRef(new THREE.Euler(0, 0, 0, "YXZ"));
+  const scratchEnemyPos = useRef(new THREE.Vector3());
   const musicUpdateTimer = useRef(0);
   const particleCleanupTimer = useRef(0);
 
@@ -559,8 +563,8 @@ function GameLoop({
     const isPlayerMoving = posDelta > 0.02;
     playerPos.current.copy(camera.position);
 
-    const euler = new THREE.Euler().setFromQuaternion(camera.quaternion, "YXZ");
-    playerYaw.current = euler.y;
+    scratchEuler.current.setFromQuaternion(camera.quaternion, "YXZ");
+    playerYaw.current = scratchEuler.current.y;
 
     const dt = Math.min(delta, 0.05);
 
@@ -618,14 +622,11 @@ function GameLoop({
     for (const e of enemies) {
       if (!e.alive) continue;
 
-        const dir = new THREE.Vector3()
-          .subVectors(playerPos.current, e.position)
-          .setY(0)
-          .normalize();
-        const dist = new THREE.Vector3()
-          .subVectors(playerPos.current, e.position)
-          .setY(0)
-          .length();
+        // Reuse scratch vectors — avoids per-enemy-per-frame GC pressure
+        scratchDir.current.subVectors(playerPos.current, e.position).setY(0);
+        const dist = scratchDir.current.length();
+        scratchDir.current.normalize();
+        const dir = scratchDir.current;
 
         // Type-specific AI
         switch (e.type) {
@@ -851,9 +852,15 @@ function GameLoop({
             let directHit = false;
             for (const e of enemies) {
               if (!e.alive) continue;
-              const enemyWorldPos = e.position.clone();
-              enemyWorldPos.y += 1.0;
-              if (p.position.distanceTo(enemyWorldPos) < HIT_RADIUS) {
+              // Fast squared-distance check (avoids clone + sqrt)
+              const dx = p.position.x - e.position.x;
+              const dy = p.position.y - (e.position.y + 1.0);
+              const dz = p.position.z - e.position.z;
+              const distSq = dx * dx + dy * dy + dz * dz;
+              if (distSq < HIT_RADIUS * HIT_RADIUS) {
+                // Only clone when we actually hit (rare, not per-frame)
+                const enemyWorldPos = e.position.clone();
+                enemyWorldPos.y += 1.0;
                 directHit = true;
                 p.alive = false;
 

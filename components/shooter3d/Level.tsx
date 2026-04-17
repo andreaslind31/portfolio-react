@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useMemo } from "react";
+import { useRef, useMemo, memo } from "react";
 import { useFrame } from "@react-three/fiber";
 import { RigidBody } from "@react-three/rapier";
 import * as THREE from "three";
@@ -396,7 +396,7 @@ function Ramp({
 // Main Level component
 // ═══════════════════════════════════════════════════════════
 
-export default function Level() {
+function LevelImpl() {
   const W = ARENA_HALF_W * 2; // 50
   const D = ARENA_HALF_D * 2; // 60
 
@@ -684,3 +684,7 @@ export default function Level() {
     </group>
   );
 }
+
+// Memoized — Level has no props and never needs to re-render after mount
+const Level = memo(LevelImpl);
+export default Level;
