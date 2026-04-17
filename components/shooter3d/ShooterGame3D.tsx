@@ -7,7 +7,7 @@ import * as THREE from "three";
 import Player from "./Player";
 import Level, { ARENA_HALF_W, ARENA_HALF_D, SPAWN_PORTALS, WALL_COLLIDERS } from "./Level";
 import Weapon, { type WeaponType, WEAPON_CONFIGS } from "./Weapon";
-import HUD, { type RadarDot } from "./HUD";
+import HUD, { type RadarDot, type ScorePopup } from "./HUD";
 import Enemies, { type EnemyData, ENEMY_COLORS } from "./Enemies";
 import Projectiles, { type ProjectileData } from "./Projectiles";
 import Particles, {
@@ -566,7 +566,7 @@ function GameLoop({
   footstepTimer: React.MutableRefObject<number>;
   setKillStreak: React.Dispatch<React.SetStateAction<number>>;
   setKillStreakText: React.Dispatch<React.SetStateAction<string>>;
-  setScorePopups: React.Dispatch<React.SetStateAction<{ id: number; text: string; x: number; y: number; time: number }[]>>;
+  setScorePopups: React.Dispatch<React.SetStateAction<ScorePopup[]>>;
   crates: CrateData[];
   setCrates: React.Dispatch<React.SetStateAction<CrateData[]>>;
   ambientSoundTimer: React.MutableRefObject<number>;
@@ -1389,7 +1389,7 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
   const [killStreak, setKillStreak] = useState(0);
   const [killStreakText, setKillStreakText] = useState("");
   const [scorePopups, setScorePopups] = useState<
-    { id: number; text: string; x: number; y: number; time: number }[]
+    ScorePopup[]
   >([]);
   const [crates, setCrates] = useState<CrateData[]>([]);
   // Settings

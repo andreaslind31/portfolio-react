@@ -108,17 +108,19 @@ export const WALL_COLLIDERS: [number, number, number, number][] = [
 // Reusable building blocks
 // ═══════════════════════════════════════════════════════════
 
+interface GlowStripProps {
+  position: [number, number, number];
+  scale: [number, number, number];
+  color?: string;
+  intensity?: number;
+}
+
 function GlowStrip({
   position,
   scale,
   color = EMISSIVE_FIRE,
   intensity = 0.8,
-}: {
-  position: [number, number, number];
-  scale: [number, number, number];
-  color?: string;
-  intensity?: number;
-}) {
+}: GlowStripProps) {
   return (
     <mesh position={position}>
       <boxGeometry args={scale} />
@@ -132,17 +134,19 @@ function GlowStrip({
   );
 }
 
+interface WallProps {
+  position: [number, number, number];
+  rotation?: [number, number, number];
+  size: [number, number, number];
+  texture?: THREE.CanvasTexture;
+}
+
 function Wall({
   position,
   rotation,
   size,
   texture,
-}: {
-  position: [number, number, number];
-  rotation?: [number, number, number];
-  size: [number, number, number];
-  texture?: THREE.CanvasTexture;
-}) {
+}: WallProps) {
   // Scale UV repeat based on wall dimensions
   const mat = useMemo(() => {
     if (texture) {
@@ -180,17 +184,19 @@ function Wall({
   );
 }
 
+interface CeilingLightProps {
+  position: [number, number, number];
+  color?: string;
+  intensity?: number;
+  flicker?: boolean;
+}
+
 function CeilingLight({
   position,
   color = EMISSIVE_FIRE,
   intensity = 3,
   flicker = false,
-}: {
-  position: [number, number, number];
-  color?: string;
-  intensity?: number;
-  flicker?: boolean;
-}) {
+}: CeilingLightProps) {
   const lightRef = useRef<THREE.PointLight>(null);
   const matRef = useRef<THREE.MeshStandardMaterial>(null);
   const flickerOffset = useRef(Math.random() * 100);
@@ -223,13 +229,12 @@ function CeilingLight({
   );
 }
 
-function EnergyPillar({
-  position,
-  color = EMISSIVE_FIRE,
-}: {
+interface EnergyPillarProps {
   position: [number, number, number];
   color?: string;
-}) {
+}
+
+function EnergyPillar({ position, color = EMISSIVE_FIRE }: EnergyPillarProps) {
   const meshRef = useRef<THREE.Mesh>(null);
   useFrame((state) => {
     if (meshRef.current) {
@@ -257,16 +262,13 @@ function EnergyPillar({
   );
 }
 
-/** Animated spawn portal — glowing doorway where enemies appear */
-function SpawnPortal({
-  position,
-  rotation,
-  color = EMISSIVE_BLOOD,
-}: {
+interface SpawnPortalProps {
   position: [number, number, number];
   rotation?: [number, number, number];
   color?: string;
-}) {
+}
+
+function SpawnPortal({ position, rotation, color = EMISSIVE_BLOOD }: SpawnPortalProps) {
   const ringRef = useRef<THREE.Mesh>(null);
   useFrame((state) => {
     if (ringRef.current) {
@@ -306,19 +308,19 @@ function SpawnPortal({
   );
 }
 
-/** Cargo crate for cover / decoration */
+interface CrateProps {
+  position: [number, number, number];
+  size?: [number, number, number];
+  color?: string;
+  stripeColor?: string;
+}
+
 function Crate({
   position,
   size = [1.2, 1.2, 1.2] as [number, number, number],
   color = TRIM_COLOR,
   stripeColor = EMISSIVE_RUST,
-}: {
-  position: [number, number, number];
-  size?: [number, number, number];
-  color?: string;
-  stripeColor?: string;
-  texture?: THREE.CanvasTexture;
-}) {
+}: CrateProps) {
   return (
     <RigidBody type="fixed" position={position} colliders="cuboid">
       <mesh castShadow receiveShadow>
@@ -335,15 +337,13 @@ function Crate({
 }
 
 /** Computer terminal / console */
-function Terminal({
-  position,
-  rotation,
-  screenColor = EMISSIVE_SICK,
-}: {
+interface TerminalProps {
   position: [number, number, number];
   rotation?: [number, number, number];
   screenColor?: string;
-}) {
+}
+
+function Terminal({ position, rotation, screenColor = EMISSIVE_SICK }: TerminalProps) {
   const screenRef = useRef<THREE.Mesh>(null);
   useFrame((state) => {
     if (screenRef.current) {
@@ -369,18 +369,19 @@ function Terminal({
   );
 }
 
-/** Ramp for verticality */
+interface RampProps {
+  position: [number, number, number];
+  rotation?: [number, number, number];
+  size?: [number, number, number];
+  rampRotation?: [number, number, number];
+}
+
 function Ramp({
   position,
   rotation,
   size = [3, 0.2, 5] as [number, number, number],
   rampRotation = [-0.3, 0, 0] as [number, number, number],
-}: {
-  position: [number, number, number];
-  rotation?: [number, number, number];
-  size?: [number, number, number];
-  rampRotation?: [number, number, number];
-}) {
+}: RampProps) {
   return (
     <RigidBody type="fixed" position={position} rotation={rotation} colliders="cuboid">
       <mesh rotation={rampRotation} castShadow receiveShadow>

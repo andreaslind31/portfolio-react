@@ -11,7 +11,20 @@ export interface RadarDot {
   alive: boolean;
 }
 
-const WEAPON_DISPLAY: Record<WeaponType, { name: string; color: string }> = {
+interface WeaponDisplay {
+  name: string;
+  color: string;
+}
+
+export interface ScorePopup {
+  id: number;
+  text: string;
+  x: number;
+  y: number;
+  time: number;
+}
+
+const WEAPON_DISPLAY: Record<WeaponType, WeaponDisplay> = {
   blaster: { name: "PISTOL", color: "#c8a848" },
   shotgun: { name: "SHOTGUN", color: "#cc8844" },
   plasma: { name: "PLASMA", color: "#33aa33" },
@@ -38,7 +51,7 @@ interface HUDProps {
   radarDots: RadarDot[];
   playerYaw: number;
   killStreakText: string;
-  scorePopups: { id: number; text: string; x: number; y: number; time: number }[];
+  scorePopups: ScorePopup[];
   bossHp: number;
   bossMaxHp: number;
   comboMultiplier: number;

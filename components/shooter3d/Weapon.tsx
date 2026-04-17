@@ -75,10 +75,15 @@ export const WEAPON_CONFIGS: Record<WeaponType, WeaponConfig> = {
 };
 
 // ── Sprite animation config ─────────────────────────────
-const SPRITE_INFO: Record<
-  WeaponType,
-  { dir: string; prefix: string; frameCount: number; frameDuration: number; scale: number }
-> = {
+interface SpriteAnimConfig {
+  dir: string;
+  prefix: string;
+  frameCount: number;
+  frameDuration: number;
+  scale: number;
+}
+
+const SPRITE_INFO: Record<WeaponType, SpriteAnimConfig> = {
   blaster: { dir: "Glock", prefix: "GLOCK", frameCount: 7, frameDuration: 0.045, scale: 0.65 },
   shotgun: { dir: "Shotgun", prefix: "SHOTGUN", frameCount: 6, frameDuration: 0.085, scale: 0.7 },
   plasma: { dir: "MachineGun", prefix: "MACHINEGUN", frameCount: 7, frameDuration: 0.035, scale: 0.7 },
