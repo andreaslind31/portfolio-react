@@ -673,14 +673,12 @@ function GameLoop({
         // If no line of sight, force strafe movement to navigate around walls
         const los = hasLineOfSight(e.position.x, e.position.z, playerPos.current.x, playerPos.current.z);
         if (!los) {
-          // Can't see player — strafe along walls instead of running into them
           e.position.x += (-dir.z) * e.strafeDir * e.speed * 0.7 * dt;
           e.position.z += dir.x * e.strafeDir * e.speed * 0.7 * dt;
-          // Occasionally flip to try the other direction
           if (Math.random() < 0.02) e.strafeDir *= -1;
           e.lastMoveDir.copy(dir);
-          resolveWallCollisions(e.position);
-          continue; // skip normal AI for this frame
+          // Wall collision handled by post-separation resolve below
+          continue;
         }
 
         // Type-specific AI
@@ -699,8 +697,7 @@ function GameLoop({
             break;
         }
 
-        // Resolve wall collisions
-        resolveWallCollisions(e.position);
+        // Wall collision + arena clamping done in batch after separation below
 
         // Clamp to arena bounds
         const margin = 1.5;
@@ -728,11 +725,8 @@ function GameLoop({
           }
         }
 
-        // Only shoot if line of sight to player is clear
-        const canSee = hasLineOfSight(
-          e.position.x, e.position.z,
-          playerPos.current.x, playerPos.current.z
-        );
+        // Only shoot if line of sight to player is clear (reuse cached LOS)
+        const canSee = los;
 
         if (e.type === "drone") {
           const cd = DRONE_SHOOT_CD * Math.max(0.5, diff.shootCdMult);
@@ -2027,6 +2021,16 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
       />
 
       <DamageFlash flash={damageFlash} />
+
+      {/* CSS vignette — replaces WebGL EffectComposer (zero GPU cost) */}
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          pointerEvents: "none",
+          boxShadow: "inset 0 0 150px 60px rgba(0,0,0,0.65)",
+        }}
+      />
 
       {/* Multiplayer kill feed */}
       <KillFeed entries={killFeedEntries} />

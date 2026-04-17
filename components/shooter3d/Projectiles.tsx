@@ -26,6 +26,7 @@ export default function Projectiles({ projectiles }: ProjectilesProps) {
   const instRef = useRef<THREE.InstancedMesh>(null);
   const dummy = useMemo(() => new THREE.Object3D(), []);
   const color = useMemo(() => new THREE.Color(), []);
+  const lookTarget = useMemo(() => new THREE.Vector3(), []);
 
   useFrame(() => {
     if (!instRef.current) return;
@@ -40,8 +41,8 @@ export default function Projectiles({ projectiles }: ProjectilesProps) {
 
       dummy.position.copy(p.position);
       dummy.scale.set(scale * 0.4, scale * 0.4, scale);
-      // Orient along direction
-      const lookTarget = p.position.clone().add(p.direction);
+      // Orient along direction (reuse scratch vector)
+      lookTarget.copy(p.position).add(p.direction);
       dummy.lookAt(lookTarget);
       dummy.updateMatrix();
       mesh.setMatrixAt(count, dummy.matrix);
