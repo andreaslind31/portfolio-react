@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Physics } from "@react-three/rapier";
 import * as THREE from "three";
@@ -20,7 +20,6 @@ import Pickups, { type PickupData, type PickupType } from "./Pickups";
 import Doors from "./Doors";
 import { MAPS, getUnlockedMaps, unlockMap, getNextMapId, type MapConfig } from "./Maps";
 import DestructibleCrates, { type CrateData, createInitialCrates } from "./DestructibleCrates";
-import PostProcessing from "./PostProcessing";
 import { ConnectionManager, LobbyUI, RemotePlayers, KillFeed, createKillFeedEntry, Scoreboard } from "./multiplayer";
 import type { ConnectionState, PlayerInfo, RemotePlayerData, KillFeedEntry } from "./multiplayer";
 import {
@@ -1972,7 +1971,6 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
               onMapCleared={handleMapCleared}
               connectionManager={connectionManager}
             />
-            <PostProcessing />
           </Suspense>
         </Canvas>
       </div>

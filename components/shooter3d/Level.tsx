@@ -14,7 +14,6 @@ import {
 
 // ── Doom palette ────────────────────────────────────────
 const FLOOR_COLOR = "#4a3828";
-const FLOOR_DARK = "#3a2a1a";
 const WALL_COLOR = "#5c4a3a";
 const TRIM_COLOR = "#6b5540";
 const CEILING_COLOR = "#2a2018";

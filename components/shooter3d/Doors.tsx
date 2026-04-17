@@ -2,7 +2,6 @@
 
 import { useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
-import { RigidBody } from "@react-three/rapier";
 import * as THREE from "three";
 
 export interface DoorData {
