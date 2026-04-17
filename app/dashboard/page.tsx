@@ -12,7 +12,7 @@ interface AnalyticsData {
 
 function StatCard({ label, value }: { label: string; value: number }) {
   return (
-    <div className="dash-card dash-card-stat group">
+    <div className="dash-card dash-card-stat">
       <div className="dash-card-inner">
         <p className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
           {label}

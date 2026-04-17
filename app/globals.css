@@ -528,12 +528,12 @@ html {
   background: linear-gradient(to top, #60a5fa, #93c5fd);
 }
 
-.group:hover .dash-bar {
+.dash-card .group:hover .dash-bar {
   filter: brightness(1.15);
   background: linear-gradient(to top, #1d4ed8, #3b82f6);
 }
 
-.dark .group:hover .dash-bar {
+.dark .dash-card .group:hover .dash-bar {
   background: linear-gradient(to top, #93c5fd, #bfdbfe);
 }
 
