@@ -416,12 +416,10 @@ function resolveWallCollisions(pos: THREE.Vector3) {
     const padW = hw + ENEMY_RADIUS;
     const padD = hd + ENEMY_RADIUS;
 
-    // Check if enemy center is inside the padded AABB
     const dx = pos.x - cx;
     const dz = pos.z - cz;
 
     if (Math.abs(dx) < padW && Math.abs(dz) < padD) {
-      // Find shortest push-out axis
       const overlapX = padW - Math.abs(dx);
       const overlapZ = padD - Math.abs(dz);
 
@@ -432,6 +430,50 @@ function resolveWallCollisions(pos: THREE.Vector3) {
       }
     }
   }
+}
+
+// ── Line-of-sight check (2D ray vs AABB) ─────────────────
+// Returns true if no wall blocks the line from A to B in the XZ plane
+function hasLineOfSight(
+  ax: number, az: number,
+  bx: number, bz: number
+): boolean {
+  const dx = bx - ax;
+  const dz = bz - az;
+  const len = Math.sqrt(dx * dx + dz * dz);
+  if (len < 0.01) return true;
+  const ndx = dx / len;
+  const ndz = dz / len;
+  // Inverse direction for slab test
+  const invDx = ndx !== 0 ? 1 / ndx : 1e10;
+  const invDz = ndz !== 0 ? 1 / ndz : 1e10;
+
+  for (const [cx, cz, hw, hd] of WALL_COLLIDERS) {
+    const minX = cx - hw;
+    const maxX = cx + hw;
+    const minZ = cz - hd;
+    const maxZ = cz + hd;
+
+    // Slab intersection test
+    let tmin = (minX - ax) * invDx;
+    let tmax = (maxX - ax) * invDx;
+    if (tmin > tmax) { const tmp = tmin; tmin = tmax; tmax = tmp; }
+
+    let tzmin = (minZ - az) * invDz;
+    let tzmax = (maxZ - az) * invDz;
+    if (tzmin > tzmax) { const tmp = tzmin; tzmin = tzmax; tzmax = tmp; }
+
+    if (tmin > tzmax || tzmin > tmax) continue;
+
+    const tenter = Math.max(tmin, tzmin);
+    const texit = Math.min(tmax, tzmax);
+
+    // Hit if intersection is within the segment [0, len]
+    if (tenter < len && texit > 0.1) {
+      return false; // wall blocks line of sight
+    }
+  }
+  return true;
 }
 
 // ── Game Loop (runs inside Canvas) ───────────────────────
@@ -628,6 +670,19 @@ function GameLoop({
         scratchDir.current.normalize();
         const dir = scratchDir.current;
 
+        // If no line of sight, force strafe movement to navigate around walls
+        const los = hasLineOfSight(e.position.x, e.position.z, playerPos.current.x, playerPos.current.z);
+        if (!los) {
+          // Can't see player — strafe along walls instead of running into them
+          e.position.x += (-dir.z) * e.strafeDir * e.speed * 0.7 * dt;
+          e.position.z += dir.x * e.strafeDir * e.speed * 0.7 * dt;
+          // Occasionally flip to try the other direction
+          if (Math.random() < 0.02) e.strafeDir *= -1;
+          e.lastMoveDir.copy(dir);
+          resolveWallCollisions(e.position);
+          continue; // skip normal AI for this frame
+        }
+
         // Type-specific AI
         switch (e.type) {
           case "drone":
@@ -673,9 +728,15 @@ function GameLoop({
           }
         }
 
+        // Only shoot if line of sight to player is clear
+        const canSee = hasLineOfSight(
+          e.position.x, e.position.z,
+          playerPos.current.x, playerPos.current.z
+        );
+
         if (e.type === "drone") {
           const cd = DRONE_SHOOT_CD * Math.max(0.5, diff.shootCdMult);
-          if (now - lastShot > cd && dist < 18) {
+          if (canSee && now - lastShot > cd && dist < 18) {
             enemyShootTimers.current.set(e.id, now);
             fireEnemyProjectile(e, playerPos.current, setProjectiles, ENEMY_PROJECTILE_SPEED, diff.accuracyMult);
             e.isShooting = true;
@@ -684,7 +745,7 @@ function GameLoop({
         } else if (e.type === "sentinel") {
           const lastBurst = sentinelBurstTimers.current.get(e.id) || 0;
           const cd = SENTINEL_SHOOT_CD * Math.max(0.5, diff.shootCdMult);
-          if (e.burstCount > 0 && now - lastShot > cd && dist < 22) {
+          if (canSee && e.burstCount > 0 && now - lastShot > cd && dist < 22) {
             enemyShootTimers.current.set(e.id, now);
             e.burstCount--;
             fireEnemyProjectile(e, playerPos.current, setProjectiles, ENEMY_PROJECTILE_SPEED, diff.accuracyMult);
@@ -701,7 +762,7 @@ function GameLoop({
           }
         } else if (e.type === "heavy") {
           // Melee only — punch when in range
-          if (now - lastShot > HEAVY_MELEE_CD && dist < HEAVY_MELEE_RANGE) {
+          if (canSee && now - lastShot > HEAVY_MELEE_CD && dist < HEAVY_MELEE_RANGE) {
             enemyShootTimers.current.set(e.id, now);
             // Play punch animation
             e.isShooting = true;
@@ -731,7 +792,7 @@ function GameLoop({
           }
         } else if (e.type === "boss") {
           // Boss: ranged attack at distance, melee when close
-          if (dist < BOSS_MELEE_RANGE) {
+          if (canSee && dist < BOSS_MELEE_RANGE) {
             // Melee slam
             if (now - lastShot > BOSS_MELEE_CD) {
               enemyShootTimers.current.set(e.id, now);
@@ -753,7 +814,7 @@ function GameLoop({
                 forward.x * toEnemy.x + forward.z * toEnemy.z
               ));
             }
-          } else if (dist < 20) {
+          } else if (canSee && dist < 20) {
             // Ranged: fire 3 projectiles in a spread
             if (now - lastShot > BOSS_SHOOT_CD) {
               enemyShootTimers.current.set(e.id, now);
@@ -784,6 +845,12 @@ function GameLoop({
 
     // ── Enemy separation ──
     applySeparation(enemies);
+
+    // Re-resolve wall collisions after separation (separation can push into walls)
+    for (const e of enemies) {
+      if (!e.alive) continue;
+      resolveWallCollisions(e.position);
+    }
 
     // ── Wave cleared? ──
     // Compute from render-state directly (not from inside a state updater,
