@@ -1789,13 +1789,10 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
 
       // Deduct ammo (skip if infinite = -1)
       if (ammo > 0) {
-        setWeaponAmmo((prev) => {
-          const newAmmo = { ...prev, [currentWeapon]: prev[currentWeapon] - 1 };
-          if (newAmmo[currentWeapon] <= 0 && currentWeapon !== "blaster") {
-            setTimeout(() => setCurrentWeapon("blaster"), 0);
-          }
-          return newAmmo;
-        });
+        setWeaponAmmo((prev) => ({
+          ...prev,
+          [currentWeapon]: prev[currentWeapon] - 1,
+        }));
       }
 
       // Create projectiles
