@@ -84,10 +84,10 @@ interface SpriteAnimConfig {
 }
 
 const SPRITE_INFO: Record<WeaponType, SpriteAnimConfig> = {
-  blaster: { dir: "Glock", prefix: "GLOCK", frameCount: 7, frameDuration: 0.045, scale: 0.65 },
-  shotgun: { dir: "Shotgun", prefix: "SHOTGUN", frameCount: 6, frameDuration: 0.085, scale: 0.7 },
-  plasma: { dir: "MachineGun", prefix: "MACHINEGUN", frameCount: 7, frameDuration: 0.035, scale: 0.7 },
-  rocket: { dir: "RocketLauncher", prefix: "ROCKETLAUNCHER", frameCount: 7, frameDuration: 0.07, scale: 0.75 },
+  blaster: { dir: "Glock", prefix: "GLOCK", frameCount: 7, frameDuration: 0.045, scale: 1.0 },
+  shotgun: { dir: "Shotgun", prefix: "SHOTGUN", frameCount: 6, frameDuration: 0.085, scale: 1.15 },
+  plasma: { dir: "MachineGun", prefix: "MACHINEGUN", frameCount: 7, frameDuration: 0.035, scale: 1.15 },
+  rocket: { dir: "RocketLauncher", prefix: "ROCKETLAUNCHER", frameCount: 7, frameDuration: 0.07, scale: 1.25 },
 };
 
 interface WeaponProps {
@@ -252,7 +252,7 @@ export default function Weapon({ locked, weaponType, ammo, onShoot }: WeaponProp
     swayY.current = THREE.MathUtils.lerp(swayY.current, 0, SWAY_DAMPING);
 
     // ── Position weapon group in front of camera ──
-    const offset = new THREE.Vector3(0.02 - swayX.current * 0.5, -0.2 + bobY - swayY.current * 0.5, -0.45);
+    const offset = new THREE.Vector3(0.02 - swayX.current * 0.5, -0.38 + bobY - swayY.current * 0.5, -0.45);
     offset.applyQuaternion(camera.quaternion);
     offset.add(camera.position);
 
