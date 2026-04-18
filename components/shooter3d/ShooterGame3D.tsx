@@ -51,8 +51,8 @@ const PICKUP_RADIUS = 1.5;
 const HEALTH_PICKUP_AMOUNT = 15;
 
 // ── Powerup spawning config ─────────────────────────────
-const MAX_POWERUPS_ON_MAP = 2;
-const POWERUP_RESPAWN_DELAY = 15; // seconds after all collected
+const MAX_POWERUPS_ON_MAP = 5;
+const POWERUP_RESPAWN_DELAY = 8; // seconds between spawn batches
 const POWERUP_DESPAWN_TIME = 14; // seconds before despawn
 const POWERUP_TYPES: PickupType[] = ["health", "shotgun", "plasma", "rocket", "speed", "damage"];
 const SPEED_BOOST_DURATION = 6; // seconds
@@ -1139,17 +1139,19 @@ function GameLoop({
       }
     }
 
-    // ── Spawn powerups (max 1-2, only when none on map, with delay) ──
+    // ── Spawn powerups (top up to MAX_POWERUPS_ON_MAP, with delay) ──
     const alivePickups = pickups.filter((p) => p.alive).length;
-    if (alivePickups === 0) {
+    if (alivePickups < MAX_POWERUPS_ON_MAP) {
       if (lastPowerupSpawn.current === 0) {
         // First time — start the delay timer
         lastPowerupSpawn.current = state.clock.elapsedTime;
       } else if (
         state.clock.elapsedTime - lastPowerupSpawn.current > POWERUP_RESPAWN_DELAY
       ) {
-        // Spawn 1-2 new powerups
-        const count = Math.random() < 0.4 ? 2 : 1;
+        const slots = MAX_POWERUPS_ON_MAP - alivePickups;
+        // Spawn a chunky batch, but don't overflow the cap
+        const desired = 2 + Math.floor(Math.random() * 3); // 2-4
+        const count = Math.min(slots, desired);
         const newPickups: PickupData[] = [];
         for (let i = 0; i < count; i++) {
           const type = POWERUP_TYPES[Math.floor(Math.random() * POWERUP_TYPES.length)];
@@ -1167,7 +1169,7 @@ function GameLoop({
             spawnTime: state.clock.elapsedTime,
           });
         }
-        setPickups(newPickups);
+        setPickups((prev) => [...prev.filter((p) => p.alive), ...newPickups]);
         lastPowerupSpawn.current = state.clock.elapsedTime;
       }
     }
