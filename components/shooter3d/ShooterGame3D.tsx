@@ -42,43 +42,43 @@ import {
 
 // ── Game constants ───────────────────────────────────────
 const MAX_HEALTH = 100;
-const ENEMY_DAMAGE = 10;
-const ENEMY_PROJECTILE_SPEED = 15;
-const ENEMY_PROJECTILE_LIFE = 3;
+const ENEMY_DAMAGE = 18;
+const ENEMY_PROJECTILE_SPEED = 22;
+const ENEMY_PROJECTILE_LIFE = 3.5;
 const HIT_RADIUS = 1.0;
-const PLAYER_HIT_RADIUS = 0.8;
+const PLAYER_HIT_RADIUS = 0.9;
 const PICKUP_RADIUS = 1.5;
-const HEALTH_PICKUP_AMOUNT = 25;
+const HEALTH_PICKUP_AMOUNT = 15;
 
 // ── Powerup spawning config ─────────────────────────────
 const MAX_POWERUPS_ON_MAP = 2;
-const POWERUP_RESPAWN_DELAY = 8; // seconds after all collected
-const POWERUP_DESPAWN_TIME = 20; // seconds before despawn
+const POWERUP_RESPAWN_DELAY = 15; // seconds after all collected
+const POWERUP_DESPAWN_TIME = 14; // seconds before despawn
 const POWERUP_TYPES: PickupType[] = ["health", "shotgun", "plasma", "rocket", "speed", "damage"];
-const SPEED_BOOST_DURATION = 8; // seconds
-const DAMAGE_BOOST_DURATION = 8; // seconds
+const SPEED_BOOST_DURATION = 6; // seconds
+const DAMAGE_BOOST_DURATION = 6; // seconds
 const DAMAGE_BOOST_MULTIPLIER = 2;
 
 // Weapon ammo amounts given by pickups
-const SHOTGUN_PICKUP_AMMO = 8;
-const PLASMA_PICKUP_AMMO = 5;
-const ROCKET_PICKUP_AMMO = 3;
+const SHOTGUN_PICKUP_AMMO = 5;
+const PLASMA_PICKUP_AMMO = 3;
+const ROCKET_PICKUP_AMMO = 2;
 
 // ── Shoot cooldowns per enemy type ──────────────────────
-const DRONE_SHOOT_CD = 1.5;
-const SENTINEL_SHOOT_CD = 0.25; // burst interval
-const SENTINEL_BURST_PAUSE = 3; // pause between bursts
-const HEAVY_MELEE_CD = 1.5; // seconds between melee hits
-const HEAVY_MELEE_RANGE = 3.5;
-const HEAVY_MELEE_DAMAGE = 20;
+const DRONE_SHOOT_CD = 0.9;
+const SENTINEL_SHOOT_CD = 0.18; // burst interval
+const SENTINEL_BURST_PAUSE = 1.6; // pause between bursts
+const HEAVY_MELEE_CD = 0.9; // seconds between melee hits
+const HEAVY_MELEE_RANGE = 3.8;
+const HEAVY_MELEE_DAMAGE = 32;
 
 // ── Difficulty scaling ────────────────────────────────────
 function getDifficultyMultiplier(wave: number) {
   return {
-    speedMult: 1 + wave * 0.05,        // enemies get 5% faster each wave
-    accuracyMult: 1 - wave * 0.03,     // inaccuracy reduces 3% per wave (min 0.3)
-    shootCdMult: 1 - wave * 0.02,      // shoot cooldown reduces 2% per wave (min 0.5)
-    hpMult: 1 + wave * 0.08,           // enemies get 8% more HP each wave
+    speedMult: 1 + wave * 0.08,        // enemies get 8% faster each wave
+    accuracyMult: 1 - wave * 0.05,     // inaccuracy reduces 5% per wave (min 0.2)
+    shootCdMult: 1 - wave * 0.04,      // shoot cooldown reduces 4% per wave (min 0.4)
+    hpMult: 1 + wave * 0.12,           // enemies get 12% more HP each wave
   };
 }
 
@@ -86,18 +86,18 @@ function getDifficultyMultiplier(wave: number) {
 function getWaveConfig(wave: number) {
   const isBossWave = wave % 5 === 0 && wave > 0;
   if (isBossWave) {
-    // Boss wave: boss + reduced escort
+    // Boss wave: boss + heavier escort
     return {
-      drones: Math.min(2 + Math.floor(wave / 5), 5),
-      sentinels: Math.floor(wave / 5),
-      heavies: 0,
+      drones: Math.min(3 + Math.floor(wave / 4), 8),
+      sentinels: Math.max(1, Math.floor(wave / 3)),
+      heavies: Math.max(1, Math.floor(wave / 5)),
       boss: 1,
     };
   }
   // Normal wave
-  const drones = Math.min(1 + wave, 6);
-  const sentinels = Math.max(1, Math.floor(wave / 2) + 1);
-  const heavies = Math.max(1, Math.floor((wave + 1) / 3));
+  const drones = Math.min(2 + wave, 10);
+  const sentinels = Math.max(1, Math.floor(wave / 2) + 2);
+  const heavies = Math.max(1, Math.floor((wave + 1) / 2));
   return { drones, sentinels, heavies, boss: 0 };
 }
 
@@ -150,11 +150,11 @@ function spawnEnemies(wave: number, portals: [number, number, number][] = [[0,0,
 
   const diff = getDifficultyMultiplier(wave);
 
-  spawn("drone", config.drones, (25 + wave * 5) * diff.hpMult, (4 + wave * 0.2) * diff.speedMult);
-  spawn("sentinel", config.sentinels, (40 + wave * 5) * diff.hpMult, 2.5 * diff.speedMult);
-  spawn("heavy", config.heavies, (80 + wave * 10) * diff.hpMult, 1.5 * diff.speedMult);
+  spawn("drone", config.drones, (35 + wave * 7) * diff.hpMult, (5 + wave * 0.3) * diff.speedMult);
+  spawn("sentinel", config.sentinels, (55 + wave * 8) * diff.hpMult, 3.2 * diff.speedMult);
+  spawn("heavy", config.heavies, (110 + wave * 14) * diff.hpMult, 2.0 * diff.speedMult);
   if (config.boss > 0) {
-    spawn("boss", config.boss, 400 + wave * 30, 2.0 * diff.speedMult);
+    spawn("boss", config.boss, 600 + wave * 50, 2.6 * diff.speedMult);
   }
 
   return enemies;
@@ -341,10 +341,10 @@ function updateHeavyAI(
 }
 
 // ── Boss AI ──────────────────────────────────────────────
-const BOSS_MELEE_RANGE = 4.5;
-const BOSS_MELEE_DAMAGE = 30;
-const BOSS_SHOOT_CD = 1.0;
-const BOSS_MELEE_CD = 1.2;
+const BOSS_MELEE_RANGE = 4.8;
+const BOSS_MELEE_DAMAGE = 50;
+const BOSS_SHOOT_CD = 0.55;
+const BOSS_MELEE_CD = 0.75;
 
 function updateBossAI(
   e: EnemyData,
@@ -731,8 +731,8 @@ function GameLoop({
         const canSee = los;
 
         if (e.type === "drone") {
-          const cd = DRONE_SHOOT_CD * Math.max(0.5, diff.shootCdMult);
-          if (canSee && now - lastShot > cd && dist < 18) {
+          const cd = DRONE_SHOOT_CD * Math.max(0.35, diff.shootCdMult);
+          if (canSee && now - lastShot > cd && dist < 20) {
             enemyShootTimers.current.set(e.id, now);
             fireEnemyProjectile(e, playerPos.current, setProjectiles, ENEMY_PROJECTILE_SPEED, diff.accuracyMult);
             e.isShooting = true;
@@ -740,8 +740,8 @@ function GameLoop({
           }
         } else if (e.type === "sentinel") {
           const lastBurst = sentinelBurstTimers.current.get(e.id) || 0;
-          const cd = SENTINEL_SHOOT_CD * Math.max(0.5, diff.shootCdMult);
-          if (canSee && e.burstCount > 0 && now - lastShot > cd && dist < 22) {
+          const cd = SENTINEL_SHOOT_CD * Math.max(0.35, diff.shootCdMult);
+          if (canSee && e.burstCount > 0 && now - lastShot > cd && dist < 25) {
             enemyShootTimers.current.set(e.id, now);
             e.burstCount--;
             fireEnemyProjectile(e, playerPos.current, setProjectiles, ENEMY_PROJECTILE_SPEED, diff.accuracyMult);
@@ -1316,7 +1316,7 @@ function fireEnemyProjectile(
     .normalize();
   // Inaccuracy per type, reduced by difficulty scaling
   const baseInaccuracy = e.type === "sentinel" ? 0.05 : e.type === "boss" ? 0.06 : e.type === "heavy" ? 0.15 : 0.1;
-  const inaccuracy = baseInaccuracy * Math.max(0.3, accuracyMult);
+  const inaccuracy = baseInaccuracy * Math.max(0.15, accuracyMult);
   shootDir.x += (Math.random() - 0.5) * inaccuracy;
   shootDir.y += (Math.random() - 0.5) * inaccuracy * 0.5;
   shootDir.z += (Math.random() - 0.5) * inaccuracy;

@@ -25,9 +25,9 @@ export const MAPS: MapConfig[] = [
     description: "Entry point. Infested with lesser demons.",
     fogColor: "#1a1008",
     ambientColor: "#aa5522", // rust
-    enemies: { drones: 8, sentinels: 2, heavies: 0, bosses: 0 },
-    hpMult: 1.0,
-    speedMult: 1.0,
+    enemies: { drones: 12, sentinels: 4, heavies: 1, bosses: 0 },
+    hpMult: 1.25,
+    speedMult: 1.15,
   },
   {
     id: "map02",
@@ -35,9 +35,9 @@ export const MAPS: MapConfig[] = [
     description: "The reactor burns. Armored fiends guard the core.",
     fogColor: "#1a0800",
     ambientColor: "#cc3300", // lava
-    enemies: { drones: 10, sentinels: 4, heavies: 2, bosses: 0 },
-    hpMult: 1.2,
-    speedMult: 1.1,
+    enemies: { drones: 14, sentinels: 6, heavies: 4, bosses: 0 },
+    hpMult: 1.5,
+    speedMult: 1.25,
   },
   {
     id: "map03",
@@ -45,9 +45,9 @@ export const MAPS: MapConfig[] = [
     description: "Poisoned halls. The horde thickens.",
     fogColor: "#0a1208",
     ambientColor: "#556b2f", // sick green
-    enemies: { drones: 12, sentinels: 6, heavies: 4, bosses: 0 },
-    hpMult: 1.4,
-    speedMult: 1.2,
+    enemies: { drones: 16, sentinels: 9, heavies: 6, bosses: 0 },
+    hpMult: 1.75,
+    speedMult: 1.35,
   },
   {
     id: "map04",
@@ -55,9 +55,9 @@ export const MAPS: MapConfig[] = [
     description: "The overlord waits in blood and fire.",
     fogColor: "#1a0404",
     ambientColor: "#8B0000", // blood red
-    enemies: { drones: 8, sentinels: 4, heavies: 3, bosses: 1 },
-    hpMult: 1.5,
-    speedMult: 1.25,
+    enemies: { drones: 12, sentinels: 7, heavies: 5, bosses: 2 },
+    hpMult: 2.0,
+    speedMult: 1.45,
   },
 ];
 
