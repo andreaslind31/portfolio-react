@@ -251,7 +251,7 @@ export interface TerminalProps {
   screenColor?: string;
 }
 
-export function Terminal({ position, rotation, screenColor = EMISSIVE_SICK }: TerminalProps) {
+export function Terminal({ position, rotation, screenColor = EMISSIVE_FIRE }: TerminalProps) {
   const screenRef = useRef<THREE.Mesh>(null);
   useFrame((state) => {
     if (screenRef.current) {
@@ -391,15 +391,15 @@ export function ArenaShell({ halfW, halfD, wallTex, floorTex, ceilingTex }: Aren
       <Wall position={[halfW, WALL_H / 2, 0]} rotation={[0, Math.PI / 2, 0]} size={[D, WALL_H, WALL_T]} texture={wallTex} />
       <Wall position={[-halfW, WALL_H / 2, 0]} rotation={[0, Math.PI / 2, 0]} size={[D, WALL_H, WALL_T]} texture={wallTex} />
 
-      {/* Perimeter glow strips */}
-      <GlowStrip position={[0, 0.15, -halfD + 0.3]} scale={[W - 1, 0.08, 0.08]} color={EMISSIVE_RUST} />
-      <GlowStrip position={[0, 0.15, halfD - 0.3]} scale={[W - 1, 0.08, 0.08]} color={EMISSIVE_RUST} />
-      <GlowStrip position={[-halfW + 0.3, 0.15, 0]} scale={[0.08, 0.08, D - 1]} color={EMISSIVE_RUST} />
-      <GlowStrip position={[halfW - 0.3, 0.15, 0]} scale={[0.08, 0.08, D - 1]} color={EMISSIVE_RUST} />
+      {/* Perimeter glow strips — hellfire channel ringing the arena */}
+      <GlowStrip position={[0, 0.15, -halfD + 0.3]} scale={[W - 1, 0.08, 0.08]} color={EMISSIVE_BLOOD} />
+      <GlowStrip position={[0, 0.15, halfD - 0.3]} scale={[W - 1, 0.08, 0.08]} color={EMISSIVE_BLOOD} />
+      <GlowStrip position={[-halfW + 0.3, 0.15, 0]} scale={[0.08, 0.08, D - 1]} color={EMISSIVE_BLOOD} />
+      <GlowStrip position={[halfW - 0.3, 0.15, 0]} scale={[0.08, 0.08, D - 1]} color={EMISSIVE_BLOOD} />
 
-      {/* Ambient light */}
-      <ambientLight intensity={0.25} color="#3a2a1a" />
-      <hemisphereLight color="#5c4a3a" groundColor="#2a2018" intensity={0.3} />
+      {/* Ambient light — dim, blood-tinted hellish wash */}
+      <ambientLight intensity={0.22} color="#3a1410" />
+      <hemisphereLight color="#5a2418" groundColor="#1a0a08" intensity={0.28} />
     </>
   );
 }

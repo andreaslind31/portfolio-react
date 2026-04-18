@@ -1906,7 +1906,14 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
           camera={{ fov: 75, near: 0.1, far: 100 }}
         >
           <Suspense fallback={null}>
-            <fog attach="fog" args={["#1a1008", 20, 50]} />
+            <fog
+              attach="fog"
+              args={[
+                (MAPS.find((m) => m.id === (gameMode === "maps" ? selectedMapId : "map01"))?.fogColor) ?? "#180808",
+                20,
+                50,
+              ]}
+            />
             <Physics gravity={[0, -15, 0]}>
               <Player locked={locked} sensitivity={mouseSensitivity} speedMultiplier={playerSpeedMult} />
               <LevelSelector mapId={gameMode === "maps" ? selectedMapId : "map01"} />

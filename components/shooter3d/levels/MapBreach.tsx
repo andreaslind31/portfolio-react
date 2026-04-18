@@ -5,7 +5,7 @@ import {
   ArenaShell, Wall, GlowStrip, CeilingLight, EnergyPillar,
   SpawnPortal, Crate, Ramp, SolidPlatform, Catwalk,
   useMapTextures, type MapLayout,
-  WALL_H, EMISSIVE_FIRE, EMISSIVE_BLOOD, EMISSIVE_LAVA, EMISSIVE_RUST, EMISSIVE_SICK, WALL_COLOR,
+  WALL_H, EMISSIVE_FIRE, EMISSIVE_BLOOD, EMISSIVE_LAVA, EMISSIVE_RUST,
 } from "./LevelBase";
 
 const HW = 45;
@@ -151,8 +151,8 @@ function MapBreachImpl() {
       {/* ═══ EAST CORRIDOR → COMMAND CENTER ═══ */}
       <Wall position={[22, WALL_H/2, -5]} rotation={[0, Math.PI/2, 0]} size={[0.5, WALL_H, 24]} texture={wallTex} />
       <Wall position={[22, WALL_H/2, 5]} rotation={[0, Math.PI/2, 0]} size={[0.5, WALL_H, 24]} texture={wallTex} />
-      <GlowStrip position={[22, 0.15, -4.7]} scale={[24, 0.08, 0.08]} color={EMISSIVE_SICK} />
-      <GlowStrip position={[22, 0.15, 4.7]} scale={[24, 0.08, 0.08]} color={EMISSIVE_SICK} />
+      <GlowStrip position={[22, 0.15, -4.7]} scale={[24, 0.08, 0.08]} color={EMISSIVE_BLOOD} />
+      <GlowStrip position={[22, 0.15, 4.7]} scale={[24, 0.08, 0.08]} color={EMISSIVE_BLOOD} />
       {/* Alcoves */}
       <Wall position={[18, WALL_H/2, -9]} size={[0.5, WALL_H, 4]} texture={wallTex} />
       <Wall position={[22, WALL_H/2, -9]} size={[4, WALL_H, 0.5]} texture={wallTex} />
@@ -164,9 +164,9 @@ function MapBreachImpl() {
       <Wall position={[34, WALL_H/2, -8]} size={[0.5, WALL_H, 8]} texture={wallTex} />
       <Wall position={[34, WALL_H/2, 8]} size={[0.5, WALL_H, 8]} texture={wallTex} />
       {/* Observation deck */}
-      <Catwalk position={[38, 2, 0]} size={[3, 0.5, 16]} glowColor={EMISSIVE_SICK} />
+      <Catwalk position={[38, 2, 0]} size={[3, 0.5, 16]} glowColor={EMISSIVE_BLOOD} />
       <Ramp position={[36, 1, 10]} rotation={[0, Math.PI/2, 0]} rampRotation={[0.2, 0, 0]} size={[2.5, 0.5, 4]} />
-      <SpawnPortal position={[HW - 3, 0, 0]} rotation={[0, -Math.PI/2, 0]} color={EMISSIVE_SICK} />
+      <SpawnPortal position={[HW - 3, 0, 0]} rotation={[0, -Math.PI/2, 0]} color={EMISSIVE_BLOOD} />
 
       {/* ═══ WEST CORRIDOR → STORAGE ═══ */}
       <Wall position={[-22, WALL_H/2, -5]} rotation={[0, Math.PI/2, 0]} size={[0.5, WALL_H, 24]} texture={wallTex} />
@@ -198,7 +198,7 @@ function MapBreachImpl() {
       <CeilingLight position={[0, WALL_H - 0.1, 0]} color={EMISSIVE_FIRE} intensity={4} />
       <CeilingLight position={[0, WALL_H - 0.1, -30]} color={EMISSIVE_BLOOD} flicker />
       <CeilingLight position={[0, WALL_H - 0.1, 30]} color={EMISSIVE_LAVA} />
-      <CeilingLight position={[30, WALL_H - 0.1, 0]} color={EMISSIVE_SICK} flicker />
+      <CeilingLight position={[30, WALL_H - 0.1, 0]} color={EMISSIVE_BLOOD} flicker />
       <CeilingLight position={[-30, WALL_H - 0.1, 0]} color={EMISSIVE_RUST} />
     </group>
   );

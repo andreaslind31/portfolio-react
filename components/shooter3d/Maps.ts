@@ -22,9 +22,9 @@ export const MAPS: MapConfig[] = [
   {
     id: "map01",
     name: "THE BREACH",
-    description: "Entry point. Infested with lesser demons.",
-    fogColor: "#1a1008",
-    ambientColor: "#aa5522", // rust
+    description: "The gate has broken. Demons pour through the rift.",
+    fogColor: "#180808",
+    ambientColor: "#cc3322", // ember
     enemies: { drones: 12, sentinels: 4, heavies: 1, bosses: 0 },
     hpMult: 1.25,
     speedMult: 1.15,
@@ -33,7 +33,7 @@ export const MAPS: MapConfig[] = [
     id: "map02",
     name: "FURNACE",
     description: "The reactor burns. Armored fiends guard the core.",
-    fogColor: "#1a0800",
+    fogColor: "#1a0400",
     ambientColor: "#cc3300", // lava
     enemies: { drones: 14, sentinels: 6, heavies: 4, bosses: 0 },
     hpMult: 1.5,
@@ -41,10 +41,10 @@ export const MAPS: MapConfig[] = [
   },
   {
     id: "map03",
-    name: "TOXIN REFINERY",
-    description: "Poisoned halls. The horde thickens.",
-    fogColor: "#0a1208",
-    ambientColor: "#556b2f", // sick green
+    name: "SLAUGHTER WORKS",
+    description: "Blood-slick halls. The horde thickens.",
+    fogColor: "#140404",
+    ambientColor: "#a0202a", // crimson
     enemies: { drones: 16, sentinels: 9, heavies: 6, bosses: 0 },
     hpMult: 1.75,
     speedMult: 1.35,

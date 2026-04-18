@@ -5,7 +5,7 @@ import {
   ArenaShell, Wall, GlowStrip, CeilingLight, EnergyPillar,
   SpawnPortal, Crate, Ramp, SolidPlatform, Catwalk,
   useMapTextures, type MapLayout,
-  WALL_H, EMISSIVE_FIRE, EMISSIVE_LAVA, EMISSIVE_BLOOD, EMISSIVE_RUST, WALL_COLOR,
+  WALL_H, EMISSIVE_FIRE, EMISSIVE_LAVA, EMISSIVE_BLOOD, EMISSIVE_RUST,
 } from "./LevelBase";
 
 const HW = 45;
