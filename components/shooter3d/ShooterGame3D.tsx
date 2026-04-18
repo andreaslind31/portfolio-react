@@ -1352,6 +1352,7 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
   );
   const [gameMode, setGameMode] = useState<"waves" | "maps">("waves");
   const [selectedMapId, setSelectedMapId] = useState<string>("map01");
+  const pendingMode = useRef<"waves" | "maps">("waves");
   const [unlockedMaps, setUnlockedMaps] = useState<string[]>(["map01"]);
   // Multiplayer state
   const [mpConnectionState, setMpConnectionState] = useState<ConnectionState>("disconnected");
@@ -1555,15 +1556,12 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
   }, []);
 
   const handleSelectMode = useCallback((mode: "waves" | "maps") => {
-    if (mode === "waves") {
-      startGame("waves");
-    } else {
-      setGameState("mapSelect");
-    }
-  }, [startGame]);
+    pendingMode.current = mode;
+    setGameState("mapSelect");
+  }, []);
 
   const handleSelectMap = useCallback((mapId: string) => {
-    startGame("maps", mapId);
+    startGame(pendingMode.current, mapId);
   }, [startGame]);
 
   const handleBackToMenu = useCallback(() => {
@@ -2023,6 +2021,7 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
         clearedMap={MAPS.find((m) => m.id === selectedMapId) ?? null}
         hasNextMap={getNextMapId(selectedMapId) !== null}
         onMultiplayer={handleMultiplayer}
+        pendingMode={pendingMode.current}
       />
 
       <DamageFlash flash={damageFlash} />

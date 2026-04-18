@@ -75,6 +75,7 @@ interface HUDProps {
   clearedMap?: MapConfig | null;
   hasNextMap: boolean;
   onMultiplayer: () => void;
+  pendingMode: "waves" | "maps";
 }
 
 export default function HUD({
@@ -118,6 +119,7 @@ export default function HUD({
   clearedMap,
   hasNextMap,
   onMultiplayer,
+  pendingMode,
 }: HUDProps) {
   const [submitName, setSubmitName] = useState("");
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -892,8 +894,13 @@ export default function HUD({
           >
             SELECT MAP
           </h2>
-          <p style={{ color: "#ffffff66", fontSize: 11, letterSpacing: 2, marginBottom: 24 }}>
-            {unlockedMaps.length} / {MAPS.length} UNLOCKED
+          <p style={{ color: "#ffffff66", fontSize: 11, letterSpacing: 2, marginBottom: 4 }}>
+            {pendingMode === "waves" ? "WAVES MODE" : "CAMPAIGN MODE"}
+          </p>
+          <p style={{ color: "#ffffff44", fontSize: 10, letterSpacing: 2, marginBottom: 24 }}>
+            {pendingMode === "waves"
+              ? "All maps available — choose your arena"
+              : `${unlockedMaps.length} / ${MAPS.length} UNLOCKED`}
           </p>
 
           <div
@@ -905,7 +912,7 @@ export default function HUD({
             }}
           >
             {MAPS.map((map, idx) => {
-              const unlocked = unlockedMaps.includes(map.id);
+              const unlocked = pendingMode === "waves" || unlockedMaps.includes(map.id);
               return (
                 <button
                   key={map.id}
