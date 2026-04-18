@@ -480,13 +480,13 @@ export default function HUD({
               {/* Forward direction indicator */}
               <polygon points="0,-46 -3,-40 3,-40" fill="#7a8a3a66" />
               {/* Enemy dots — rotated to match camera facing */}
-              <g transform={`rotate(${(-playerYaw * 180) / Math.PI})`}>
+              <g transform={`rotate(${(playerYaw * 180) / Math.PI})`}>
                 {radarDots
                   .filter((d) => d.alive)
                   .map((dot, i) => {
-                    const radarScale = 48 / 30; // 30 units = edge of radar
+                    const radarScale = 48 / 50; // 50 units = edge of radar (matches large maps)
                     const rx = dot.x * radarScale;
-                    const rz = -dot.z * radarScale;
+                    const rz = dot.z * radarScale;
                     // Clamp to radar bounds
                     const dist = Math.sqrt(rx * rx + rz * rz);
                     const clampedDist = Math.min(dist, 46);
