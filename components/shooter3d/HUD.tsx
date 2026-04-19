@@ -47,6 +47,7 @@ interface HUDProps {
   maxArmor: number;
   difficulty: Difficulty;
   onSelectDifficulty: (d: Difficulty) => void;
+  playerMoving: boolean;
   score: number;
   wave: number;
   currentWeapon: WeaponType;
@@ -98,6 +99,7 @@ export default function HUD({
   maxArmor,
   difficulty,
   onSelectDifficulty,
+  playerMoving,
   score,
   wave,
   currentWeapon,
@@ -205,7 +207,7 @@ export default function HUD({
       {/* ═══ PLAYING HUD ═══ */}
       {gameState === "playing" && (
         <>
-          {/* Crosshair */}
+          {/* Crosshair — blooms while moving */}
           <div
             style={{
               position: "absolute",
@@ -214,35 +216,44 @@ export default function HUD({
               transform: "translate(-50%, -50%)",
             }}
           >
-            <svg width="28" height="28" viewBox="0 0 28 28">
-              {/* Outer ring — expands on hit */}
-              <circle
-                cx="14"
-                cy="14"
-                r={hitMarker ? 11 : 9}
-                fill="none"
-                stroke={hitMarker ? "#8B0000" : "#7a8a3a"}
-                strokeWidth={hitMarker ? 2 : 1}
-                opacity={hitMarker ? 1 : 0.5}
-                style={{ transition: "all 0.08s ease-out" }}
-              />
-              {/* Crosshair lines */}
-              <line x1="14" y1="2" x2="14" y2="9" stroke={hitMarker ? "#8B0000" : "#7a8a3a"} strokeWidth="1.5" opacity="0.8" />
-              <line x1="14" y1="19" x2="14" y2="26" stroke={hitMarker ? "#8B0000" : "#7a8a3a"} strokeWidth="1.5" opacity="0.8" />
-              <line x1="2" y1="14" x2="9" y2="14" stroke={hitMarker ? "#8B0000" : "#7a8a3a"} strokeWidth="1.5" opacity="0.8" />
-              <line x1="19" y1="14" x2="26" y2="14" stroke={hitMarker ? "#8B0000" : "#7a8a3a"} strokeWidth="1.5" opacity="0.8" />
-              {/* Center dot */}
-              <circle cx="14" cy="14" r={hitMarker ? 2.5 : 1.5} fill={hitMarker ? "#8B0000" : "#7a8a3a"} opacity="0.9" />
-              {/* Hit X marks */}
-              {hitMarker && (
-                <>
-                  <line x1="8" y1="8" x2="11" y2="11" stroke="#8B0000" strokeWidth="2" opacity="0.9" />
-                  <line x1="20" y1="8" x2="17" y2="11" stroke="#8B0000" strokeWidth="2" opacity="0.9" />
-                  <line x1="8" y1="20" x2="11" y2="17" stroke="#8B0000" strokeWidth="2" opacity="0.9" />
-                  <line x1="20" y1="20" x2="17" y2="17" stroke="#8B0000" strokeWidth="2" opacity="0.9" />
-                </>
-              )}
-            </svg>
+            {(() => {
+              const bloom = playerMoving ? 6 : 0; // pixels the ticks push outward
+              const ringR = (hitMarker ? 11 : 9) + bloom;
+              const strokeColor = hitMarker ? "#8B0000" : "#7a8a3a";
+              return (
+                <svg width="40" height="40" viewBox="0 0 40 40">
+                  {/* Outer ring — expands on hit and while moving */}
+                  <circle
+                    cx="20"
+                    cy="20"
+                    r={ringR}
+                    fill="none"
+                    stroke={strokeColor}
+                    strokeWidth={hitMarker ? 2 : 1}
+                    opacity={hitMarker ? 1 : 0.5}
+                    style={{ transition: "all 0.1s ease-out" }}
+                  />
+                  {/* Crosshair tick marks — pushed outward by `bloom` */}
+                  <g style={{ transition: "all 0.1s ease-out" }} opacity="0.85">
+                    <line x1="20" y1={8 - bloom} x2="20" y2={15 - bloom} stroke={strokeColor} strokeWidth="1.5" />
+                    <line x1="20" y1={25 + bloom} x2="20" y2={32 + bloom} stroke={strokeColor} strokeWidth="1.5" />
+                    <line x1={8 - bloom} y1="20" x2={15 - bloom} y2="20" stroke={strokeColor} strokeWidth="1.5" />
+                    <line x1={25 + bloom} y1="20" x2={32 + bloom} y2="20" stroke={strokeColor} strokeWidth="1.5" />
+                  </g>
+                  {/* Center dot */}
+                  <circle cx="20" cy="20" r={hitMarker ? 2.5 : 1.5} fill={strokeColor} opacity="0.9" />
+                  {/* Hit X marks */}
+                  {hitMarker && (
+                    <>
+                      <line x1="14" y1="14" x2="17" y2="17" stroke="#8B0000" strokeWidth="2" opacity="0.9" />
+                      <line x1="26" y1="14" x2="23" y2="17" stroke="#8B0000" strokeWidth="2" opacity="0.9" />
+                      <line x1="14" y1="26" x2="17" y2="23" stroke="#8B0000" strokeWidth="2" opacity="0.9" />
+                      <line x1="26" y1="26" x2="23" y2="23" stroke="#8B0000" strokeWidth="2" opacity="0.9" />
+                    </>
+                  )}
+                </svg>
+              );
+            })()}
           </div>
 
           {/* Damage direction indicator */}

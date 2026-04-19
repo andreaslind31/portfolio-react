@@ -98,7 +98,9 @@ interface WeaponProps {
 }
 
 const BOB_SPEED = 8;
-const BOB_AMOUNT = 0.008;
+const BOB_AMOUNT = 0.022;      // vertical bob
+const BOB_X_AMOUNT = 0.018;    // horizontal sway
+const BOB_ROLL_AMOUNT = 0.05;  // roll tilt (radians)
 const CAM_KICK_RECOVERY = 10;
 const SWAY_DAMPING = 0.12;
 
@@ -246,18 +248,29 @@ export default function Weapon({ locked, weaponType, ammo, onShoot }: WeaponProp
       keys.current.has("KeyW") || keys.current.has("KeyS") || keys.current.has("KeyA") || keys.current.has("KeyD");
 
     bobPhase.current += delta * (moving ? BOB_SPEED : 2);
+    // Figure-8 sway: Y at 2x freq (heel-strike rhythm), X at 1x freq (side-to-side)
     const bobY = moving ? Math.abs(Math.cos(bobPhase.current)) * BOB_AMOUNT : 0;
+    const bobX = moving ? Math.sin(bobPhase.current * 0.5) * BOB_X_AMOUNT : 0;
+    const bobRoll = moving ? Math.sin(bobPhase.current * 0.5) * BOB_ROLL_AMOUNT : 0;
 
     swayX.current = THREE.MathUtils.lerp(swayX.current, 0, SWAY_DAMPING);
     swayY.current = THREE.MathUtils.lerp(swayY.current, 0, SWAY_DAMPING);
 
     // ── Position weapon group in front of camera ──
-    const offset = new THREE.Vector3(0.02 - swayX.current * 0.5, -0.38 + bobY - swayY.current * 0.5, -0.45);
+    const offset = new THREE.Vector3(
+      0.02 + bobX - swayX.current * 0.5,
+      -0.38 + bobY - swayY.current * 0.5,
+      -0.45
+    );
     offset.applyQuaternion(camera.quaternion);
     offset.add(camera.position);
 
     groupRef.current.position.copy(offset);
     groupRef.current.quaternion.copy(camera.quaternion);
+    // Subtle roll tilt while walking — rotate around camera's local Z (forward-axis roll)
+    if (bobRoll !== 0) {
+      groupRef.current.rotateZ(bobRoll);
+    }
   });
 
   const spriteScale = SPRITE_INFO[weaponType].scale;

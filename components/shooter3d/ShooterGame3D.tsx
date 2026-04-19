@@ -1497,6 +1497,8 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
   const [pickups, setPickups] = useState<PickupData[]>([]);
   const [damageFlash, setDamageFlash] = useState(false);
   const [hitMarker, setHitMarker] = useState(false);
+  const [playerMoving, setPlayerMoving] = useState(false);
+  const playerMovingRef = useRef(false);
   const [kills, setKills] = useState(0);
   const [waveAnnounce, setWaveAnnounce] = useState(0);
   const [damageDirection, setDamageDirection] = useState<number | null>(null);
@@ -1587,6 +1589,30 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [gameState, weaponAmmo]);
+
+  // Track WASD held state — feeds crosshair bloom and shot spread
+  useEffect(() => {
+    const held = new Set<string>();
+    const MOVE_KEYS = ["KeyW", "KeyA", "KeyS", "KeyD"];
+    const sync = () => {
+      const nowMoving = MOVE_KEYS.some((k) => held.has(k));
+      if (playerMovingRef.current !== nowMoving) {
+        playerMovingRef.current = nowMoving;
+        setPlayerMoving(nowMoving);
+      }
+    };
+    const onKeyDown = (e: KeyboardEvent) => { if (MOVE_KEYS.includes(e.code)) { held.add(e.code); sync(); } };
+    const onKeyUp = (e: KeyboardEvent) => { if (MOVE_KEYS.includes(e.code)) { held.delete(e.code); sync(); } };
+    const onBlur = () => { held.clear(); sync(); };
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
+    window.addEventListener("blur", onBlur);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+      window.removeEventListener("blur", onBlur);
+    };
+  }, []);
 
   // Tab key for scoreboard (multiplayer)
   useEffect(() => {
@@ -1913,13 +1939,18 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
         }));
       }
 
+      // Movement inaccuracy — adds a cone of spread when firing while moving
+      const MOVE_SPREAD = 0.05;
+      const moveSpread = playerMovingRef.current ? MOVE_SPREAD : 0;
+
       // Create projectiles
       const newProjectiles: ProjectileData[] = [];
       for (let i = 0; i < config.pellets; i++) {
         const dir = direction.clone().normalize();
-        if (config.spread > 0) {
+        const totalSpread = config.spread + moveSpread;
+        if (totalSpread > 0) {
           // Cone-shaped spread: random angle within cone, random rotation around axis
-          const spreadAngle = config.spread * Math.sqrt(Math.random()); // sqrt for uniform disc
+          const spreadAngle = totalSpread * Math.sqrt(Math.random()); // sqrt for uniform disc
           const rotAngle = Math.random() * Math.PI * 2;
           // Create perpendicular axes
           const up = new THREE.Vector3(0, 1, 0);
@@ -2113,6 +2144,7 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
         maxArmor={MAX_ARMOR}
         difficulty={difficulty}
         onSelectDifficulty={handleSelectDifficulty}
+        playerMoving={playerMoving}
         score={score}
         wave={wave}
         currentWeapon={currentWeapon}
