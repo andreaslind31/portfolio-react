@@ -59,15 +59,24 @@ const HEALTH_PICKUP_AMOUNT = 15;
 const MAX_POWERUPS_ON_MAP = 5;
 const POWERUP_RESPAWN_DELAY = 8; // seconds between spawn batches
 const POWERUP_DESPAWN_TIME = 14; // seconds before despawn
-const POWERUP_TYPES: PickupType[] = ["health", "armor", "shotgun", "plasma", "rocket", "speed", "damage"];
+// Weighted spawn pool — weapons appear more often than support pickups
+const POWERUP_TYPES: PickupType[] = [
+  "health", "health",
+  "armor", "armor",
+  "shotgun", "shotgun", "shotgun",
+  "plasma", "plasma", "plasma",
+  "rocket", "rocket", "rocket",
+  "speed",
+  "damage",
+];
 const SPEED_BOOST_DURATION = 6; // seconds
 const DAMAGE_BOOST_DURATION = 6; // seconds
 const DAMAGE_BOOST_MULTIPLIER = 2;
 
 // Weapon ammo amounts given by pickups
-const SHOTGUN_PICKUP_AMMO = 5;
-const PLASMA_PICKUP_AMMO = 3;
-const ROCKET_PICKUP_AMMO = 2;
+const SHOTGUN_PICKUP_AMMO = 8;
+const PLASMA_PICKUP_AMMO = 5;
+const ROCKET_PICKUP_AMMO = 3;
 
 // ── Shoot cooldowns per enemy type ──────────────────────
 const DRONE_SHOOT_CD = 0.9;
