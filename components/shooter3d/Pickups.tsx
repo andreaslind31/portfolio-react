@@ -6,6 +6,7 @@ import * as THREE from "three";
 
 export type PickupType =
   | "health"
+  | "armor"
   | "shotgun"
   | "plasma"
   | "rocket"
@@ -22,6 +23,7 @@ export interface PickupData {
 
 const PICKUP_CONFIG: Record<PickupType, { color: string; label: string }> = {
   health: { color: "#3a8a3a", label: "HP" },
+  armor: { color: "#4a90c8", label: "AR" },
   shotgun: { color: "#8a7a3a", label: "SG" },
   plasma: { color: "#33aa33", label: "PL" },
   rocket: { color: "#8B4513", label: "RL" },
@@ -112,6 +114,18 @@ function PickupMesh({ pickup, weaponTextures }: PickupMeshProps) {
             side={THREE.DoubleSide}
             depthWrite={false}
           />
+        </mesh>
+      </group>
+    );
+  }
+
+  // Armor pickup: tilted cube that reads as a shield chunk
+  if (pickup.type === "armor") {
+    return (
+      <group ref={groupRef} visible={pickup.alive}>
+        <mesh rotation={[0.4, 0, 0.4]}>
+          <boxGeometry args={[0.4, 0.4, 0.4]} />
+          <meshBasicMaterial color={cfg.color} toneMapped={false} />
         </mesh>
       </group>
     );

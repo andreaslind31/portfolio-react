@@ -298,6 +298,31 @@ export function playDamageSound() {
   }
 }
 
+/** Low-health heartbeat — dual-thump pulse (lub-dub) */
+export function playHeartbeatPulse() {
+  try {
+    const ctx = getCtx();
+    const now = ctx.currentTime;
+    const thump = (start: number, strength: number) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(75, start);
+      osc.frequency.exponentialRampToValueAtTime(45, start + 0.12);
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.linearRampToValueAtTime(0.25 * strength, start + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.18);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(start);
+      osc.stop(start + 0.2);
+    };
+    thump(now, 1);
+    thump(now + 0.14, 0.7);
+  } catch {
+    // Audio not available
+  }
+}
+
 /** Wave start — rising tone */
 export function playWaveStartSound() {
   try {

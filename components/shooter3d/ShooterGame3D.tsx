@@ -30,6 +30,7 @@ import {
   playHitSound,
   playExplosionSound,
   playDamageSound,
+  playHeartbeatPulse,
   playWaveStartSound,
   playPickupSound,
   playFootstepSound,
@@ -42,6 +43,10 @@ import {
 
 // ── Game constants ───────────────────────────────────────
 const MAX_HEALTH = 100;
+const MAX_ARMOR = 100;
+const ARMOR_PICKUP_AMOUNT = 25;
+const ARMOR_ABSORB = 0.6; // armor soaks 60% of incoming damage
+const LOW_HEALTH_THRESHOLD = 30;
 const ENEMY_DAMAGE = 18;
 const ENEMY_PROJECTILE_SPEED = 22;
 const ENEMY_PROJECTILE_LIFE = 3.5;
@@ -54,7 +59,7 @@ const HEALTH_PICKUP_AMOUNT = 15;
 const MAX_POWERUPS_ON_MAP = 5;
 const POWERUP_RESPAWN_DELAY = 8; // seconds between spawn batches
 const POWERUP_DESPAWN_TIME = 14; // seconds before despawn
-const POWERUP_TYPES: PickupType[] = ["health", "shotgun", "plasma", "rocket", "speed", "damage"];
+const POWERUP_TYPES: PickupType[] = ["health", "armor", "shotgun", "plasma", "rocket", "speed", "damage"];
 const SPEED_BOOST_DURATION = 6; // seconds
 const DAMAGE_BOOST_DURATION = 6; // seconds
 const DAMAGE_BOOST_MULTIPLIER = 2;
@@ -72,13 +77,49 @@ const HEAVY_MELEE_CD = 0.9; // seconds between melee hits
 const HEAVY_MELEE_RANGE = 3.8;
 const HEAVY_MELEE_DAMAGE = 32;
 
+// ── Difficulty tiers ─────────────────────────────────────
+export type Difficulty = "easy" | "normal" | "hard" | "nightmare";
+
+interface DifficultyProfile {
+  hpMult: number;       // multiplies enemy HP baseline
+  speedMult: number;    // multiplies enemy speed baseline
+  damageMult: number;   // multiplies damage the player takes
+  pickupMult: number;   // scales pickup spawn batch size
+}
+
+const DIFFICULTY_PROFILES: Record<Difficulty, DifficultyProfile> = {
+  easy:      { hpMult: 0.75, speedMult: 0.85, damageMult: 0.6, pickupMult: 1.35 },
+  normal:    { hpMult: 1.0,  speedMult: 1.0,  damageMult: 1.0, pickupMult: 1.0 },
+  hard:      { hpMult: 1.3,  speedMult: 1.15, damageMult: 1.35, pickupMult: 0.8 },
+  nightmare: { hpMult: 1.7,  speedMult: 1.3,  damageMult: 1.75, pickupMult: 0.6 },
+};
+
+const DIFFICULTY_STORAGE_KEY = "sectorBreachDifficulty";
+
+export function loadDifficulty(): Difficulty {
+  if (typeof window === "undefined") return "normal";
+  try {
+    const v = localStorage.getItem(DIFFICULTY_STORAGE_KEY);
+    if (v === "easy" || v === "normal" || v === "hard" || v === "nightmare") return v;
+  } catch {}
+  return "normal";
+}
+
+export function saveDifficulty(d: Difficulty) {
+  if (typeof window === "undefined") return;
+  try { localStorage.setItem(DIFFICULTY_STORAGE_KEY, d); } catch {}
+}
+
 // ── Difficulty scaling ────────────────────────────────────
-function getDifficultyMultiplier(wave: number) {
+function getDifficultyMultiplier(wave: number, difficulty: Difficulty = "normal") {
+  const p = DIFFICULTY_PROFILES[difficulty];
   return {
-    speedMult: 1 + wave * 0.08,        // enemies get 8% faster each wave
-    accuracyMult: 1 - wave * 0.05,     // inaccuracy reduces 5% per wave (min 0.2)
-    shootCdMult: 1 - wave * 0.04,      // shoot cooldown reduces 4% per wave (min 0.4)
-    hpMult: 1 + wave * 0.12,           // enemies get 12% more HP each wave
+    speedMult: (1 + wave * 0.08) * p.speedMult,     // enemies get 8% faster each wave
+    accuracyMult: 1 - wave * 0.05,                  // inaccuracy reduces 5% per wave
+    shootCdMult: 1 - wave * 0.04,                   // shoot cooldown reduces 4% per wave
+    hpMult: (1 + wave * 0.12) * p.hpMult,           // enemies get 12% more HP each wave
+    damageMult: p.damageMult,
+    pickupMult: p.pickupMult,
   };
 }
 
@@ -103,7 +144,7 @@ function getWaveConfig(wave: number) {
 
 let nextId = 1;
 
-function spawnEnemies(wave: number, portals: [number, number, number][] = [[0,0,10],[0,0,-10],[10,0,0],[-10,0,0]]): EnemyData[] {
+function spawnEnemies(wave: number, portals: [number, number, number][] = [[0,0,10],[0,0,-10],[10,0,0],[-10,0,0]], difficulty: Difficulty = "normal"): EnemyData[] {
   const config = getWaveConfig(wave);
   const enemies: EnemyData[] = [];
 
@@ -148,7 +189,7 @@ function spawnEnemies(wave: number, portals: [number, number, number][] = [[0,0,
     }
   };
 
-  const diff = getDifficultyMultiplier(wave);
+  const diff = getDifficultyMultiplier(wave, difficulty);
 
   spawn("drone", config.drones, (35 + wave * 7) * diff.hpMult, (5 + wave * 0.3) * diff.speedMult);
   spawn("sentinel", config.sentinels, (55 + wave * 8) * diff.hpMult, 3.2 * diff.speedMult);
@@ -161,8 +202,9 @@ function spawnEnemies(wave: number, portals: [number, number, number][] = [[0,0,
 }
 
 // Spawn enemies for a specific map — fixed counts, no wave progression
-function spawnMapEnemies(map: MapConfig, portals: [number, number, number][] = [[0,0,10],[0,0,-10],[10,0,0],[-10,0,0]]): EnemyData[] {
+function spawnMapEnemies(map: MapConfig, portals: [number, number, number][] = [[0,0,10],[0,0,-10],[10,0,0],[-10,0,0]], difficulty: Difficulty = "normal"): EnemyData[] {
   const enemies: EnemyData[] = [];
+  const p = DIFFICULTY_PROFILES[difficulty];
 
   const spawn = (
     type: EnemyData["type"],
@@ -204,12 +246,37 @@ function spawnMapEnemies(map: MapConfig, portals: [number, number, number][] = [
     }
   };
 
-  spawn("drone", map.enemies.drones, 30 * map.hpMult, 4 * map.speedMult);
-  spawn("sentinel", map.enemies.sentinels, 50 * map.hpMult, 2.5 * map.speedMult);
-  spawn("heavy", map.enemies.heavies, 100 * map.hpMult, 1.5 * map.speedMult);
-  spawn("boss", map.enemies.bosses, 500 * map.hpMult, 2.0 * map.speedMult);
+  spawn("drone", map.enemies.drones, 30 * map.hpMult * p.hpMult, 4 * map.speedMult * p.speedMult);
+  spawn("sentinel", map.enemies.sentinels, 50 * map.hpMult * p.hpMult, 2.5 * map.speedMult * p.speedMult);
+  spawn("heavy", map.enemies.heavies, 100 * map.hpMult * p.hpMult, 1.5 * map.speedMult * p.speedMult);
+  spawn("boss", map.enemies.bosses, 500 * map.hpMult * p.hpMult, 2.0 * map.speedMult * p.speedMult);
 
   return enemies;
+}
+
+// ── Low-health pulsing vignette ──────────────────────────
+function LowHealthOverlay({ active }: { active: boolean }) {
+  return (
+    <div
+      style={{
+        position: "absolute",
+        inset: 0,
+        pointerEvents: "none",
+        background:
+          "radial-gradient(ellipse at center, transparent 35%, #8B0000cc 100%)",
+        opacity: active ? 1 : 0,
+        transition: "opacity 0.3s",
+        animation: active ? "lowHealthPulse 1.1s ease-in-out infinite" : "none",
+      }}
+    >
+      <style>{`
+        @keyframes lowHealthPulse {
+          0%, 100% { filter: brightness(0.85); }
+          50% { filter: brightness(1.25); }
+        }
+      `}</style>
+    </div>
+  );
 }
 
 // ── Hit flash overlay ────────────────────────────────────
@@ -531,6 +598,10 @@ function GameLoop({
   onMapCleared,
   connectionManager,
   activeLayout,
+  difficulty,
+  applyPlayerDamage,
+  armorRef,
+  setArmor,
 }: {
   enemies: EnemyData[];
   setEnemies: React.Dispatch<React.SetStateAction<EnemyData[]>>;
@@ -585,6 +656,10 @@ function GameLoop({
   onMapCleared: () => void;
   connectionManager: React.MutableRefObject<ConnectionManager | null>;
   activeLayout: React.MutableRefObject<MapLayout>;
+  difficulty: Difficulty;
+  applyPlayerDamage: (raw: number) => void;
+  armorRef: React.MutableRefObject<number>;
+  setArmor: React.Dispatch<React.SetStateAction<number>>;
 }) {
   const { camera } = useThree();
   const enemyShootTimers = useRef<Map<number, number>>(new Map());
@@ -598,6 +673,7 @@ function GameLoop({
   const scratchEnemyPos = useRef(new THREE.Vector3());
   const musicUpdateTimer = useRef(0);
   const particleCleanupTimer = useRef(0);
+  const heartbeatTimer = useRef(0);
 
   useFrame((state, delta) => {
     if (gameState !== "playing") return;
@@ -613,7 +689,7 @@ function GameLoop({
     const dt = Math.min(delta, 0.05);
 
     // ── Difficulty scaling ──
-    const diff = getDifficultyMultiplier(wave);
+    const diff = getDifficultyMultiplier(wave, difficulty);
 
     // ── Send local player state to multiplayer server ──
     if (connectionManager.current && connectionManager.current.getState() === "connected") {
@@ -763,8 +839,8 @@ function GameLoop({
             // Play punch animation
             e.isShooting = true;
             e.shootFrame = 0;
-            // Deal direct damage to player
-            setHealth((h) => Math.max(0, h - HEAVY_MELEE_DAMAGE));
+            // Deal damage (routed through armor)
+            applyPlayerDamage(HEAVY_MELEE_DAMAGE);
             setDamageFlash(true);
             setTimeout(() => setDamageFlash(false), 150);
             playDamageSound();
@@ -794,7 +870,7 @@ function GameLoop({
               enemyShootTimers.current.set(e.id, now);
               e.isShooting = true;
               e.shootFrame = 0;
-              setHealth((h) => Math.max(0, h - BOSS_MELEE_DAMAGE));
+              applyPlayerDamage(BOSS_MELEE_DAMAGE);
               setDamageFlash(true);
               setTimeout(() => setDamageFlash(false), 150);
               playDamageSound();
@@ -865,7 +941,7 @@ function GameLoop({
         setTimeout(() => {
           setWave((w) => {
             const next = w + 1;
-            setEnemies(spawnEnemies(next, activeLayout.current.SPAWN_PORTALS));
+            setEnemies(spawnEnemies(next, activeLayout.current.SPAWN_PORTALS, difficulty));
             enemyShootTimers.current.clear();
             sentinelBurstTimers.current.clear();
             waveCleared.current = false;
@@ -1069,7 +1145,7 @@ function GameLoop({
               p.position.distanceTo(playerPos.current) < PLAYER_HIT_RADIUS
             ) {
               p.alive = false;
-              setHealth((h) => Math.max(0, h - ENEMY_DAMAGE));
+              applyPlayerDamage(ENEMY_DAMAGE);
               setDamageFlash(true);
               setTimeout(() => setDamageFlash(false), 150);
               playDamageSound();
@@ -1104,6 +1180,10 @@ function GameLoop({
         switch (pk.type) {
           case "health":
             setHealth((h) => Math.min(MAX_HEALTH, h + HEALTH_PICKUP_AMOUNT));
+            break;
+          case "armor":
+            armorRef.current = Math.min(MAX_ARMOR, armorRef.current + ARMOR_PICKUP_AMOUNT);
+            setArmor(armorRef.current);
             break;
           case "shotgun":
             setWeaponAmmo((prev) => ({
@@ -1149,8 +1229,9 @@ function GameLoop({
         state.clock.elapsedTime - lastPowerupSpawn.current > POWERUP_RESPAWN_DELAY
       ) {
         const slots = MAX_POWERUPS_ON_MAP - alivePickups;
-        // Spawn a chunky batch, but don't overflow the cap
-        const desired = 2 + Math.floor(Math.random() * 3); // 2-4
+        // Spawn a chunky batch, but don't overflow the cap. Difficulty scales batch size.
+        const desiredBase = 2 + Math.floor(Math.random() * 3); // 2-4
+        const desired = Math.max(1, Math.round(desiredBase * diff.pickupMult));
         const count = Math.min(slots, desired);
         const newPickups: PickupData[] = [];
         for (let i = 0; i < count; i++) {
@@ -1225,6 +1306,19 @@ function GameLoop({
       }
       return 0;
     });
+
+    // ── Low-health heartbeat ──
+    if (health > 0 && health < LOW_HEALTH_THRESHOLD) {
+      heartbeatTimer.current += dt;
+      // Pulse faster as health drops
+      const interval = 0.4 + (health / LOW_HEALTH_THRESHOLD) * 0.4; // 0.4s..0.8s
+      if (heartbeatTimer.current >= interval) {
+        heartbeatTimer.current = 0;
+        playHeartbeatPulse();
+      }
+    } else {
+      heartbeatTimer.current = 0;
+    }
 
     // ── Update combat music intensity (throttled to 4x/sec) ──
     musicUpdateTimer.current += dt;
@@ -1354,6 +1448,24 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
   );
   const [gameMode, setGameMode] = useState<"waves" | "maps">("waves");
   const [selectedMapId, setSelectedMapId] = useState<string>("map01");
+  const [difficulty, setDifficulty] = useState<Difficulty>(() => loadDifficulty());
+  const difficultyRef = useRef<Difficulty>(difficulty);
+  useEffect(() => { difficultyRef.current = difficulty; }, [difficulty]);
+  const armorRef = useRef(0);
+  const handleSelectDifficulty = useCallback((d: Difficulty) => {
+    setDifficulty(d);
+    saveDifficulty(d);
+  }, []);
+  // Route all player damage through armor: armor absorbs ARMOR_ABSORB fraction first.
+  const applyPlayerDamage = useCallback((rawDmg: number) => {
+    const scaled = rawDmg * DIFFICULTY_PROFILES[difficultyRef.current].damageMult;
+    const absorbable = scaled * ARMOR_ABSORB;
+    const absorbed = Math.min(armorRef.current, absorbable);
+    armorRef.current -= absorbed;
+    setArmor(armorRef.current);
+    const healthDmg = scaled - absorbed;
+    setHealth((h) => Math.max(0, h - healthDmg));
+  }, []);
   const pendingMode = useRef<"waves" | "maps">("waves");
   const [unlockedMaps, setUnlockedMaps] = useState<string[]>(["map01"]);
   // Multiplayer state
@@ -1367,6 +1479,7 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
   const [killFeedEntries, setKillFeedEntries] = useState<KillFeedEntry[]>([]);
   const [showScoreboard, setShowScoreboard] = useState(false);
   const [health, setHealth] = useState(MAX_HEALTH);
+  const [armor, setArmor] = useState(0);
   const [score, setScore] = useState(0);
   const [wave, setWave] = useState(1);
   const [currentWeapon, setCurrentWeapon] = useState<WeaponType>("blaster");
@@ -1503,6 +1616,8 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
 
     setGameState("playing");
     setHealth(MAX_HEALTH);
+    setArmor(0);
+    armorRef.current = 0;
     setScore(0);
     setWave(1);
     setCurrentWeapon("blaster");
@@ -1536,11 +1651,12 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
     shakeIntensity.current = 0;
 
     // Spawn enemies — for maps, spawn the map's fixed enemy set; for waves, start wave 1
+    const diff = difficultyRef.current;
     if (mode === "maps" && mapId) {
       const map = MAPS.find((m) => m.id === mapId);
-      if (map) setEnemies(spawnMapEnemies(map, activeLayout.current.SPAWN_PORTALS));
+      if (map) setEnemies(spawnMapEnemies(map, activeLayout.current.SPAWN_PORTALS, diff));
     } else {
-      setEnemies(spawnEnemies(1, activeLayout.current.SPAWN_PORTALS));
+      setEnemies(spawnEnemies(1, activeLayout.current.SPAWN_PORTALS, diff));
     }
 
     stopAmbient.current?.();
@@ -1981,6 +2097,10 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
               onMapCleared={handleMapCleared}
               connectionManager={connectionManager}
               activeLayout={activeLayout}
+              difficulty={difficulty}
+              applyPlayerDamage={applyPlayerDamage}
+              armorRef={armorRef}
+              setArmor={setArmor}
             />
           </Suspense>
         </Canvas>
@@ -1989,6 +2109,10 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
       <HUD
         health={health}
         maxHealth={MAX_HEALTH}
+        armor={armor}
+        maxArmor={MAX_ARMOR}
+        difficulty={difficulty}
+        onSelectDifficulty={handleSelectDifficulty}
         score={score}
         wave={wave}
         currentWeapon={currentWeapon}
@@ -2031,6 +2155,7 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
       />
 
       <DamageFlash flash={damageFlash} />
+      <LowHealthOverlay active={gameState === "playing" && health > 0 && health < LOW_HEALTH_THRESHOLD} />
 
       {/* CSS vignette — replaces WebGL EffectComposer (zero GPU cost) */}
       <div

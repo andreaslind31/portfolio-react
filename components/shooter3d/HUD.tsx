@@ -4,6 +4,15 @@ import { useState, useEffect } from "react";
 import type { WeaponType } from "./Weapon";
 import { MAPS, type MapConfig } from "./Maps";
 
+export type Difficulty = "easy" | "normal" | "hard" | "nightmare";
+
+const DIFFICULTY_META: Record<Difficulty, { label: string; color: string; desc: string }> = {
+  easy:      { label: "EASY",      color: "#4a90c8", desc: "Weakened foes. Generous pickups." },
+  normal:    { label: "NORMAL",    color: "#8a7a3a", desc: "Baseline challenge." },
+  hard:      { label: "HARD",      color: "#cc4400", desc: "Faster, tougher, meaner." },
+  nightmare: { label: "NIGHTMARE", color: "#8B0000", desc: "No mercy. Scarce resources." },
+};
+
 export interface RadarDot {
   x: number;
   z: number;
@@ -34,6 +43,10 @@ const WEAPON_DISPLAY: Record<WeaponType, WeaponDisplay> = {
 interface HUDProps {
   health: number;
   maxHealth: number;
+  armor: number;
+  maxArmor: number;
+  difficulty: Difficulty;
+  onSelectDifficulty: (d: Difficulty) => void;
   score: number;
   wave: number;
   currentWeapon: WeaponType;
@@ -81,6 +94,10 @@ interface HUDProps {
 export default function HUD({
   health,
   maxHealth,
+  armor,
+  maxArmor,
+  difficulty,
+  onSelectDifficulty,
   score,
   wave,
   currentWeapon,
@@ -289,6 +306,30 @@ export default function HUD({
                   background: healthColor,
                   boxShadow: `0 0 10px ${healthColor}`,
                   transition: "width 0.3s, background 0.3s",
+                }}
+              />
+            </div>
+            {/* Armor bar */}
+            <div style={{ color: "#4a90c8", fontSize: 12, letterSpacing: 2, marginTop: 4 }}>
+              ARMOR
+            </div>
+            <div
+              style={{
+                width: 200,
+                height: 6,
+                background: "rgba(255,255,255,0.08)",
+                borderRadius: 3,
+                overflow: "hidden",
+                border: "1px solid #4a90c844",
+              }}
+            >
+              <div
+                style={{
+                  width: `${Math.max(0, (armor / maxArmor) * 100)}%`,
+                  height: "100%",
+                  background: "#4a90c8",
+                  boxShadow: "0 0 8px #4a90c8",
+                  transition: "width 0.3s",
                 }}
               />
             </div>
@@ -770,9 +811,46 @@ export default function HUD({
           >
             SELECT MODE
           </h2>
-          <p style={{ color: "#7b2ff7", fontSize: 12, letterSpacing: 3, marginBottom: 40 }}>
+          <p style={{ color: "#7b2ff7", fontSize: 12, letterSpacing: 3, marginBottom: 24 }}>
             CHOOSE YOUR BATTLE
           </p>
+
+          {/* Difficulty picker */}
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 28 }}>
+            <div style={{ color: "#ffffff88", fontSize: 11, letterSpacing: 3, marginBottom: 10 }}>
+              DIFFICULTY
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              {(["easy", "normal", "hard", "nightmare"] as Difficulty[]).map((d) => {
+                const meta = DIFFICULTY_META[d];
+                const active = difficulty === d;
+                return (
+                  <button
+                    key={d}
+                    onClick={() => onSelectDifficulty(d)}
+                    style={{
+                      background: active ? `${meta.color}33` : "transparent",
+                      border: `1px solid ${meta.color}${active ? "" : "66"}`,
+                      color: meta.color,
+                      padding: "8px 14px",
+                      fontSize: 11,
+                      letterSpacing: 2,
+                      cursor: "pointer",
+                      fontFamily: "'Courier New', monospace",
+                      textShadow: active ? `0 0 8px ${meta.color}` : "none",
+                      boxShadow: active ? `0 0 12px ${meta.color}55` : "none",
+                      minWidth: 100,
+                    }}
+                  >
+                    {meta.label}
+                  </button>
+                );
+              })}
+            </div>
+            <div style={{ color: `${DIFFICULTY_META[difficulty].color}cc`, fontSize: 10, letterSpacing: 1, marginTop: 8, minHeight: 14 }}>
+              {DIFFICULTY_META[difficulty].desc}
+            </div>
+          </div>
 
           <div style={{ display: "flex", gap: 24 }}>
             {/* Waves button */}
