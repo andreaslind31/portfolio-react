@@ -1721,6 +1721,10 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
     setGameState("menu");
   }, []);
 
+  const handleBackToModeSelect = useCallback(() => {
+    setGameState("modeSelect");
+  }, []);
+
   const handleNextMap = useCallback(() => {
     const next = getNextMapId(selectedMapId);
     if (next) startGame("maps", next);
@@ -2188,6 +2192,7 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
         onSelectMode={handleSelectMode}
         onSelectMap={handleSelectMap}
         onBackToMenu={handleBackToMenu}
+        onBackToModeSelect={handleBackToModeSelect}
         onNextMap={handleNextMap}
         clearedMap={MAPS.find((m) => m.id === selectedMapId) ?? null}
         hasNextMap={getNextMapId(selectedMapId) !== null}

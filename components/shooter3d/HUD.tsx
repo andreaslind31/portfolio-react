@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import type { WeaponType } from "./Weapon";
 import { MAPS, type MapConfig } from "./Maps";
+import { getMapLayout } from "./levels";
 
 export type Difficulty = "easy" | "normal" | "hard" | "nightmare";
 
@@ -85,6 +86,7 @@ interface HUDProps {
   onSelectMode: (mode: "waves" | "maps") => void;
   onSelectMap: (mapId: string) => void;
   onBackToMenu: () => void;
+  onBackToModeSelect: () => void;
   onNextMap: () => void;
   clearedMap?: MapConfig | null;
   hasNextMap: boolean;
@@ -134,6 +136,7 @@ export default function HUD({
   onSelectMode,
   onSelectMap,
   onBackToMenu,
+  onBackToModeSelect,
   onNextMap,
   clearedMap,
   hasNextMap,
@@ -509,7 +512,7 @@ export default function HUD({
           <div
             style={{
               position: "absolute",
-              bottom: 70,
+              bottom: 120,
               left: 30,
               width: 100,
               height: 100,
@@ -1002,6 +1005,10 @@ export default function HUD({
           >
             {MAPS.map((map, idx) => {
               const unlocked = pendingMode === "waves" || unlockedMaps.includes(map.id);
+              const layout = getMapLayout(map.id);
+              const scale = Math.min(200 / (layout.ARENA_HALF_W * 2), 80 / (layout.ARENA_HALF_D * 2));
+              const cx = 100;
+              const cy = 40;
               return (
                 <button
                   key={map.id}
@@ -1026,31 +1033,58 @@ export default function HUD({
                     if (unlocked) e.currentTarget.style.boxShadow = `0 0 20px ${map.ambientColor}44`;
                   }}
                 >
-                  {/* Procedural thumbnail */}
+                  {/* Procedural thumbnail — rendered from actual wall colliders */}
                   <div style={{ height: 80, background: map.fogColor, position: "relative", overflow: "hidden" }}>
                     <svg width="100%" height="80" viewBox="0 0 200 80" style={{ display: "block" }}>
-                      {/* Cross-shaped facility diagram */}
-                      <rect x="70" y="20" width="60" height="40" fill={map.ambientColor} opacity="0.3" />
-                      <rect x="90" y="0" width="20" height="20" fill={map.ambientColor} opacity="0.25" />
-                      <rect x="90" y="60" width="20" height="20" fill={map.ambientColor} opacity="0.25" />
-                      <rect x="50" y="30" width="20" height="20" fill={map.ambientColor} opacity="0.25" />
-                      <rect x="130" y="30" width="20" height="20" fill={map.ambientColor} opacity="0.25" />
-                      {/* Center dot */}
-                      <circle cx="100" cy="40" r="3" fill={map.ambientColor} />
-                      {/* Enemy icons (red dots scattered) */}
-                      {Array.from({ length: Math.min(idx + 3, 8) }).map((_, i) => {
-                        const a = (i / 8) * Math.PI * 2;
+                      {/* Arena floor */}
+                      <rect
+                        x={cx - layout.ARENA_HALF_W * scale}
+                        y={cy - layout.ARENA_HALF_D * scale}
+                        width={layout.ARENA_HALF_W * 2 * scale}
+                        height={layout.ARENA_HALF_D * 2 * scale}
+                        fill={map.ambientColor}
+                        opacity="0.15"
+                      />
+                      {/* Arena perimeter */}
+                      <rect
+                        x={cx - layout.ARENA_HALF_W * scale}
+                        y={cy - layout.ARENA_HALF_D * scale}
+                        width={layout.ARENA_HALF_W * 2 * scale}
+                        height={layout.ARENA_HALF_D * 2 * scale}
+                        fill="none"
+                        stroke={map.ambientColor}
+                        strokeWidth="0.6"
+                        opacity="0.6"
+                      />
+                      {/* Walls from actual level layout */}
+                      {layout.WALL_COLLIDERS.map(([wcx, wcz, hw, hd], i) => {
+                        const w = Math.max(hw * 2 * scale, 0.8);
+                        const h = Math.max(hd * 2 * scale, 0.8);
                         return (
-                          <circle
+                          <rect
                             key={i}
-                            cx={100 + Math.cos(a) * (20 + i * 2)}
-                            cy={40 + Math.sin(a) * (15 + i * 1.5)}
-                            r={map.enemies.bosses > 0 && i === 0 ? 4 : 2}
-                            fill={map.enemies.bosses > 0 && i === 0 ? "#ff0000" : "#ff4444"}
-                            opacity={0.8}
+                            x={cx + wcx * scale - w / 2}
+                            y={cy + wcz * scale - h / 2}
+                            width={w}
+                            height={h}
+                            fill={map.ambientColor}
+                            opacity="0.75"
                           />
                         );
                       })}
+                      {/* Spawn portals */}
+                      {layout.SPAWN_PORTALS.map(([sx, , sz], i) => (
+                        <circle
+                          key={`sp-${i}`}
+                          cx={cx + sx * scale}
+                          cy={cy + sz * scale}
+                          r={1.6}
+                          fill="#ff4444"
+                          opacity="0.85"
+                        />
+                      ))}
+                      {/* Player start marker */}
+                      <circle cx={cx} cy={cy} r={1.8} fill="#ffffff" opacity="0.9" />
                       {/* Lock overlay */}
                       {!unlocked && (
                         <>
@@ -1081,7 +1115,7 @@ export default function HUD({
           </div>
 
           <button
-            onClick={() => onSelectMode("waves")}
+            onClick={onBackToModeSelect}
             style={{
               marginTop: 24,
               background: "transparent",
@@ -1092,6 +1126,7 @@ export default function HUD({
               letterSpacing: 2,
               cursor: "pointer",
               fontFamily: "'Courier New', monospace",
+              pointerEvents: "auto",
             }}
           >
             ← BACK
