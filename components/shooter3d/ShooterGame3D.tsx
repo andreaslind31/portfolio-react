@@ -94,13 +94,14 @@ interface DifficultyProfile {
   speedMult: number;    // multiplies enemy speed baseline
   damageMult: number;   // multiplies damage the player takes
   pickupMult: number;   // scales pickup spawn batch size
+  scoreMult: number;    // scales points awarded per kill
 }
 
 const DIFFICULTY_PROFILES: Record<Difficulty, DifficultyProfile> = {
-  easy:      { hpMult: 0.75, speedMult: 0.85, damageMult: 0.6, pickupMult: 1.35 },
-  normal:    { hpMult: 1.0,  speedMult: 1.0,  damageMult: 1.0, pickupMult: 1.0 },
-  hard:      { hpMult: 1.3,  speedMult: 1.15, damageMult: 1.35, pickupMult: 0.8 },
-  nightmare: { hpMult: 1.7,  speedMult: 1.3,  damageMult: 1.75, pickupMult: 0.6 },
+  easy:      { hpMult: 0.75, speedMult: 0.85, damageMult: 0.6,  pickupMult: 1.35, scoreMult: 0.4 },
+  normal:    { hpMult: 1.0,  speedMult: 1.0,  damageMult: 1.0,  pickupMult: 1.0,  scoreMult: 1.0 },
+  hard:      { hpMult: 1.3,  speedMult: 1.15, damageMult: 1.35, pickupMult: 0.8,  scoreMult: 1.6 },
+  nightmare: { hpMult: 1.7,  speedMult: 1.3,  damageMult: 1.75, pickupMult: 0.6,  scoreMult: 2.5 },
 };
 
 const DIFFICULTY_STORAGE_KEY = "sectorBreachDifficulty";
@@ -1018,7 +1019,7 @@ function GameLoop({
                     p.position.clone(), enemies, state, currentWeapon,
                     damageBoostEnd, explosionRadius, setParticles,
                     setExplosions, setScore, setKills, setHitMarker,
-                    shakeIntensity
+                    shakeIntensity, difficulty
                   );
                 } else {
                   // Normal hit: single target
@@ -1046,7 +1047,8 @@ function GameLoop({
                     const newCombo = Math.min(comboMultiplier + 0.5, 5);
                     setComboTimer(3);
                     setComboMultiplier(newCombo);
-                    const points = Math.round(basePoints * newCombo);
+                    const scoreMult = DIFFICULTY_PROFILES[difficulty].scoreMult;
+                    const points = Math.round(basePoints * newCombo * scoreMult);
                     setScore((s) => s + points);
                     setKills((k) => k + 1);
                     const deathColor = e.type === "drone" ? "#8B0000" : e.type === "sentinel" ? "#B22222" : "#660000";
@@ -1361,7 +1363,8 @@ function rocketExplode(
   setScore: React.Dispatch<React.SetStateAction<number>>,
   setKills: React.Dispatch<React.SetStateAction<number>>,
   setHitMarker: React.Dispatch<React.SetStateAction<boolean>>,
-  shakeIntensity: React.MutableRefObject<number>
+  shakeIntensity: React.MutableRefObject<number>,
+  difficulty: Difficulty = "normal"
 ) {
   // Big explosion visual
   setParticles((pp) => [
@@ -1396,7 +1399,8 @@ function rocketExplode(
         e.alive = false;
         e.dying = true;
         e.deathTimer = 0;
-        const points = e.type === "drone" ? 100 : e.type === "sentinel" ? 200 : e.type === "boss" ? 2000 : 500;
+        const basePoints = e.type === "drone" ? 100 : e.type === "sentinel" ? 200 : e.type === "boss" ? 2000 : 500;
+        const points = Math.round(basePoints * DIFFICULTY_PROFILES[difficulty].scoreMult);
         setScore((s) => s + points);
         setKills((k) => k + 1);
         const deathColor = e.type === "drone" ? "#8B0000" : e.type === "sentinel" ? "#B22222" : "#660000";

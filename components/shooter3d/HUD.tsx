@@ -8,10 +8,10 @@ import { getMapLayout } from "./levels";
 export type Difficulty = "easy" | "normal" | "hard" | "nightmare";
 
 const DIFFICULTY_META: Record<Difficulty, { label: string; color: string; desc: string }> = {
-  easy:      { label: "EASY",      color: "#4a90c8", desc: "Weakened foes. Generous pickups." },
-  normal:    { label: "NORMAL",    color: "#8a7a3a", desc: "Baseline challenge." },
-  hard:      { label: "HARD",      color: "#cc4400", desc: "Faster, tougher, meaner." },
-  nightmare: { label: "NIGHTMARE", color: "#8B0000", desc: "No mercy. Scarce resources." },
+  easy:      { label: "EASY",      color: "#4a90c8", desc: "Weakened foes. Generous pickups. 0.4x score." },
+  normal:    { label: "NORMAL",    color: "#8a7a3a", desc: "Baseline challenge. 1.0x score." },
+  hard:      { label: "HARD",      color: "#cc4400", desc: "Faster, tougher, meaner. 1.6x score." },
+  nightmare: { label: "NIGHTMARE", color: "#8B0000", desc: "No mercy. Scarce resources. 2.5x score." },
 };
 
 export interface RadarDot {
