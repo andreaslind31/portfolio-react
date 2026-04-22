@@ -5,6 +5,9 @@ export interface MapEnemySpawn {
   sentinels: number;
   heavies: number;
   bosses: number;
+  snipers?: number;
+  teleporters?: number;
+  shieldedHeavies?: number;
 }
 
 export interface MapConfig {
@@ -35,7 +38,7 @@ export const MAPS: MapConfig[] = [
     description: "The reactor burns. Armored fiends guard the core.",
     fogColor: "#1a0400",
     ambientColor: "#cc3300", // lava
-    enemies: { drones: 14, sentinels: 6, heavies: 4, bosses: 0 },
+    enemies: { drones: 14, sentinels: 6, heavies: 4, bosses: 0, snipers: 2, shieldedHeavies: 1 },
     hpMult: 1.5,
     speedMult: 1.25,
   },
@@ -45,7 +48,7 @@ export const MAPS: MapConfig[] = [
     description: "Blood-slick halls. The horde thickens.",
     fogColor: "#140404",
     ambientColor: "#a0202a", // crimson
-    enemies: { drones: 16, sentinels: 9, heavies: 6, bosses: 0 },
+    enemies: { drones: 14, sentinels: 8, heavies: 5, bosses: 0, snipers: 3, teleporters: 2, shieldedHeavies: 1 },
     hpMult: 1.75,
     speedMult: 1.35,
   },
@@ -55,7 +58,7 @@ export const MAPS: MapConfig[] = [
     description: "The overlord waits in blood and fire.",
     fogColor: "#1a0404",
     ambientColor: "#8B0000", // blood red
-    enemies: { drones: 12, sentinels: 7, heavies: 5, bosses: 2 },
+    enemies: { drones: 10, sentinels: 6, heavies: 4, bosses: 2, snipers: 3, teleporters: 3, shieldedHeavies: 2 },
     hpMult: 2.0,
     speedMult: 1.45,
   },

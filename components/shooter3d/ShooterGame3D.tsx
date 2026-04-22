@@ -173,6 +173,7 @@ function spawnEnemies(wave: number, portals: [number, number, number][] = [[0,0,
         0,
         (Math.random() - 0.5) * 4
       );
+      const shieldHp = type === "shieldedHeavy" ? 80 : undefined;
       enemies.push({
         id: nextId++,
         position: new THREE.Vector3(
@@ -195,6 +196,9 @@ function spawnEnemies(wave: number, portals: [number, number, number][] = [[0,0,
         lastMoveDir: new THREE.Vector3(0, 0, 1),
         dying: false,
         deathTimer: 0,
+        shieldHp,
+        maxShieldHp: shieldHp,
+        teleportCd: type === "teleporter" ? 3 + Math.random() * 1.5 : undefined,
       });
     }
   };
@@ -204,6 +208,19 @@ function spawnEnemies(wave: number, portals: [number, number, number][] = [[0,0,
   spawn("drone", config.drones, (35 + wave * 7) * diff.hpMult, (5 + wave * 0.3) * diff.speedMult);
   spawn("sentinel", config.sentinels, (55 + wave * 8) * diff.hpMult, 3.2 * diff.speedMult);
   spawn("heavy", config.heavies, (110 + wave * 14) * diff.hpMult, 2.0 * diff.speedMult);
+  // Archetype scaling: sniper from wave 3, shieldedHeavy from wave 5, teleporter from wave 7
+  if (wave >= 3) {
+    const snipers = Math.min(1 + Math.floor((wave - 3) / 3), 3);
+    spawn("sniper", snipers, (70 + wave * 10) * diff.hpMult, 2.6 * diff.speedMult);
+  }
+  if (wave >= 5) {
+    const wardens = Math.min(1 + Math.floor((wave - 5) / 4), 2);
+    spawn("shieldedHeavy", wardens, (130 + wave * 16) * diff.hpMult, 1.8 * diff.speedMult);
+  }
+  if (wave >= 7) {
+    const wraiths = Math.min(1 + Math.floor((wave - 7) / 3), 3);
+    spawn("teleporter", wraiths, (45 + wave * 8) * diff.hpMult, 5.5 * diff.speedMult);
+  }
   if (config.boss > 0) {
     spawn("boss", config.boss, 600 + wave * 50, 2.6 * diff.speedMult);
   }
@@ -230,6 +247,7 @@ function spawnMapEnemies(map: MapConfig, portals: [number, number, number][] = [
         0,
         (Math.random() - 0.5) * 4
       );
+      const shieldHp = type === "shieldedHeavy" ? 80 : undefined;
       enemies.push({
         id: nextId++,
         position: new THREE.Vector3(
@@ -252,6 +270,9 @@ function spawnMapEnemies(map: MapConfig, portals: [number, number, number][] = [
         lastMoveDir: new THREE.Vector3(0, 0, 1),
         dying: false,
         deathTimer: 0,
+        shieldHp,
+        maxShieldHp: shieldHp,
+        teleportCd: type === "teleporter" ? 3 + Math.random() * 1.5 : undefined,
       });
     }
   };
@@ -259,9 +280,44 @@ function spawnMapEnemies(map: MapConfig, portals: [number, number, number][] = [
   spawn("drone", map.enemies.drones, 30 * map.hpMult * p.hpMult, 4 * map.speedMult * p.speedMult);
   spawn("sentinel", map.enemies.sentinels, 50 * map.hpMult * p.hpMult, 2.5 * map.speedMult * p.speedMult);
   spawn("heavy", map.enemies.heavies, 100 * map.hpMult * p.hpMult, 1.5 * map.speedMult * p.speedMult);
+  spawn("sniper", map.enemies.snipers ?? 0, 70 * map.hpMult * p.hpMult, 2.3 * map.speedMult * p.speedMult);
+  spawn("teleporter", map.enemies.teleporters ?? 0, 40 * map.hpMult * p.hpMult, 5.0 * map.speedMult * p.speedMult);
+  spawn("shieldedHeavy", map.enemies.shieldedHeavies ?? 0, 130 * map.hpMult * p.hpMult, 1.6 * map.speedMult * p.speedMult);
   spawn("boss", map.enemies.bosses, 500 * map.hpMult * p.hpMult, 2.0 * map.speedMult * p.speedMult);
 
   return enemies;
+}
+
+// ── Sniper telegraph lasers ──────────────────────────────
+// Renders a thin red line from each telegraphing sniper to its locked aim position.
+// The line appears on first frame of telegraph and fades in over the telegraph duration.
+function SniperLasers({ enemies }: { enemies: EnemyData[] }) {
+  const telegraphing = enemies.filter(
+    (e) => e.alive && e.type === "sniper" && e.aiState === "telegraph" && e.telegraphAimPos
+  );
+  return (
+    <group>
+      {telegraphing.map((e) => {
+        const from = e.position.clone();
+        from.y += 1.4;
+        const to = e.telegraphAimPos!;
+        const mid = from.clone().add(to).multiplyScalar(0.5);
+        const length = from.distanceTo(to);
+        // Rotate a thin cylinder to align with (to - from).
+        const dir = new THREE.Vector3().subVectors(to, from).normalize();
+        const up = new THREE.Vector3(0, 1, 0);
+        const quat = new THREE.Quaternion().setFromUnitVectors(up, dir);
+        const progress = Math.min(e.chargeTimer / SNIPER_TELEGRAPH_TIME, 1);
+        const opacity = 0.2 + progress * 0.7;
+        return (
+          <mesh key={e.id} position={mid} quaternion={quat}>
+            <cylinderGeometry args={[0.03, 0.03, length, 6]} />
+            <meshBasicMaterial color="#ff2222" transparent opacity={opacity} toneMapped={false} />
+          </mesh>
+        );
+      })}
+    </group>
+  );
 }
 
 // ── Low-health pulsing vignette ──────────────────────────
@@ -453,6 +509,178 @@ function updateBossAI(
   }
 
   e.chargeTimer += dt;
+  e.lastMoveDir.copy(dir);
+}
+
+// ── Score + damage helpers ──────────────────────────────
+function enemyBasePoints(type: EnemyData["type"]): number {
+  switch (type) {
+    case "drone": return 100;
+    case "sentinel": return 200;
+    case "heavy": return 500;
+    case "boss": return 2000;
+    case "sniper": return 300;
+    case "teleporter": return 250;
+    case "shieldedHeavy": return 650;
+  }
+}
+
+// Apply damage to an enemy with optional shield absorption on shielded heavies.
+// projectileDir: the direction the projectile was travelling (enemy is hit from the opposite side).
+function applyEnemyDamage(e: EnemyData, dmg: number, projectileDir: THREE.Vector3) {
+  if (e.type === "shieldedHeavy" && e.shieldHp !== undefined && e.shieldHp > 0) {
+    // Hit is on the shield if the projectile came at the enemy's front arc.
+    // Enemy facing = lastMoveDir (toward player). Projectile direction · facing < -0.5 => frontal.
+    const facing = e.lastMoveDir;
+    const dot = facing.x * projectileDir.x + facing.z * projectileDir.z;
+    if (dot < -0.3) {
+      e.shieldHp -= dmg;
+      if (e.shieldHp < 0) {
+        // Shield broke — remainder bleeds through to HP.
+        e.hp += e.shieldHp; // shieldHp is negative here
+        e.shieldHp = 0;
+      }
+      return;
+    }
+  }
+  e.hp -= dmg;
+}
+
+// ── Sniper AI ────────────────────────────────────────────
+// Stays at long range, telegraphs with a red laser, then fires a high-damage shot.
+const SNIPER_IDEAL_MIN = 18;
+const SNIPER_IDEAL_MAX = 28;
+const SNIPER_TELEGRAPH_TIME = 1.2;
+
+function updateSniperAI(
+  e: EnemyData,
+  dir: THREE.Vector3,
+  dist: number,
+  dt: number
+) {
+  // If telegraphing, freeze in place (chargeTimer tracks telegraph progress).
+  if (e.aiState === "telegraph") {
+    e.chargeTimer += dt;
+    e.lastMoveDir.copy(dir);
+    return;
+  }
+
+  // Otherwise, maintain long range and strafe lightly.
+  const strafe = aiStrafe.set(-dir.z, 0, dir.x).multiplyScalar(e.strafeDir);
+  if (dist < SNIPER_IDEAL_MIN) {
+    e.position.addScaledVector(dir, -e.speed * dt);
+  } else if (dist > SNIPER_IDEAL_MAX) {
+    e.position.addScaledVector(dir, e.speed * 0.8 * dt);
+  } else {
+    e.position.addScaledVector(strafe, e.speed * 0.35 * dt);
+  }
+  e.lastMoveDir.copy(dir);
+  if (Math.random() < 0.01) e.strafeDir *= -1;
+}
+
+// ── Teleporter AI ───────────────────────────────────────
+// Fast close-in harassment; blinks to a random position near the player every few seconds.
+const TELEPORT_DURATION = 0.35;
+const TELEPORT_MIN_DIST = 4;
+const TELEPORT_MAX_DIST = 9;
+
+function updateTeleporterAI(
+  e: EnemyData,
+  dir: THREE.Vector3,
+  dist: number,
+  dt: number,
+  playerPos: THREE.Vector3,
+  wallColliders: [number, number, number, number][],
+  arenaHalfW: number,
+  arenaHalfD: number
+) {
+  // Teleport phase: timer counts down, then resolve a new position.
+  if (e.aiState === "teleport") {
+    e.chargeTimer -= dt;
+    if (e.chargeTimer <= 0) {
+      // Pick a random position in an annulus around the player that isn't inside a wall.
+      for (let attempt = 0; attempt < 8; attempt++) {
+        const angle = Math.random() * Math.PI * 2;
+        const r = TELEPORT_MIN_DIST + Math.random() * (TELEPORT_MAX_DIST - TELEPORT_MIN_DIST);
+        const nx = THREE.MathUtils.clamp(playerPos.x + Math.cos(angle) * r, -arenaHalfW + 2, arenaHalfW - 2);
+        const nz = THREE.MathUtils.clamp(playerPos.z + Math.sin(angle) * r, -arenaHalfD + 2, arenaHalfD - 2);
+        if (!pointInsideWall(nx, nz, wallColliders)) {
+          e.position.set(nx, 0, nz);
+          break;
+        }
+      }
+      e.aiState = "engage";
+      e.teleportCd = 2.5 + Math.random() * 2; // next teleport
+    }
+    e.lastMoveDir.copy(dir);
+    return;
+  }
+
+  // Normal: close the distance quickly and strafe.
+  const strafe = aiStrafe.set(-dir.z, 0, dir.x).multiplyScalar(e.strafeDir);
+  if (dist > 5) {
+    e.position.addScaledVector(dir, e.speed * dt);
+    e.position.addScaledVector(strafe, e.speed * 0.5 * dt);
+  } else if (dist < 2) {
+    e.position.addScaledVector(dir, -e.speed * 0.8 * dt);
+  } else {
+    e.position.addScaledVector(strafe, e.speed * 0.9 * dt);
+  }
+  e.lastMoveDir.copy(dir);
+
+  // Count down to next teleport.
+  if (e.teleportCd !== undefined) {
+    e.teleportCd -= dt;
+    if (e.teleportCd <= 0) {
+      e.aiState = "teleport";
+      e.chargeTimer = TELEPORT_DURATION;
+    }
+  }
+
+  if (Math.random() < 0.015) e.strafeDir *= -1;
+}
+
+// Check if a point sits inside any rectangular wall collider (cx, cz, hw, hd).
+function pointInsideWall(
+  x: number,
+  z: number,
+  walls: [number, number, number, number][]
+): boolean {
+  for (const [cx, cz, hw, hd] of walls) {
+    if (Math.abs(x - cx) < hw + 0.5 && Math.abs(z - cz) < hd + 0.5) return true;
+  }
+  return false;
+}
+
+// ── Shielded heavy AI ───────────────────────────────────
+// Same melee approach as heavy but slower + front-facing shield absorbs damage.
+function updateShieldedHeavyAI(
+  e: EnemyData,
+  dir: THREE.Vector3,
+  dist: number,
+  dt: number
+) {
+  // Identical to heavy, but we always face the player so the shield works reliably.
+  if (dist > 10) {
+    e.aiState = "engage";
+    e.position.addScaledVector(dir, e.speed * dt);
+    e.chargeTimer = 0;
+  } else if (dist > HEAVY_MELEE_RANGE) {
+    e.aiState = "charge";
+    e.chargeTimer += dt;
+    if (e.chargeTimer > 1.2) {
+      e.position.addScaledVector(dir, e.speed * 2.5 * dt);
+    } else {
+      e.position.addScaledVector(dir, e.speed * 0.45 * dt);
+    }
+  } else {
+    e.aiState = "charge";
+    const strafe = aiStrafe.set(-dir.z, 0, dir.x).multiplyScalar(e.strafeDir);
+    e.position.addScaledVector(strafe, e.speed * 0.25 * dt);
+    e.position.addScaledVector(dir, e.speed * 0.2 * dt);
+    if (Math.random() < 0.02) e.strafeDir *= -1;
+  }
+  // Always face the player so the shield arc works predictably.
   e.lastMoveDir.copy(dir);
 }
 
@@ -783,6 +1011,20 @@ function GameLoop({
           case "boss":
             updateBossAI(e, dir, dist, dt);
             break;
+          case "sniper":
+            updateSniperAI(e, dir, dist, dt);
+            break;
+          case "teleporter":
+            updateTeleporterAI(
+              e, dir, dist, dt, playerPos.current,
+              activeLayout.current.WALL_COLLIDERS,
+              activeLayout.current.ARENA_HALF_W,
+              activeLayout.current.ARENA_HALF_D
+            );
+            break;
+          case "shieldedHeavy":
+            updateShieldedHeavyAI(e, dir, dist, dt);
+            break;
         }
 
         // Wall collision + arena clamping done in batch after separation below
@@ -842,7 +1084,7 @@ function GameLoop({
           ) {
             e.burstCount = 3;
           }
-        } else if (e.type === "heavy") {
+        } else if (e.type === "heavy" || e.type === "shieldedHeavy") {
           // Melee only — punch when in range
           if (canSee && now - lastShot > HEAVY_MELEE_CD && dist < HEAVY_MELEE_RANGE) {
             enemyShootTimers.current.set(e.id, now);
@@ -871,6 +1113,52 @@ function GameLoop({
               forward.x * toEnemy.x + forward.z * toEnemy.z
             );
             setDamageDirection(angle);
+          }
+        } else if (e.type === "sniper") {
+          // Sniper: telegraph (1.2s) then single high-damage shot at 2.5s cooldown.
+          const SNIPER_CD = 2.5 * Math.max(0.4, diff.shootCdMult);
+          if (e.aiState === "telegraph") {
+            if (e.chargeTimer >= SNIPER_TELEGRAPH_TIME) {
+              // Fire at locked aim position.
+              enemyShootTimers.current.set(e.id, now);
+              e.isShooting = true;
+              e.shootFrame = 0;
+              const origin = e.position.clone().add(new THREE.Vector3(0, 1.4, 0));
+              const target = e.telegraphAimPos ?? playerPos.current;
+              const shotDir = new THREE.Vector3().subVectors(target, origin).normalize();
+              setProjectiles((prev) => [...prev, {
+                id: nextId++,
+                position: origin,
+                direction: shotDir,
+                speed: ENEMY_PROJECTILE_SPEED * 1.5,
+                alive: true,
+                friendly: false,
+                life: ENEMY_PROJECTILE_LIFE,
+                color: "#ff2222",
+                size: 1.2,
+              }]);
+              e.aiState = "engage";
+              e.chargeTimer = 0;
+            }
+          } else if (canSee && now - lastShot > SNIPER_CD && dist < 32) {
+            // Begin telegraph; lock aim at the player's current position.
+            e.aiState = "telegraph";
+            e.chargeTimer = 0;
+            e.telegraphAimPos = playerPos.current.clone();
+          }
+        } else if (e.type === "teleporter") {
+          // Teleporter: brief contact damage in melee range (no projectile).
+          const TELEPORT_MELEE_CD = 0.8;
+          const TELEPORT_MELEE_DMG = 15;
+          if (canSee && e.aiState !== "teleport" && now - lastShot > TELEPORT_MELEE_CD && dist < 2.2) {
+            enemyShootTimers.current.set(e.id, now);
+            e.isShooting = true;
+            e.shootFrame = 0;
+            applyPlayerDamage(TELEPORT_MELEE_DMG);
+            setDamageFlash(true);
+            setTimeout(() => setDamageFlash(false), 150);
+            playDamageSound();
+            shakeIntensity.current = 0.12;
           }
         } else if (e.type === "boss") {
           // Boss: ranged attack at distance, melee when close
@@ -1037,12 +1325,12 @@ function GameLoop({
 
                   const weaponDmg = WEAPON_CONFIGS[currentWeapon].damage;
                   const dmgMult = state.clock.elapsedTime < damageBoostEnd ? DAMAGE_BOOST_MULTIPLIER : 1;
-                  e.hp -= weaponDmg * dmgMult;
+                  applyEnemyDamage(e, weaponDmg * dmgMult, p.direction);
                   if (e.hp <= 0) {
                     e.alive = false;
                     e.dying = true;
                     e.deathTimer = 0;
-                    const basePoints = e.type === "drone" ? 100 : e.type === "sentinel" ? 200 : e.type === "boss" ? 2000 : 500;
+                    const basePoints = enemyBasePoints(e.type);
                     // Combo multiplier — compute new value inline to avoid stale closure
                     const newCombo = Math.min(comboMultiplier + 0.5, 5);
                     setComboTimer(3);
@@ -1051,7 +1339,7 @@ function GameLoop({
                     const points = Math.round(basePoints * newCombo * scoreMult);
                     setScore((s) => s + points);
                     setKills((k) => k + 1);
-                    const deathColor = e.type === "drone" ? "#8B0000" : e.type === "sentinel" ? "#B22222" : "#660000";
+                    const deathColor = ENEMY_COLORS[e.type].glow;
                     setParticles((pp) => [
                       ...pp,
                       ...createDeathExplosion(enemyWorldPos.clone(), deathColor, 15),
@@ -1392,6 +1680,7 @@ function rocketExplode(
     if (dist < radius) {
       const falloff = 1 - dist / radius; // 1 at center, 0 at edge
       const damage = weaponDmg * dmgMult * falloff;
+      // Rocket splash ignores directional shield (AoE bypasses).
       e.hp -= damage;
       playHitSound();
 
@@ -1399,11 +1688,11 @@ function rocketExplode(
         e.alive = false;
         e.dying = true;
         e.deathTimer = 0;
-        const basePoints = e.type === "drone" ? 100 : e.type === "sentinel" ? 200 : e.type === "boss" ? 2000 : 500;
+        const basePoints = enemyBasePoints(e.type);
         const points = Math.round(basePoints * DIFFICULTY_PROFILES[difficulty].scoreMult);
         setScore((s) => s + points);
         setKills((k) => k + 1);
-        const deathColor = e.type === "drone" ? "#8B0000" : e.type === "sentinel" ? "#B22222" : "#660000";
+        const deathColor = ENEMY_COLORS[e.type].glow;
         setParticles((pp) => [
           ...pp,
           ...createDeathExplosion(enemyWorldPos.clone(), deathColor, 12),
@@ -2084,6 +2373,7 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
             </Physics>
             <Weapon locked={locked} weaponType={currentWeapon} ammo={weaponAmmo[currentWeapon]} onShoot={handleShoot} />
             <Enemies enemies={enemies} playerPosition={playerPos.current} />
+            <SniperLasers enemies={enemies} />
             <Projectiles projectiles={projectiles} />
             <Particles particles={particles} explosions={explosions} />
             <Pickups pickups={pickups} />

@@ -9,11 +9,11 @@ export interface EnemyData {
   position: THREE.Vector3;
   hp: number;
   maxHp: number;
-  type: "drone" | "sentinel" | "heavy" | "boss";
+  type: "drone" | "sentinel" | "heavy" | "boss" | "sniper" | "teleporter" | "shieldedHeavy";
   alive: boolean;
   speed: number;
   bobOffset: number;
-  aiState: "patrol" | "engage" | "strafe" | "charge" | "retreat";
+  aiState: "patrol" | "engage" | "strafe" | "charge" | "retreat" | "telegraph" | "teleport";
   strafeDir: number;
   burstCount: number;
   chargeTimer: number;
@@ -23,6 +23,11 @@ export interface EnemyData {
   // Death animation
   dying: boolean;
   deathTimer: number;
+  // Optional archetype state
+  shieldHp?: number;
+  maxShieldHp?: number;
+  telegraphAimPos?: THREE.Vector3; // locked aim for sniper
+  teleportCd?: number;
 }
 
 // ── Type-specific visual config ─────────────────────────
@@ -31,6 +36,9 @@ export const ENEMY_COLORS = {
   sentinel: { tint: "#ffffff", glow: "#B22222", projectile: "#cc3300", name: "BARON" },
   heavy: { tint: "#ffffff", glow: "#660000", projectile: "#882200", name: "DEMON" },
   boss: { tint: "#ffffff", glow: "#440000", projectile: "#ff4400", name: "CYBERDEMON" },
+  sniper: { tint: "#ffe0e0", glow: "#ff2222", projectile: "#ff4444", name: "STALKER" },
+  teleporter: { tint: "#e0d0ff", glow: "#9933ff", projectile: "#aa44ff", name: "WRAITH" },
+  shieldedHeavy: { tint: "#ffffff", glow: "#7a3a1a", projectile: "#aa4422", name: "WARDEN" },
 } as const;
 
 // ── Sprite configuration ────────────────────────────────
@@ -132,8 +140,16 @@ function EnemySprite({ enemy, textures }: EnemySpriteProps) {
   const { camera } = useThree();
 
   const spriteScale =
-    enemy.type === "boss" ? 4.0 : enemy.type === "heavy" ? 2.8 : enemy.type === "sentinel" ? 2.2 : 1.8;
-  const hoverHeight = enemy.type === "heavy" || enemy.type === "boss" ? 0.0 : 0.2;
+    enemy.type === "boss" ? 4.0
+    : enemy.type === "heavy" || enemy.type === "shieldedHeavy" ? 2.8
+    : enemy.type === "sentinel" || enemy.type === "sniper" ? 2.2
+    : 1.8;
+  const hoverHeight =
+    enemy.type === "heavy" || enemy.type === "shieldedHeavy" || enemy.type === "boss"
+      ? 0.0
+      : enemy.type === "teleporter"
+      ? 0.5
+      : 0.2;
 
   const colors = ENEMY_COLORS[enemy.type];
 
@@ -263,6 +279,35 @@ function EnemySprite({ enemy, textures }: EnemySpriteProps) {
         </group>
       )}
 
+      {/* Shield bar for shielded heavy */}
+      {enemy.type === "shieldedHeavy" && enemy.shieldHp !== undefined && enemy.maxShieldHp && enemy.shieldHp > 0 && (
+        <group position={[0, spriteScale + 0.5, 0]}>
+          <mesh>
+            <planeGeometry args={[1.2, 0.08]} />
+            <meshBasicMaterial color="#111" transparent opacity={0.7} side={THREE.DoubleSide} />
+          </mesh>
+          <mesh position={[-(1 - enemy.shieldHp / enemy.maxShieldHp) * 0.6, 0, 0.001]}>
+            <planeGeometry args={[(enemy.shieldHp / enemy.maxShieldHp) * 1.2, 0.06]} />
+            <meshBasicMaterial color="#4a90c8" side={THREE.DoubleSide} toneMapped={false} />
+          </mesh>
+        </group>
+      )}
+
+      {/* Shield hemisphere overlay */}
+      {enemy.type === "shieldedHeavy" && enemy.shieldHp !== undefined && enemy.shieldHp > 0 && (
+        <mesh position={[0, spriteScale / 2, 0]}>
+          <sphereGeometry args={[spriteScale * 0.75, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2]} />
+          <meshBasicMaterial
+            color="#4a90c8"
+            transparent
+            opacity={0.18}
+            side={THREE.DoubleSide}
+            depthWrite={false}
+            toneMapped={false}
+          />
+        </mesh>
+      )}
+
     </group>
   );
 }
@@ -284,6 +329,9 @@ export default function Enemies({ enemies, playerPosition }: EnemiesProps) {
     sentinel: sentinelTextures,
     heavy: heavyTextures,
     boss: sentinelTextures, // Boss uses the giant kicking imp (same as sentinel) at larger scale + red tint
+    sniper: sentinelTextures, // Stalker reuses sentinel visuals with red glow
+    teleporter: droneTextures, // Wraith reuses drone visuals with purple glow
+    shieldedHeavy: heavyTextures, // Warden reuses heavy visuals with shield overlay
   };
 
   return (

@@ -17,7 +17,7 @@ const DIFFICULTY_META: Record<Difficulty, { label: string; color: string; desc: 
 export interface RadarDot {
   x: number;
   z: number;
-  type: "drone" | "sentinel" | "heavy" | "boss";
+  type: "drone" | "sentinel" | "heavy" | "boss" | "sniper" | "teleporter" | "shieldedHeavy";
   alive: boolean;
 }
 
@@ -549,17 +549,24 @@ export default function HUD({
                     const cx = rx * scale;
                     const cy = rz * scale;
                     const dotColor =
-                      dot.type === "drone"
-                        ? "#8B0000"
-                        : dot.type === "sentinel"
-                          ? "#B22222"
-                          : "#660000";
+                      dot.type === "drone" ? "#8B0000"
+                      : dot.type === "sentinel" ? "#B22222"
+                      : dot.type === "heavy" ? "#660000"
+                      : dot.type === "boss" ? "#440000"
+                      : dot.type === "sniper" ? "#ff2222"
+                      : dot.type === "teleporter" ? "#9933ff"
+                      : dot.type === "shieldedHeavy" ? "#7a3a1a"
+                      : "#660000";
+                    const dotR =
+                      dot.type === "boss" ? 5
+                      : dot.type === "heavy" || dot.type === "shieldedHeavy" ? 3.5
+                      : 2.5;
                     return (
                       <circle
                         key={i}
                         cx={cx}
                         cy={cy}
-                        r={dot.type === "boss" ? 5 : dot.type === "heavy" ? 3.5 : 2.5}
+                        r={dotR}
                         fill={dotColor}
                         opacity={dist > 46 ? 0.4 : 0.9}
                       />
