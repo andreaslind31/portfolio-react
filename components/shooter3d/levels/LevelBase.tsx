@@ -27,11 +27,15 @@ export const WALL_H = 5;
 export const WALL_T = 0.5;
 
 // ── Map data interface ──────────────────────────────────
+export type HazardSpec =
+  | { kind: "lava"; x: number; z: number; w: number; d: number; dps: number; color?: string };
+
 export interface MapLayout {
   ARENA_HALF_W: number;
   ARENA_HALF_D: number;
   WALL_COLLIDERS: [number, number, number, number][];
   SPAWN_PORTALS: [number, number, number][];
+  HAZARDS?: HazardSpec[];
 }
 
 // ── Shared texture hook ─────────────────────────────────
@@ -401,5 +405,51 @@ export function ArenaShell({ halfW, halfD, wallTex, floorTex, ceilingTex }: Aren
       <ambientLight intensity={0.22} color="#3a1410" />
       <hemisphereLight color="#5a2418" groundColor="#1a0a08" intensity={0.28} />
     </>
+  );
+}
+
+// ── Hazard renderer ─────────────────────────────────────
+// Draws each hazard in a MapLayout. Pure visual: damage logic lives in GameLoop.
+export interface HazardsProps {
+  hazards: HazardSpec[] | undefined;
+}
+
+export function Hazards({ hazards }: HazardsProps) {
+  if (!hazards || hazards.length === 0) return null;
+  return (
+    <group>
+      {hazards.map((h, i) => {
+        if (h.kind === "lava") {
+          const color = h.color ?? EMISSIVE_LAVA;
+          return <LavaPool key={`hz-${i}`} x={h.x} z={h.z} w={h.w} d={h.d} color={color} />;
+        }
+        return null;
+      })}
+    </group>
+  );
+}
+
+function LavaPool({ x, z, w, d, color }: { x: number; z: number; w: number; d: number; color: string }) {
+  const matRef = useRef<THREE.MeshStandardMaterial>(null);
+  // Animate intensity subtly so the pool looks alive.
+  useFrame((state) => {
+    if (matRef.current) {
+      const t = state.clock.elapsedTime;
+      matRef.current.emissiveIntensity = 1.1 + Math.sin(t * 2 + x * 0.3) * 0.25;
+    }
+  });
+  return (
+    <mesh position={[x, 0.02, z]} rotation={[-Math.PI / 2, 0, 0]}>
+      <planeGeometry args={[w, d]} />
+      <meshStandardMaterial
+        ref={matRef}
+        color={color}
+        emissive={color}
+        emissiveIntensity={1.1}
+        toneMapped={false}
+        transparent
+        opacity={0.95}
+      />
+    </mesh>
   );
 }

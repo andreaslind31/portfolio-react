@@ -3,7 +3,7 @@
 import { memo } from "react";
 import {
   ArenaShell, Wall, GlowStrip, CeilingLight, EnergyPillar,
-  SpawnPortal, Crate, Ramp, SolidPlatform, Catwalk,
+  SpawnPortal, Crate, Ramp, SolidPlatform, Catwalk, Hazards,
   useMapTextures, type MapLayout,
   WALL_H, EMISSIVE_FIRE, EMISSIVE_LAVA, EMISSIVE_BLOOD, EMISSIVE_RUST,
 } from "./LevelBase";
@@ -16,6 +16,13 @@ const D = HD * 2;
 export const LAYOUT: MapLayout = {
   ARENA_HALF_W: HW,
   ARENA_HALF_D: HD,
+  HAZARDS: [
+    // Lava pools at north+south chokepoints
+    { kind: "lava", x: 0, z: -28, w: 8, d: 4, dps: 20 },
+    { kind: "lava", x: 0, z: 28, w: 8, d: 4, dps: 20 },
+    // Flanking lava by east corridor
+    { kind: "lava", x: 28, z: 0, w: 4, d: 8, dps: 20 },
+  ],
   SPAWN_PORTALS: [
     [0, 0, -HD + 3],
     [0, 0, HD - 3],
@@ -70,6 +77,7 @@ function MapFurnaceImpl() {
   return (
     <group>
       <ArenaShell halfW={HW} halfD={HD} wallTex={wallTex} floorTex={floorTex} ceilingTex={ceilingTex} />
+      <Hazards hazards={LAYOUT.HAZARDS} />
 
       {/* ═══ CENTRAL FOUNDRY (open, no platform) ═══ */}
       {/* Lava pillars around the open center */}

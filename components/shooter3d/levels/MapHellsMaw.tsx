@@ -3,7 +3,7 @@
 import { memo } from "react";
 import {
   ArenaShell, Wall, GlowStrip, CeilingLight, EnergyPillar,
-  SpawnPortal, Crate, Ramp, SolidPlatform, Catwalk,
+  SpawnPortal, Crate, Ramp, SolidPlatform, Catwalk, Hazards,
   useMapTextures, type MapLayout,
   WALL_H, EMISSIVE_FIRE, EMISSIVE_BLOOD, EMISSIVE_LAVA, EMISSIVE_RUST,
 } from "./LevelBase";
@@ -16,6 +16,13 @@ const D = HD * 2;
 export const LAYOUT: MapLayout = {
   ARENA_HALF_W: HW,
   ARENA_HALF_D: HD,
+  HAZARDS: [
+    // Ring of lava framing the central pit
+    { kind: "lava", x: -14, z: 0, w: 4, d: 6, dps: 25 },
+    { kind: "lava", x: 14, z: 0, w: 4, d: 6, dps: 25 },
+    { kind: "lava", x: 0, z: -14, w: 6, d: 4, dps: 25 },
+    { kind: "lava", x: 0, z: 14, w: 6, d: 4, dps: 25 },
+  ],
   SPAWN_PORTALS: [
     [-35, 0, -38], [35, 0, -38],
     [-35, 0, 38], [35, 0, 38],
@@ -64,6 +71,7 @@ function MapHellsMawImpl() {
   return (
     <group>
       <ArenaShell halfW={HW} halfD={HD} wallTex={wallTex} floorTex={floorTex} ceilingTex={ceilingTex} />
+      <Hazards hazards={LAYOUT.HAZARDS} />
 
       {/* ═══ CENTRAL ARENA (40x40 clear space) ═══ */}
       {/* Central decorative pit (cosmetic, glowing red) */}

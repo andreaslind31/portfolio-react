@@ -4,7 +4,7 @@ import { memo } from "react";
 import { RigidBody } from "@react-three/rapier";
 import {
   ArenaShell, Wall, GlowStrip, CeilingLight, EnergyPillar,
-  SpawnPortal, Crate, Ramp, Catwalk,
+  SpawnPortal, Crate, Ramp, Catwalk, Hazards,
   useMapTextures, type MapLayout,
   WALL_H, EMISSIVE_BLOOD, EMISSIVE_FIRE, EMISSIVE_LAVA,
 } from "./LevelBase";
@@ -17,6 +17,13 @@ const D = HD * 2;
 export const LAYOUT: MapLayout = {
   ARENA_HALF_W: HW,
   ARENA_HALF_D: HD,
+  HAZARDS: [
+    // Toxic sludge pools — green tint, half DPS
+    { kind: "lava", x: -30, z: -10, w: 4, d: 4, dps: 12, color: "#5a8a1a" },
+    { kind: "lava", x: 30, z: -10, w: 4, d: 4, dps: 12, color: "#5a8a1a" },
+    { kind: "lava", x: -30, z: 10, w: 4, d: 4, dps: 12, color: "#5a8a1a" },
+    { kind: "lava", x: 30, z: 10, w: 4, d: 4, dps: 12, color: "#5a8a1a" },
+  ],
   SPAWN_PORTALS: [
     [-30, 0, -35], [30, 0, -35],
     [-30, 0, 35], [30, 0, 35],
@@ -74,6 +81,7 @@ function MapToxinImpl() {
   return (
     <group>
       <ArenaShell halfW={HW} halfD={HD} wallTex={wallTex} floorTex={floorTex} ceilingTex={ceilingTex} />
+      <Hazards hazards={LAYOUT.HAZARDS} />
 
       {/* ═══ MAIN N-S CORRIDOR ═══ */}
       <Wall position={[-4, WALL_H/2, 0]} size={[0.5, WALL_H, D - 4]} texture={wallTex} />

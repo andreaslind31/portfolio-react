@@ -904,6 +904,7 @@ function GameLoop({
   const sentinelBurstTimers = useRef<Map<number, number>>(new Map());
   const waveCleared = useRef(false);
   const radarUpdateTimer = useRef(0);
+  const hazardDamageAcc = useRef(0);
   // Pre-allocated scratch vectors to avoid per-frame GC pressure
   const scratchDir = useRef(new THREE.Vector3());
   const scratchStrafe = useRef(new THREE.Vector3());
@@ -928,6 +929,42 @@ function GameLoop({
 
     // ── Difficulty scaling ──
     const diff = getDifficultyMultiplier(wave, difficulty);
+
+    // ── Hazards (lava pools) ──
+    // Applies continuous DPS to the player (and enemies) while overlapping.
+    // Accumulates fractional damage in a ref so low DPS over short frames still lands.
+    const hazards = activeLayout.current.HAZARDS;
+    if (hazards && hazards.length) {
+      for (const h of hazards) {
+        if (h.kind !== "lava") continue;
+        const hx = playerPos.current.x - h.x;
+        const hz = playerPos.current.z - h.z;
+        if (Math.abs(hx) < h.w / 2 && Math.abs(hz) < h.d / 2) {
+          hazardDamageAcc.current += h.dps * dt;
+          if (hazardDamageAcc.current >= 1) {
+            const whole = Math.floor(hazardDamageAcc.current);
+            hazardDamageAcc.current -= whole;
+            applyPlayerDamage(whole);
+            setDamageFlash(true);
+            setTimeout(() => setDamageFlash(false), 120);
+          }
+        }
+        // Damage enemies stepping on lava too.
+        for (const e of enemies) {
+          if (!e.alive) continue;
+          const ex = e.position.x - h.x;
+          const ez = e.position.z - h.z;
+          if (Math.abs(ex) < h.w / 2 && Math.abs(ez) < h.d / 2) {
+            e.hp -= h.dps * dt;
+            if (e.hp <= 0) {
+              e.alive = false;
+              e.dying = true;
+              e.deathTimer = 0;
+            }
+          }
+        }
+      }
+    }
 
     // ── Send local player state to multiplayer server ──
     if (connectionManager.current && connectionManager.current.getState() === "connected") {
