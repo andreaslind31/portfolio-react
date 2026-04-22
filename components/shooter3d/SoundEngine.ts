@@ -267,6 +267,38 @@ export function playExplosionSound() {
 }
 
 /** Player takes damage — sharp zap */
+// Short "thud" for melee kicks — low thump with a high-freq crack.
+export function playMeleeKickSound() {
+  try {
+    const ctx = getCtx();
+    const now = ctx.currentTime;
+
+    const thump = ctx.createOscillator();
+    const thumpGain = ctx.createGain();
+    thump.type = "sine";
+    thump.frequency.setValueAtTime(180, now);
+    thump.frequency.exponentialRampToValueAtTime(60, now + 0.12);
+    thumpGain.gain.setValueAtTime(0.22, now);
+    thumpGain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+    thump.connect(thumpGain).connect(ctx.destination);
+    thump.start(now);
+    thump.stop(now + 0.12);
+
+    const crack = ctx.createOscillator();
+    const crackGain = ctx.createGain();
+    crack.type = "square";
+    crack.frequency.setValueAtTime(800, now);
+    crack.frequency.exponentialRampToValueAtTime(200, now + 0.05);
+    crackGain.gain.setValueAtTime(0.08, now);
+    crackGain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+    crack.connect(crackGain).connect(ctx.destination);
+    crack.start(now);
+    crack.stop(now + 0.05);
+  } catch {
+    // Audio not available
+  }
+}
+
 export function playDamageSound() {
   try {
     const ctx = getCtx();

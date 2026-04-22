@@ -30,6 +30,7 @@ import {
   playHitSound,
   playExplosionSound,
   playDamageSound,
+  playMeleeKickSound,
   playHeartbeatPulse,
   playWaveStartSound,
   playPickupSound,
@@ -1830,6 +1831,8 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
   });
   const [locked, setLocked] = useState(false);
   const [enemies, setEnemies] = useState<EnemyData[]>([]);
+  const enemiesRef = useRef<EnemyData[]>([]);
+  useEffect(() => { enemiesRef.current = enemies; }, [enemies]);
   const [projectiles, setProjectiles] = useState<ProjectileData[]>([]);
   const [particles, setParticles] = useState<ParticleData[]>([]);
   const [explosions, setExplosions] = useState<ExplosionData[]>([]);
@@ -2331,6 +2334,57 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
     [gameState, currentWeapon, weaponAmmo]
   );
 
+  // Melee kick: short-range hitscan that damages the first enemy in range.
+  // Range 2.5 units, damage 35. Knocks targets back slightly.
+  const handleMelee = useCallback(
+    (origin: THREE.Vector3, direction: THREE.Vector3) => {
+      if (gameState !== "playing") return;
+      const MELEE_RANGE = 2.5;
+      const MELEE_DAMAGE = 35;
+      const KNOCKBACK = 2.0;
+      playMeleeKickSound();
+      shakeIntensity.current = Math.max(shakeIntensity.current, 0.08);
+
+      // Find the nearest enemy in a forward cone.
+      let best: EnemyData | null = null;
+      let bestDist = Infinity;
+      for (const e of enemiesRef.current) {
+        if (!e.alive) continue;
+        const to = new THREE.Vector3().subVectors(e.position, origin);
+        to.y = 0;
+        const dist = to.length();
+        if (dist > MELEE_RANGE) continue;
+        to.normalize();
+        const dot = direction.x * to.x + direction.z * to.z;
+        if (dot < 0.5) continue; // roughly ±60° cone
+        if (dist < bestDist) {
+          bestDist = dist;
+          best = e;
+        }
+      }
+
+      if (best) {
+        applyEnemyDamage(best, MELEE_DAMAGE, direction);
+        // Knockback — push enemy along the kick direction.
+        best.position.x += direction.x * KNOCKBACK;
+        best.position.z += direction.z * KNOCKBACK;
+        setHitMarker(true);
+        setTimeout(() => setHitMarker(false), 100);
+        playHitSound();
+        if (best.hp <= 0) {
+          best.alive = false;
+          best.dying = true;
+          best.deathTimer = 0;
+          const basePoints = enemyBasePoints(best.type);
+          const scoreMult = DIFFICULTY_PROFILES[difficulty].scoreMult;
+          setScore((s) => s + Math.round(basePoints * scoreMult));
+          setKills((k) => k + 1);
+        }
+      }
+    },
+    [gameState, difficulty]
+  );
+
   if (isTouchDevice) {
     return (
       <div
@@ -2408,7 +2462,7 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
               <Player locked={locked} sensitivity={mouseSensitivity} speedMultiplier={playerSpeedMult} />
               <LevelSelector mapId={gameMode === "maps" ? selectedMapId : "map01"} />
             </Physics>
-            <Weapon locked={locked} weaponType={currentWeapon} ammo={weaponAmmo[currentWeapon]} onShoot={handleShoot} />
+            <Weapon locked={locked} weaponType={currentWeapon} ammo={weaponAmmo[currentWeapon]} onShoot={handleShoot} onMelee={handleMelee} />
             <Enemies enemies={enemies} playerPosition={playerPos.current} />
             <SniperLasers enemies={enemies} />
             <Projectiles projectiles={projectiles} />

@@ -95,7 +95,10 @@ interface WeaponProps {
   weaponType: WeaponType;
   ammo: number; // -1 = infinite
   onShoot?: (origin: THREE.Vector3, direction: THREE.Vector3) => void;
+  onMelee?: (origin: THREE.Vector3, direction: THREE.Vector3) => void;
 }
+
+const MELEE_COOLDOWN = 0.6;
 
 const BOB_SPEED = 8;
 const BOB_AMOUNT = 0.022;      // vertical bob
@@ -104,11 +107,13 @@ const BOB_ROLL_AMOUNT = 0.05;  // roll tilt (radians)
 const CAM_KICK_RECOVERY = 10;
 const SWAY_DAMPING = 0.12;
 
-export default function Weapon({ locked, weaponType, ammo, onShoot }: WeaponProps) {
+export default function Weapon({ locked, weaponType, ammo, onShoot, onMelee }: WeaponProps) {
   const groupRef = useRef<THREE.Group>(null);
   const spriteMatRef = useRef<THREE.SpriteMaterial>(null);
   const muzzleLightRef = useRef<THREE.PointLight>(null);
   const lastShot = useRef(0);
+  const lastMelee = useRef(0);
+  const meleeAnim = useRef(0); // 0 = idle, >0 = playing kick
   const cameraKick = useRef(0);
   const bobPhase = useRef(0);
   const swayX = useRef(0);
@@ -154,7 +159,18 @@ export default function Weapon({ locked, weaponType, ammo, onShoot }: WeaponProp
 
   // Key & mouse tracking for sway/bob
   useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => keys.current.add(e.code);
+    const onKeyDown = (e: KeyboardEvent) => {
+      keys.current.add(e.code);
+      // V — melee kick
+      if (e.code === "KeyV" && locked) {
+        const now = performance.now() / 1000;
+        if (now - lastMelee.current < MELEE_COOLDOWN) return;
+        lastMelee.current = now;
+        meleeAnim.current = 0.25; // 250 ms punch anim timer
+        const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+        onMelee?.(camera.position.clone(), dir);
+      }
+    };
     const onKeyUp = (e: KeyboardEvent) => keys.current.delete(e.code);
     const onMouseMove = (e: MouseEvent) => {
       swayX.current += e.movementX * 0.0008;
@@ -170,7 +186,7 @@ export default function Weapon({ locked, weaponType, ammo, onShoot }: WeaponProp
       window.removeEventListener("keyup", onKeyUp);
       window.removeEventListener("mousemove", onMouseMove);
     };
-  }, []);
+  }, [locked, camera, onMelee]);
 
   const handleClick = useCallback(() => {
     if (!locked) return;
@@ -288,6 +304,9 @@ export default function Weapon({ locked, weaponType, ammo, onShoot }: WeaponProp
         />
       </sprite>
 
+      {/* Melee kick overlay — boot swings in from bottom-right */}
+      <KickOverlay timerRef={meleeAnim} />
+
       {/* Muzzle flash dynamic light */}
       <pointLight
         ref={muzzleLightRef}
@@ -297,6 +316,38 @@ export default function Weapon({ locked, weaponType, ammo, onShoot }: WeaponProp
         distance={8}
         decay={2}
       />
+    </group>
+  );
+}
+
+// ── Melee kick overlay ───────────────────────────────────
+// Drives its own useFrame so the parent Weapon can keep its existing render path
+// untouched. Appears briefly whenever meleeAnim > 0.
+function KickOverlay({ timerRef }: { timerRef: React.MutableRefObject<number> }) {
+  const meshRef = useRef<THREE.Group>(null);
+  useFrame((_, delta) => {
+    if (!meshRef.current) return;
+    if (timerRef.current > 0) {
+      timerRef.current -= delta;
+      const t = THREE.MathUtils.clamp(1 - timerRef.current / 0.25, 0, 1);
+      const swing = Math.sin(t * Math.PI); // 0 → 1 → 0
+      meshRef.current.visible = true;
+      meshRef.current.position.set(0.25 - swing * 0.3, -0.3 + swing * 0.25, -0.35 - swing * 0.2);
+      meshRef.current.rotation.set(-swing * 0.6, swing * 0.4, swing * 0.2);
+    } else {
+      meshRef.current.visible = false;
+    }
+  });
+  return (
+    <group ref={meshRef} visible={false}>
+      <mesh>
+        <boxGeometry args={[0.22, 0.14, 0.4]} />
+        <meshStandardMaterial color="#2a2218" metalness={0.1} roughness={0.9} />
+      </mesh>
+      <mesh position={[0, 0.08, 0.15]}>
+        <boxGeometry args={[0.24, 0.12, 0.12]} />
+        <meshStandardMaterial color="#1a1410" metalness={0.2} roughness={0.85} />
+      </mesh>
     </group>
   );
 }

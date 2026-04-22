@@ -744,6 +744,9 @@ export default function HUD({
             <div>
               <span style={{ color: "#7a8a3a" }}>1/2/3</span> — Switch weapon
             </div>
+            <div>
+              <span style={{ color: "#7a8a3a" }}>V</span> — Kick
+            </div>
           </div>
 
           {/* Sensitivity slider */}
