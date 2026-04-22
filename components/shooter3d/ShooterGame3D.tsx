@@ -1832,7 +1832,20 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
   const [locked, setLocked] = useState(false);
   const [enemies, setEnemies] = useState<EnemyData[]>([]);
   const enemiesRef = useRef<EnemyData[]>([]);
+  const lastBossCount = useRef(0);
   useEffect(() => { enemiesRef.current = enemies; }, [enemies]);
+
+  // Watch for new bosses entering the arena and trigger the intro banner.
+  // lastBossCount tracks alive-boss count so the banner only fires on rising edge.
+  useEffect(() => {
+    const alive = enemies.filter((e) => e.alive && e.type === "boss").length;
+    if (alive > lastBossCount.current && alive > 0) {
+      setBossIntro({ name: "CYBERDEMON", subtitle: "— AWAKENS —" });
+      playDistantRumble();
+      window.setTimeout(() => setBossIntro(null), 2500);
+    }
+    lastBossCount.current = alive;
+  }, [enemies]);
   const [projectiles, setProjectiles] = useState<ProjectileData[]>([]);
   const [particles, setParticles] = useState<ParticleData[]>([]);
   const [explosions, setExplosions] = useState<ExplosionData[]>([]);
@@ -1843,6 +1856,7 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
   const playerMovingRef = useRef(false);
   const [kills, setKills] = useState(0);
   const [waveAnnounce, setWaveAnnounce] = useState(0);
+  const [bossIntro, setBossIntro] = useState<{ name: string; subtitle: string } | null>(null);
   const [damageDirection, setDamageDirection] = useState<number | null>(null);
   const [radarDots, setRadarDots] = useState<RadarDot[]>([]);
   const [finalScore, setFinalScore] = useState(0);
@@ -2543,6 +2557,7 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
         difficulty={difficulty}
         onSelectDifficulty={handleSelectDifficulty}
         playerMoving={playerMoving}
+        bossIntro={bossIntro}
         score={score}
         wave={wave}
         currentWeapon={currentWeapon}

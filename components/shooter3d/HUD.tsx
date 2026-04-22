@@ -92,6 +92,7 @@ interface HUDProps {
   hasNextMap: boolean;
   onMultiplayer: () => void;
   pendingMode: "waves" | "maps";
+  bossIntro?: { name: string; subtitle: string } | null;
 }
 
 export default function HUD({
@@ -142,6 +143,7 @@ export default function HUD({
   hasNextMap,
   onMultiplayer,
   pendingMode,
+  bossIntro,
 }: HUDProps) {
   const [submitName, setSubmitName] = useState("");
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -637,6 +639,50 @@ export default function HUD({
                 }}
               >
                 WAVE {waveBannerNum}
+              </div>
+            </div>
+          )}
+
+          {/* ═══ BOSS INTRO BANNER ═══ */}
+          {bossIntro && (
+            <div
+              style={{
+                position: "absolute",
+                top: "28%",
+                left: "50%",
+                transform: "translateX(-50%)",
+                textAlign: "center",
+                animation: "bossIntroIn 0.5s ease-out",
+              }}
+            >
+              <style>{`
+                @keyframes bossIntroIn {
+                  0% { opacity: 0; transform: translateX(-50%) scale(0.6); }
+                  60% { opacity: 1; transform: translateX(-50%) scale(1.08); }
+                  100% { opacity: 1; transform: translateX(-50%) scale(1); }
+                }
+              `}</style>
+              <div
+                style={{
+                  color: "#ff2222",
+                  fontSize: 14,
+                  letterSpacing: 8,
+                  marginBottom: 6,
+                  textShadow: "0 0 10px #ff2222",
+                }}
+              >
+                {bossIntro.subtitle}
+              </div>
+              <div
+                style={{
+                  color: "#fff",
+                  fontSize: 72,
+                  fontWeight: "bold",
+                  textShadow: "0 0 24px #ff0000, 0 0 48px #8B000088",
+                  letterSpacing: 10,
+                }}
+              >
+                {bossIntro.name}
               </div>
             </div>
           )}
