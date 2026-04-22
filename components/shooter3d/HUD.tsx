@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import type { WeaponType } from "./Weapon";
 import { MAPS, type MapConfig } from "./Maps";
 import { getMapLayout } from "./levels";
+import { getUnlockedPerks, PERK_DESCRIPTIONS } from "./Profile";
 
 export type Difficulty = "easy" | "normal" | "hard" | "nightmare";
 
@@ -93,6 +94,12 @@ interface HUDProps {
   onMultiplayer: () => void;
   pendingMode: "waves" | "maps";
   bossIntro?: { name: string; subtitle: string } | null;
+  lifetimeStats?: {
+    totalKills: number;
+    totalScore: number;
+    bossesDefeated: number;
+    runsCompleted: number;
+  } | null;
 }
 
 export default function HUD({
@@ -144,6 +151,7 @@ export default function HUD({
   onMultiplayer,
   pendingMode,
   bossIntro,
+  lifetimeStats,
 }: HUDProps) {
   const [submitName, setSubmitName] = useState("");
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -921,6 +929,39 @@ export default function HUD({
               {DIFFICULTY_META[difficulty].desc}
             </div>
           </div>
+
+          {/* Lifetime stats panel */}
+          {lifetimeStats && (
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 8,
+                marginBottom: 28,
+                padding: "10px 20px",
+                background: "#1a0f0766",
+                border: "1px solid #3a2a1a",
+                borderRadius: 4,
+              }}
+            >
+              <div style={{ display: "flex", gap: 24, fontSize: 11, letterSpacing: 1.5, color: "#ffffff99" }}>
+                <span>KILLS <span style={{ color: "#ffffff" }}>{lifetimeStats.totalKills}</span></span>
+                <span>SCORE <span style={{ color: "#ffffff" }}>{lifetimeStats.totalScore.toLocaleString()}</span></span>
+                <span>BOSSES <span style={{ color: "#ff4444" }}>{lifetimeStats.bossesDefeated}</span></span>
+                <span>RUNS <span style={{ color: "#ffffff" }}>{lifetimeStats.runsCompleted}</span></span>
+              </div>
+              {(() => {
+                const perks = getUnlockedPerks(lifetimeStats);
+                if (perks.length === 0) return null;
+                return (
+                  <div style={{ fontSize: 10, letterSpacing: 1.5, color: "#c0a060", textAlign: "center" }}>
+                    UNLOCKED: {perks.map((id) => PERK_DESCRIPTIONS[id]?.name).filter(Boolean).join(" · ")}
+                  </div>
+                );
+              })()}
+            </div>
+          )}
 
           <div style={{ display: "flex", gap: 24 }}>
             {/* Waves button */}

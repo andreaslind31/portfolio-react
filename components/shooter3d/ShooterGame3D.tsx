@@ -19,6 +19,7 @@ import Particles, {
 import Pickups, { type PickupData, type PickupType } from "./Pickups";
 import Doors from "./Doors";
 import { MAPS, getUnlockedMaps, unlockMap, getNextMapId, type MapConfig } from "./Maps";
+import { loadProfile, recordRun } from "./Profile";
 import DestructibleCrates, { type CrateData, createInitialCrates } from "./DestructibleCrates";
 import { ConnectionManager, LobbyUI, RemotePlayers, KillFeed, createKillFeedEntry, Scoreboard } from "./multiplayer";
 import type { ConnectionState, PlayerInfo, RemotePlayerData, KillFeedEntry } from "./multiplayer";
@@ -1833,6 +1834,7 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
   const [enemies, setEnemies] = useState<EnemyData[]>([]);
   const enemiesRef = useRef<EnemyData[]>([]);
   const lastBossCount = useRef(0);
+  const bossesDefeatedThisRun = useRef(0);
   useEffect(() => { enemiesRef.current = enemies; }, [enemies]);
 
   // Watch for new bosses entering the arena and trigger the intro banner.
@@ -1843,6 +1845,10 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
       setBossIntro({ name: "CYBERDEMON", subtitle: "— AWAKENS —" });
       playDistantRumble();
       window.setTimeout(() => setBossIntro(null), 2500);
+    }
+    // Count each boss whose alive state flipped to false (defeated this run).
+    if (alive < lastBossCount.current) {
+      bossesDefeatedThisRun.current += lastBossCount.current - alive;
     }
     lastBossCount.current = alive;
   }, [enemies]);
@@ -1857,6 +1863,7 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
   const [kills, setKills] = useState(0);
   const [waveAnnounce, setWaveAnnounce] = useState(0);
   const [bossIntro, setBossIntro] = useState<{ name: string; subtitle: string } | null>(null);
+  const [lifetimeStats, setLifetimeStats] = useState(() => loadProfile().stats);
   const [damageDirection, setDamageDirection] = useState<number | null>(null);
   const [radarDots, setRadarDots] = useState<RadarDot[]>([]);
   const [finalScore, setFinalScore] = useState(0);
@@ -1912,6 +1919,14 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
       stopAmbient.current = null;
       combatMusic.current?.stop();
       combatMusic.current = null;
+      // Record lifetime stats
+      const updated = recordRun({
+        totalKills: kills,
+        totalScore: score,
+        bossesDefeated: bossesDefeatedThisRun.current,
+        runsCompleted: 1,
+      });
+      setLifetimeStats(updated.stats);
     }
   }, [health, gameState, score]);
 
@@ -2029,6 +2044,8 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
     setHitMarker(false);
     setWaveAnnounce(mode === "waves" ? 1 : 0);
     setDamageDirection(null);
+    bossesDefeatedThisRun.current = 0;
+    lastBossCount.current = 0;
     nextId = 1;
     shakeIntensity.current = 0;
 
@@ -2092,7 +2109,15 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
     stopAmbient.current = null;
     combatMusic.current?.stop();
     combatMusic.current = null;
-  }, [selectedMapId]);
+    // Record lifetime stats (map cleared counts as a completed run).
+    const updated = recordRun({
+      totalKills: kills,
+      totalScore: score,
+      bossesDefeated: bossesDefeatedThisRun.current,
+      runsCompleted: 1,
+    });
+    setLifetimeStats(updated.stats);
+  }, [selectedMapId, kills, score]);
 
   const handleRestart = useCallback(() => {
     // Retry in the current mode — replay current map in maps mode, restart waves otherwise
@@ -2558,6 +2583,7 @@ export default function ShooterGame3D({ onScoreSubmit }: ShooterGame3DProps) {
         onSelectDifficulty={handleSelectDifficulty}
         playerMoving={playerMoving}
         bossIntro={bossIntro}
+        lifetimeStats={lifetimeStats}
         score={score}
         wave={wave}
         currentWeapon={currentWeapon}
