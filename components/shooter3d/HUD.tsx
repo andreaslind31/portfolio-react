@@ -589,7 +589,7 @@ export default function HUD({
             <div
               style={{
                 textAlign: "center",
-                color: "#7a8a3a44",
+                color: "#c5d085",
                 fontSize: 9,
                 letterSpacing: 2,
                 marginTop: 2,
@@ -606,9 +606,10 @@ export default function HUD({
               top: 30,
               left: "50%",
               transform: "translateX(-50%)",
-              color: "#ffffff44",
+              color: "#ffffff99",
               fontSize: 11,
               letterSpacing: 1,
+              textShadow: "0 1px 3px #000",
             }}
           >
             ESC to release cursor
@@ -805,7 +806,7 @@ export default function HUD({
 
           {/* Sensitivity slider */}
           <div style={{ marginBottom: 30, textAlign: "center" }}>
-            <div style={{ color: "#ffffff88", fontSize: 11, letterSpacing: 2, marginBottom: 6 }}>
+            <div style={{ color: "#ffffffbb", fontSize: 11, letterSpacing: 2, marginBottom: 6 }}>
               MOUSE SENSITIVITY
             </div>
             <input
@@ -817,7 +818,7 @@ export default function HUD({
               onChange={(e) => onSensitivityChange(parseFloat(e.target.value))}
               style={{ width: 180, accentColor: "#00d4ff" }}
             />
-            <div style={{ color: "#00d4ff88", fontSize: 10, marginTop: 2 }}>
+            <div style={{ color: "#00d4ffcc", fontSize: 10, marginTop: 2 }}>
               {(mouseSensitivity * 1000).toFixed(1)}
             </div>
           </div>
@@ -852,7 +853,7 @@ export default function HUD({
 
           <p
             style={{
-              color: "#ffffff33",
+              color: "#ffffff99",
               fontSize: 11,
               marginTop: 20,
               letterSpacing: 1,
@@ -895,7 +896,7 @@ export default function HUD({
 
           {/* Difficulty picker */}
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 28 }}>
-            <div style={{ color: "#ffffff88", fontSize: 11, letterSpacing: 3, marginBottom: 10 }}>
+            <div style={{ color: "#ffffffbb", fontSize: 11, letterSpacing: 3, marginBottom: 10 }}>
               DIFFICULTY
             </div>
             <div style={{ display: "flex", gap: 8 }}>
@@ -984,7 +985,7 @@ export default function HUD({
               <div style={{ fontSize: 24, fontWeight: "bold", letterSpacing: 4, marginBottom: 8 }}>
                 WAVES
               </div>
-              <div style={{ fontSize: 11, color: "#00d4ff99", lineHeight: 1.6 }}>
+              <div style={{ fontSize: 11, color: "#00d4ffcc", lineHeight: 1.6 }}>
                 Endless waves of increasing difficulty. Survive as long as you can.
               </div>
             </button>
@@ -1009,7 +1010,7 @@ export default function HUD({
               <div style={{ fontSize: 24, fontWeight: "bold", letterSpacing: 4, marginBottom: 8 }}>
                 MAPS
               </div>
-              <div style={{ fontSize: 11, color: "#ff880099", lineHeight: 1.6 }}>
+              <div style={{ fontSize: 11, color: "#ff8800cc", lineHeight: 1.6 }}>
                 Campaign mode. Clear each map to unlock the next.
               </div>
             </button>
@@ -1043,7 +1044,7 @@ export default function HUD({
               marginTop: 20,
               background: "transparent",
               border: "1px solid #ffffff33",
-              color: "#ffffff88",
+              color: "#ffffffbb",
               padding: "8px 24px",
               fontSize: 11,
               letterSpacing: 2,
@@ -1083,10 +1084,10 @@ export default function HUD({
           >
             SELECT MAP
           </h2>
-          <p style={{ color: "#ffffff66", fontSize: 11, letterSpacing: 2, marginBottom: 4 }}>
+          <p style={{ color: "#ffffffcc", fontSize: 11, letterSpacing: 2, marginBottom: 4 }}>
             {pendingMode === "waves" ? "WAVES MODE" : "CAMPAIGN MODE"}
           </p>
-          <p style={{ color: "#ffffff44", fontSize: 10, letterSpacing: 2, marginBottom: 24 }}>
+          <p style={{ color: "#ffffff99", fontSize: 10, letterSpacing: 2, marginBottom: 24 }}>
             {pendingMode === "waves"
               ? "All maps available — choose your arena"
               : `${unlockedMaps.length} / ${MAPS.length} UNLOCKED`}
@@ -1192,16 +1193,16 @@ export default function HUD({
                     </svg>
                   </div>
                   <div style={{ padding: 12 }}>
-                    <div style={{ color: unlocked ? map.ambientColor : "#666", fontSize: 10, letterSpacing: 2, marginBottom: 2 }}>
+                    <div style={{ color: unlocked ? map.ambientColor : "#aaaaaacc", fontSize: 10, letterSpacing: 2, marginBottom: 2 }}>
                       {(idx + 1).toString().padStart(2, "0")} / {MAPS.length.toString().padStart(2, "0")}
                     </div>
-                    <div style={{ color: unlocked ? "#fff" : "#666", fontSize: 14, fontWeight: "bold", letterSpacing: 3, marginBottom: 4 }}>
+                    <div style={{ color: unlocked ? "#fff" : "#cccccc", fontSize: 14, fontWeight: "bold", letterSpacing: 3, marginBottom: 4 }}>
                       {map.name}
                     </div>
-                    <div style={{ color: unlocked ? "#ffffff88" : "#444", fontSize: 10, lineHeight: 1.4, marginBottom: 6 }}>
+                    <div style={{ color: unlocked ? "#ffffffcc" : "#999999", fontSize: 10, lineHeight: 1.4, marginBottom: 6 }}>
                       {map.description}
                     </div>
-                    <div style={{ color: unlocked ? "#ff8800" : "#444", fontSize: 10 }}>
+                    <div style={{ color: unlocked ? "#ff8800" : "#bb7744", fontSize: 10 }}>
                       {map.enemies.drones + map.enemies.sentinels + map.enemies.heavies + map.enemies.bosses} ENEMIES
                       {map.enemies.bosses > 0 && " • BOSS"}
                     </div>
@@ -1217,7 +1218,7 @@ export default function HUD({
               marginTop: 24,
               background: "transparent",
               border: "1px solid #ffffff33",
-              color: "#ffffff88",
+              color: "#ffffffbb",
               padding: "8px 24px",
               fontSize: 11,
               letterSpacing: 2,
@@ -1263,7 +1264,7 @@ export default function HUD({
           <div style={{ color: "#00d4ff", fontSize: 36, fontWeight: "bold", textShadow: "0 0 15px #00d4ff", marginBottom: 4 }}>
             {score.toLocaleString()}
           </div>
-          <div style={{ color: "#ffffff66", fontSize: 11, letterSpacing: 2, marginBottom: 24 }}>
+          <div style={{ color: "#ffffffbb", fontSize: 11, letterSpacing: 2, marginBottom: 24 }}>
             {kills} KILLS
             {gameEndTime > 0 && ` • ${Math.floor((gameEndTime - gameStartTime) / 1000)}s`}
             {shotsFired > 0 && ` • ${Math.round((shotsHit / shotsFired) * 100)}% ACCURACY`}
@@ -1301,7 +1302,7 @@ export default function HUD({
               marginTop: 20,
               background: "transparent",
               border: "1px solid #ffffff33",
-              color: "#ffffff88",
+              color: "#ffffffbb",
               padding: "8px 24px",
               fontSize: 11,
               letterSpacing: 2,
@@ -1363,7 +1364,7 @@ export default function HUD({
           </div>
           <div
             style={{
-              color: "#ffffff66",
+              color: "#ffffffbb",
               fontSize: 13,
               letterSpacing: 2,
               marginBottom: 30,
@@ -1373,7 +1374,7 @@ export default function HUD({
           </div>
 
           {/* Detailed stats */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 20px", marginBottom: 20, fontSize: 11, color: "#ffffff88", letterSpacing: 1 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 20px", marginBottom: 20, fontSize: 11, color: "#ffffffbb", letterSpacing: 1 }}>
             <div>ACCURACY</div>
             <div style={{ color: "#00d4ff", textAlign: "right" }}>
               {shotsFired > 0 ? `${Math.round((shotsHit / shotsFired) * 100)}%` : "—"}
@@ -1488,7 +1489,7 @@ export default function HUD({
                 marginTop: 12,
                 background: "transparent",
                 border: "1px solid #ffffff33",
-                color: "#ffffff88",
+                color: "#ffffffbb",
                 padding: "8px 24px",
                 fontSize: 11,
                 letterSpacing: 2,
