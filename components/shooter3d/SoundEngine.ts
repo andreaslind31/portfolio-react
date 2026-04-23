@@ -3,7 +3,14 @@
 /**
  * Procedural sound engine using Web Audio API.
  * No external audio files needed — all sounds are synthesized.
+ *
+ * NOTE: SOUND_ENABLED is currently false — all playback calls are no-ops
+ * while we swap to real audio assets. Flip to true to restore procedural
+ * sound instantly. The return shapes of startAmbientHum / startCombatMusic
+ * still return safe no-op handles so callers don't need to change.
  */
+
+const SOUND_ENABLED = false;
 
 let audioCtx: AudioContext | null = null;
 
@@ -19,6 +26,7 @@ function getCtx(): AudioContext {
 
 /** Sci-fi energy weapon shot — blaster "pew" */
 export function playBlasterSound() {
+  if (!SOUND_ENABLED) return;
   try {
     const ctx = getCtx();
     const now = ctx.currentTime;
@@ -60,6 +68,7 @@ export function playBlasterSound() {
 
 /** Shotgun — punchy low-frequency boom with noise burst */
 export function playShotgunSound() {
+  if (!SOUND_ENABLED) return;
   try {
     const ctx = getCtx();
     const now = ctx.currentTime;
@@ -113,6 +122,7 @@ export function playShotgunSound() {
 
 /** Plasma cannon — rising whine then release */
 export function playPlasmaSound() {
+  if (!SOUND_ENABLED) return;
   try {
     const ctx = getCtx();
     const now = ctx.currentTime;
@@ -148,6 +158,7 @@ export function playPlasmaSound() {
 
 /** Rocket launcher — deep thud with whoosh tail */
 export function playRocketSound() {
+  if (!SOUND_ENABLED) return;
   try {
     const ctx = getCtx();
     const now = ctx.currentTime;
@@ -204,6 +215,7 @@ export function playRocketSound() {
 
 /** Enemy hit — metallic impact */
 export function playHitSound() {
+  if (!SOUND_ENABLED) return;
   try {
     const ctx = getCtx();
     const now = ctx.currentTime;
@@ -225,6 +237,7 @@ export function playHitSound() {
 
 /** Enemy death — explosion */
 export function playExplosionSound() {
+  if (!SOUND_ENABLED) return;
   try {
     const ctx = getCtx();
     const now = ctx.currentTime;
@@ -269,6 +282,7 @@ export function playExplosionSound() {
 /** Player takes damage — sharp zap */
 // Short "thud" for melee kicks — low thump with a high-freq crack.
 export function playMeleeKickSound() {
+  if (!SOUND_ENABLED) return;
   try {
     const ctx = getCtx();
     const now = ctx.currentTime;
@@ -300,6 +314,7 @@ export function playMeleeKickSound() {
 }
 
 export function playDamageSound() {
+  if (!SOUND_ENABLED) return;
   try {
     const ctx = getCtx();
     const now = ctx.currentTime;
@@ -332,6 +347,7 @@ export function playDamageSound() {
 
 /** Low-health heartbeat — dual-thump pulse (lub-dub) */
 export function playHeartbeatPulse() {
+  if (!SOUND_ENABLED) return;
   try {
     const ctx = getCtx();
     const now = ctx.currentTime;
@@ -357,6 +373,7 @@ export function playHeartbeatPulse() {
 
 /** Wave start — rising tone */
 export function playWaveStartSound() {
+  if (!SOUND_ENABLED) return;
   try {
     const ctx = getCtx();
     const now = ctx.currentTime;
@@ -394,6 +411,7 @@ export function playWaveStartSound() {
 
 /** Pickup collected — bright chime */
 export function playPickupSound() {
+  if (!SOUND_ENABLED) return;
   try {
     const ctx = getCtx();
     const now = ctx.currentTime;
@@ -419,6 +437,7 @@ export function playPickupSound() {
 
 /** Footstep — short thud */
 export function playFootstepSound() {
+  if (!SOUND_ENABLED) return;
   try {
     const ctx = getCtx();
     const now = ctx.currentTime;
@@ -446,6 +465,7 @@ export function playFootstepSound() {
 
 /** Kill streak sound — ascending tone */
 export function playKillStreakSound(streak: number) {
+  if (!SOUND_ENABLED) return;
   try {
     const ctx = getCtx();
     const now = ctx.currentTime;
@@ -479,6 +499,7 @@ export function playKillStreakSound(streak: number) {
 
 /** Random distant rumble — plays occasionally for atmosphere */
 export function playDistantRumble() {
+  if (!SOUND_ENABLED) return;
   try {
     const ctx = getCtx();
     const now = ctx.currentTime;
@@ -521,6 +542,7 @@ export function playDistantRumble() {
 
 /** Pipe hiss — short steam burst */
 export function playPipeHiss() {
+  if (!SOUND_ENABLED) return;
   try {
     const ctx = getCtx();
     const now = ctx.currentTime;
@@ -550,6 +572,7 @@ export function playPipeHiss() {
 
 /** Start ambient hum — returns a stop function */
 export function startAmbientHum(): () => void {
+  if (!SOUND_ENABLED) return () => {};
   try {
     const ctx = getCtx();
     const osc = ctx.createOscillator();
@@ -589,6 +612,7 @@ export function startAmbientHum(): () => void {
  * Returns an object with setIntensity(0-1) and stop() methods.
  */
 export function startCombatMusic(): { setIntensity: (v: number) => void; stop: () => void } {
+  if (!SOUND_ENABLED) return { setIntensity: () => {}, stop: () => {} };
   try {
     const ctx = getCtx();
 

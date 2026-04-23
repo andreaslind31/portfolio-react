@@ -113,12 +113,17 @@ export default function Weapon({ locked, weaponType, ammo, onShoot, onMelee }: W
   const muzzleLightRef = useRef<THREE.PointLight>(null);
   const lastShot = useRef(0);
   const lastMelee = useRef(0);
-  const meleeAnim = useRef(0); // 0 = idle, >0 = playing kick
   const cameraKick = useRef(0);
   const bobPhase = useRef(0);
   const swayX = useRef(0);
   const swayY = useRef(0);
   const keys = useRef<Set<string>>(new Set());
+  // Refs that mirror latest prop values so the global key listener can use
+  // them without needing to be re-registered on every prop change.
+  const lockedRef = useRef(locked);
+  const onMeleeRef = useRef(onMelee);
+  useEffect(() => { lockedRef.current = locked; }, [locked]);
+  useEffect(() => { onMeleeRef.current = onMelee; }, [onMelee]);
   const animFrame = useRef(0); // 0 = idle, 1+ = firing animation
   const animTimer = useRef(0);
   const flashTimer = useRef(0);
@@ -157,18 +162,19 @@ export default function Weapon({ locked, weaponType, ammo, onShoot, onMelee }: W
     };
   }, [allTextures]);
 
-  // Key & mouse tracking for sway/bob
+  // Key & mouse tracking for sway/bob. Registered once on mount — the handler
+  // reads the latest locked/onMelee values via refs so the listeners never
+  // need to churn.
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       keys.current.add(e.code);
       // V — melee kick
-      if (e.code === "KeyV" && locked) {
+      if (e.code === "KeyV" && lockedRef.current) {
         const now = performance.now() / 1000;
         if (now - lastMelee.current < MELEE_COOLDOWN) return;
         lastMelee.current = now;
-        meleeAnim.current = 0.25; // 250 ms punch anim timer
         const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
-        onMelee?.(camera.position.clone(), dir);
+        onMeleeRef.current?.(camera.position.clone(), dir);
       }
     };
     const onKeyUp = (e: KeyboardEvent) => keys.current.delete(e.code);
@@ -186,7 +192,7 @@ export default function Weapon({ locked, weaponType, ammo, onShoot, onMelee }: W
       window.removeEventListener("keyup", onKeyUp);
       window.removeEventListener("mousemove", onMouseMove);
     };
-  }, [locked, camera, onMelee]);
+  }, [camera]);
 
   const handleClick = useCallback(() => {
     if (!locked) return;
@@ -304,9 +310,6 @@ export default function Weapon({ locked, weaponType, ammo, onShoot, onMelee }: W
         />
       </sprite>
 
-      {/* Melee kick overlay — boot swings in from bottom-right */}
-      <KickOverlay timerRef={meleeAnim} />
-
       {/* Muzzle flash dynamic light */}
       <pointLight
         ref={muzzleLightRef}
@@ -320,34 +323,3 @@ export default function Weapon({ locked, weaponType, ammo, onShoot, onMelee }: W
   );
 }
 
-// ── Melee kick overlay ───────────────────────────────────
-// Drives its own useFrame so the parent Weapon can keep its existing render path
-// untouched. Appears briefly whenever meleeAnim > 0.
-function KickOverlay({ timerRef }: { timerRef: React.MutableRefObject<number> }) {
-  const meshRef = useRef<THREE.Group>(null);
-  useFrame((_, delta) => {
-    if (!meshRef.current) return;
-    if (timerRef.current > 0) {
-      timerRef.current -= delta;
-      const t = THREE.MathUtils.clamp(1 - timerRef.current / 0.25, 0, 1);
-      const swing = Math.sin(t * Math.PI); // 0 → 1 → 0
-      meshRef.current.visible = true;
-      meshRef.current.position.set(0.25 - swing * 0.3, -0.3 + swing * 0.25, -0.35 - swing * 0.2);
-      meshRef.current.rotation.set(-swing * 0.6, swing * 0.4, swing * 0.2);
-    } else {
-      meshRef.current.visible = false;
-    }
-  });
-  return (
-    <group ref={meshRef} visible={false}>
-      <mesh>
-        <boxGeometry args={[0.22, 0.14, 0.4]} />
-        <meshStandardMaterial color="#2a2218" metalness={0.1} roughness={0.9} />
-      </mesh>
-      <mesh position={[0, 0.08, 0.15]}>
-        <boxGeometry args={[0.24, 0.12, 0.12]} />
-        <meshStandardMaterial color="#1a1410" metalness={0.2} roughness={0.85} />
-      </mesh>
-    </group>
-  );
-}
